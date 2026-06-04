@@ -32,12 +32,13 @@ struct Token
 {
 	TokenType type;
 	string str;
+	int line;
 };
 
 struct Lexer
 {
-	string text;
 	char *current;
+	int line;
 };
 
 internal bool
@@ -56,6 +57,13 @@ IsDigit(char c)
 	return result;
 }
 
+internal bool
+IsAtEnd(Lexer *lexer)
+{
+	bool result = (*lexer->current == 0);
+	return result;
+}
+
 internal char
 PeekChar(Lexer *lexer)
 {
@@ -64,9 +72,31 @@ PeekChar(Lexer *lexer)
 }
 
 internal char
+PeekNextChar(Lexer *lexer)
+{
+	char result = 0;
+	if (!IsAtEnd(lexer))
+	{
+		result = *(lexer->current + 1);
+	}
+	return result;
+}
+
+internal char
 AdvanceChar(Lexer *lexer)
 {
 	char result = *lexer->current++;
+	return result;
+}
+
+internal Token
+MakeToken(Lexer *lexer, TokenType type, string str)
+{
+	Token result = {};
+	result.type = type;
+	result.str = str;
+	result.line = lexer->line;
+
 	return result;
 }
 
@@ -82,29 +112,57 @@ ParseIdentifier(Lexer *lexer)
 		str.count++;
 	}
 
-	Token result = {};
-	result.type = TokenType_Identifier;
-	result.str = str;
-
+	Token result = MakeToken(lexer, TokenType_Identifier, str);
 	return result;
 }
+
+//internal Token
+//ParseString(Lexer *lexer)
+//{
+//	// eat the opening quote
+//	AdvanceChar(lexer);
+//
+//	while (!IsAtEnd(lexer) && PeekChar(lexer) != '"')
+//	{
+//
+//	}
+//}
 
 internal void
 SkipWhitespace(Lexer *lexer)
 {
-	for (;;)
+	bool done = false;
+	while (!done)
 	{
 		char c = PeekChar(lexer);
 		if (c == ' '
 			|| c == '\t'
-			|| c == '\n'
 			|| c == '\r')
 		{
 			AdvanceChar(lexer);
 		}
+		else if (c == '\n')
+		{
+			lexer->line++;
+			AdvanceChar(lexer);
+		}
+		else if (c == '/')
+		{
+			if (PeekNextChar(lexer) == '/')
+			{
+				while (!IsAtEnd(lexer) && PeekChar(lexer) != '\n')
+				{
+					AdvanceChar(lexer);
+				}
+			}
+			else
+			{
+				done = true;
+			}
+		}
 		else
 		{
-			break;
+			done = true;
 		}
 	}
 }
@@ -112,47 +170,49 @@ SkipWhitespace(Lexer *lexer)
 internal Token
 GetToken(Lexer *lexer)
 {
-	Token result = {};
-
 	SkipWhitespace(lexer);
 
-	if (PeekChar(lexer) == 0)
+	if (IsAtEnd(lexer))
 	{
-		result.type = TokenType_EOF;
-	}
-	else
-	{
-		char c = PeekChar(lexer);
-		if (IsAlpha(c))
-		{
-			result = ParseIdentifier(lexer);
-		}
-		else if (c == '('
-				 || c == ')'
-				 || c == '{'
-				 || c == '}'
-				 || c == ','
-				 || c == '.'
-				 || c == '-'
-				 || c == '+'
-				 || c == ';'
-				 || c == '/'
-				 || c == '*'
-				 || c == '!'
-				 || c == '='
-				 || c == '<'
-				 || c == '>'
-				 || c == '['
-				 || c == ']')
-		{
-			result.type = (TokenType)c;
-			result.str = {lexer->current, 1};
-			AdvanceChar(lexer);
-		}
-
+		return MakeToken(lexer, TokenType_EOF, {});
 	}
 
-	return result;
+	char c = PeekChar(lexer);
+
+	if (IsAlpha(c))
+	{
+		return ParseIdentifier(lexer);
+	}
+
+	if (c == '('
+		|| c == ')'
+		|| c == '{'
+		|| c == '}'
+		|| c == ','
+		|| c == '.'
+		|| c == '-'
+		|| c == '+'
+		|| c == ';'
+		|| c == '/'
+		|| c == '*'
+		|| c == '!'
+		|| c == '='
+		|| c == '<'
+		|| c == '>'
+		|| c == '['
+		|| c == ']')
+	{
+		string str = {lexer->current, 1};
+		AdvanceChar(lexer);
+		return MakeToken(lexer, (TokenType)c, str);
+	}
+
+	if (c == '"')
+	{
+		//return ParseString(lexer);
+	}
+
+	return {};
 }
 
 internal string
@@ -193,16 +253,16 @@ int main(int argc, char *argv[])
 
 	const char *fileName = argv[1];
 	
-	string fileData = LoadFile(fileName);
-	if (fileData.count == 0)
+	string text = LoadFile(fileName);
+	if (text.count == 0)
 	{
 		fprintf(stderr, "Couldn't load file '%s'\n", fileName);
 		return 1;
 	}
 
 	Lexer lexer = {};
-	lexer.text = fileData;
-	lexer.current = lexer.text.data;
+	lexer.line = 1;
+	lexer.current = text.data;
 
 	Token token = GetToken(&lexer);
 	while (token.type != TokenType_EOF)
