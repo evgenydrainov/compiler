@@ -7,6 +7,8 @@ project(compiler)
 add_executable(
     compiler
     src/common.h
+    src/lexer.cpp
+    src/lexer.h
     src/main.cpp
 )
 

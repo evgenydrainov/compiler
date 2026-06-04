@@ -26,6 +26,13 @@ struct string
 {
 	char *data;
 	usize count;
+
+	string() = default;
+
+	string(char *data, usize count) : data(data), count(count) {}
+
+	template <usize N>
+	string(const char (&str)[N]) : data((char *)str), count(N-1) {}
 };
 
 #define STR_FMT "%.*s"
