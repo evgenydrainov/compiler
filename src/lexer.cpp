@@ -225,7 +225,7 @@ GetToken(Lexer *lexer)
 			{"->", TokenType_Arrow},
 		};
 
-		for (TokenInfo tokenInfo : tokenInfos)
+		for (auto &tokenInfo : tokenInfos)
 		{
 			if (c == tokenInfo.str[0]
 				&& PeekNextChar(lexer) == tokenInfo.str[1])

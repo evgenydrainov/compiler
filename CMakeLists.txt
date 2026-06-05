@@ -10,6 +10,8 @@ add_executable(
     src/lexer.cpp
     src/lexer.h
     src/main.cpp
+    src/parser.cpp
+    src/parser.h
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

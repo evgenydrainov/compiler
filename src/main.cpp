@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "lexer.h"
+#include "parser.h"
 
 internal string
 LoadFile(const char *fileName)
@@ -54,6 +55,7 @@ int main(int argc, char *argv[])
 	lexer.line = 1;
 	lexer.current = text.data;
 
+#if 0
 	Token token = GetToken(&lexer);
 	while (token.type != TokenType_EOF)
 	{
@@ -63,4 +65,9 @@ int main(int argc, char *argv[])
 			   token.line);
 		token = GetToken(&lexer);
 	}
+#endif
+
+	Parser parser = {};
+	parser.current = GetToken(&lexer);
+	ParseExpression(&parser, &lexer, 0);
 }
