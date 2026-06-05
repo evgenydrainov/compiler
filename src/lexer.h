@@ -22,13 +22,15 @@
 	X(TokenType_Less,         '<') \
 	X(TokenType_LeftBracket,  '[') \
 	X(TokenType_RightBracket, ']') \
+	X(TokenType_Colon,        ':') \
 	X(TokenType_Identifier,   256) \
 	X(TokenType_String,       257) \
 	X(TokenType_Number,       258) \
 	X(TokenType_BangEqual,    259) \
 	X(TokenType_EqualEqual,   260) \
 	X(TokenType_GreaterEqual, 261) \
-	X(TokenType_LessEqual,    262)
+	X(TokenType_LessEqual,    262) \
+	X(TokenType_Arrow,        263)
 
 DEFINE_ENUM_WITH_VALUES(TokenType, u32, TOKEN_TYPE_LIST);
 

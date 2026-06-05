@@ -33,6 +33,16 @@ struct string
 
 	template <usize N>
 	string(const char (&str)[N]) : data((char *)str), count(N-1) {}
+
+	char &operator[](usize index)
+	{
+		return data[index];
+	}
+
+	const char &operator[](usize index) const
+	{
+		return data[index];
+	}
 };
 
 #define STR_FMT "%.*s"

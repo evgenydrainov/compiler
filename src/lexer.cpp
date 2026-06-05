@@ -208,6 +208,39 @@ GetToken(Lexer *lexer)
 		return ParseNumber(lexer);
 	}
 
+	// handle two-letter tokens
+	{
+		struct TokenInfo
+		{
+			string str;
+			TokenType type;
+		};
+
+		TokenInfo tokenInfos[] =
+		{
+			{"!=", TokenType_BangEqual},
+			{"==", TokenType_EqualEqual},
+			{">=", TokenType_GreaterEqual},
+			{"<=", TokenType_LessEqual},
+			{"->", TokenType_Arrow},
+		};
+
+		for (TokenInfo tokenInfo : tokenInfos)
+		{
+			if (c == tokenInfo.str[0]
+				&& PeekNextChar(lexer) == tokenInfo.str[1])
+			{
+				string str = {lexer->current, 2};
+				TokenType type = tokenInfo.type;
+				AdvanceChar(lexer);
+				AdvanceChar(lexer);
+
+				return MakeToken(lexer, type, str);
+			}
+		}
+	}
+
+	// handle one-letter tokens
 	if (c == '('
 		|| c == ')'
 		|| c == '{'
@@ -220,30 +253,16 @@ GetToken(Lexer *lexer)
 		|| c == '/'
 		|| c == '*'
 		|| c == '['
-		|| c == ']')
+		|| c == ']'
+		|| c == '!'
+		|| c == '='
+		|| c == '>'
+		|| c == '<'
+		|| c == ':')
 	{
 		string str = {lexer->current, 1};
 		AdvanceChar(lexer);
 		return MakeToken(lexer, (TokenType)c, str);
-	}
-
-	if (c == '!'
-		|| c == '='
-		|| c == '>'
-		|| c == '<')
-	{
-		string str = {lexer->current, 1};
-		TokenType type = (TokenType)c;
-		AdvanceChar(lexer);
-
-		if (PeekChar(lexer) == '=')
-		{
-			str.count++;
-			type = (TokenType)(TokenType_BangEqual + (c - '!'));
-			AdvanceChar(lexer);
-		}
-		
-		return MakeToken(lexer, type, str);
 	}
 
 	if (c == '"')
