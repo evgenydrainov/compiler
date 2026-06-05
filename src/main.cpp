@@ -34,6 +34,36 @@ LoadFile(const char *fileName)
 	return result;
 }
 
+internal void
+PrintTree(AstNode *node,
+		  const char *prefix,
+		  bool isLeft)
+{
+	if (!node)
+	{
+		return;
+	}
+
+	printf("%s%s%s\n", prefix, isLeft ? "+-- " : "|-- ", GetNodeTypeName(node->type));
+
+	char childPrefix[256];
+	snprintf(childPrefix, sizeof(childPrefix), "%s%s", prefix, isLeft ? "|   " : "    ");
+
+	if (node->lhs && node->rhs)
+	{
+		PrintTree(node->lhs, childPrefix, true);
+		PrintTree(node->rhs, childPrefix, false);
+	}
+	else if (node->lhs)
+	{
+		PrintTree(node->lhs, childPrefix, false);
+	}
+	else if (node->rhs)
+	{
+		PrintTree(node->rhs, childPrefix, false);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	if (argc != 2)
@@ -67,7 +97,13 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	Arena arena = {};
+	arena.capacity = Megabytes(10);
+	arena.data = (u8 *)malloc(arena.capacity);
+
 	Parser parser = {};
 	parser.current = GetToken(&lexer);
-	ParseExpression(&parser, &lexer, 0);
+	AstNode *node = ParseExpression(&parser, &lexer, 0, &arena);
+
+	PrintTree(node, "", false);
 }

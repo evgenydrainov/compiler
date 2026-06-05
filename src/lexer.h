@@ -39,6 +39,7 @@ struct Token
 	TokenType type;
 	string str;
 	int line;
+	int numberValue;
 };
 
 struct Lexer

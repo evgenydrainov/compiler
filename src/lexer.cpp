@@ -41,11 +41,10 @@ PeekNextChar(Lexer *lexer)
 	return result;
 }
 
-internal char
-AdvanceChar(Lexer *lexer)
+internal void
+AdvanceChar(Lexer *lexer, int count = 1)
 {
-	char result = *lexer->current++;
-	return result;
+	lexer->current += count;
 }
 
 internal Token
@@ -232,8 +231,7 @@ GetToken(Lexer *lexer)
 			{
 				string str = {lexer->current, 2};
 				TokenType type = tokenInfo.type;
-				AdvanceChar(lexer);
-				AdvanceChar(lexer);
+				AdvanceChar(lexer, 2);
 
 				return MakeToken(lexer, type, str);
 			}

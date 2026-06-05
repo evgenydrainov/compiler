@@ -22,6 +22,12 @@ typedef ptrdiff_t isize;
 typedef float f32;
 typedef double f64;
 
+#define Kilobytes(n) ((n)*1024LL)
+#define Megabytes(n) (Kilobytes(n)*1024LL)
+#define Gigabytes(n) (Megabytes(n)*1024LL)
+
+#define Assert(cond) ((cond) ? (void)0 : __debugbreak())
+
 struct string
 {
 	char *data;
@@ -65,3 +71,54 @@ struct string
 
 #define GENERATE_ENUM(Name, Value) Name=Value,
 #define GENERATE_ENUM_CASE(Name, Value) case Name: return #Name;
+
+struct Arena
+{
+	u8 *data;
+	usize pos;
+	usize capacity;
+};
+
+#define DEFAULT_ALIGNMENT (sizeof(void *))
+
+#define IsPowerOfTwo(x) ((x) != 0 && ((x) & ((x) - 1)) == 0)
+
+inline usize
+AlignForward(usize ptr, usize alignment)
+{
+	Assert(IsPowerOfTwo(alignment));
+	return (ptr + (alignment-1)) & ~(alignment-1);
+}
+
+inline void *
+PushSize(Arena *arena,
+		 usize size,
+		 usize alignment = DEFAULT_ALIGNMENT)
+{
+	//
+	// Assume that arena->data is already aligned
+	//
+
+	usize alignedPos = AlignForward(arena->pos, alignment);
+
+	Assert(alignedPos + size <= arena->capacity);
+
+	void *result = arena->data + alignedPos;
+	arena->pos = alignedPos + size;
+
+	return result;
+}
+
+#define PushStruct(arena, T) (T*)PushSize(arena, sizeof(T))
+
+#define PushArray(arena, count, T) (T*)PushSize(arena, (count)*sizeof(T))
+
+inline Arena
+PushArena(Arena *arena, usize capacity)
+{
+	Arena result = {};
+	result.data = (u8 *)PushSize(arena, capacity);
+	result.capacity = capacity;
+
+	return result;
+}
