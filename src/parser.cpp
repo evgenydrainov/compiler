@@ -47,7 +47,8 @@ Error(Parser *parser,
 	  const char *message)
 {
 	fprintf(stderr, "%s\n", message);
-	// TODO
+	
+	parser->hadError = true;
 }
 
 internal void

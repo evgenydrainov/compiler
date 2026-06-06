@@ -6,6 +6,8 @@ project(compiler)
 
 add_executable(
     compiler
+    src/codegen.cpp
+    src/codegen.h
     src/common.h
     src/lexer.cpp
     src/lexer.h

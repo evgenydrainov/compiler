@@ -23,6 +23,7 @@ struct AstNode
 struct Parser
 {
 	Token current;
+	bool hadError;
 };
 
 AstNode *ParseExpression(Parser *parser,

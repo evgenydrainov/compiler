@@ -121,9 +121,12 @@ internal Token
 ParseNumber(Lexer *lexer)
 {
 	string str = {lexer->current, 0};
+	int value = 0;
 
 	while (IsDigit(PeekChar(lexer)))
 	{
+		value = 10*value + (PeekChar(lexer) - '0');
+
 		AdvanceChar(lexer);
 		str.count++;
 	}
@@ -143,7 +146,9 @@ ParseNumber(Lexer *lexer)
 		}
 	}
 
-	return MakeToken(lexer, TokenType_Number, str);
+	Token result = MakeToken(lexer, TokenType_Number, str);
+	result.numberValue = value;
+	return result;
 }
 
 internal void

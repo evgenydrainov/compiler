@@ -2,9 +2,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <direct.h>
 
 #include "lexer.h"
 #include "parser.h"
+#include "codegen.h"
 
 internal string
 LoadFile(const char *fileName)
@@ -44,7 +46,14 @@ PrintTree(AstNode *node,
 		return;
 	}
 
-	printf("%s%s%s\n", prefix, isLeft ? "+-- " : "|-- ", GetNodeTypeName(node->type));
+	printf("%s%s%s", prefix, isLeft ? "+-- " : "|-- ", GetNodeTypeName(node->type));
+
+	if (node->type == NodeType_Number)
+	{
+		printf(" (%d)", node->numberValue);
+	}
+
+	printf("\n");
 
 	char childPrefix[256];
 	snprintf(childPrefix, sizeof(childPrefix), "%s%s", prefix, isLeft ? "|   " : "    ");
@@ -73,6 +82,8 @@ int main(int argc, char *argv[])
 	}
 
 	const char *fileName = argv[1];
+
+	_chdir("test");
 	
 	string text = LoadFile(fileName);
 	if (text.count == 0)
@@ -106,4 +117,12 @@ int main(int argc, char *argv[])
 	AstNode *node = ParseExpression(&parser, &lexer, 0, &arena);
 
 	PrintTree(node, "", false);
+
+	FILE *out = fopen("test.asm", "wb");
+	Generate_x86_64(node, out);
+	fclose(out);
+
+	system("%USERPROFILE%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 test.asm -o test.obj");
+
+	system("\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe\" /nologo test.obj /subsystem:console /entry:main");
 }
