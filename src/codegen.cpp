@@ -48,9 +48,32 @@ DeclareSymbol(SymbolTable *table, string name)
 }
 
 internal void
+GenerateStatement(AstNode *node,
+				  SymbolTable *table,
+				  FILE *out,
+				  CodegenContext *context);
+
+internal void
+GenerateBlock(AstNode *node,
+			  SymbolTable *table,
+			  FILE *out,
+			  CodegenContext *context)
+{
+	Assert(node->type == NodeType_Block);
+
+	for (int i = 0;
+		 i < node->numStatements;
+		 i++)
+	{
+		GenerateStatement(node->statements[i], table, out, context);
+	}
+}
+
+internal void
 GenerateExpression(AstNode *node,
 				   SymbolTable *table,
-				   FILE *out)
+				   FILE *out,
+				   CodegenContext *context)
 {
 	switch (node->type)
 	{
@@ -66,8 +89,8 @@ GenerateExpression(AstNode *node,
 		case NodeType_Multiply:
 		case NodeType_Divide:
 		{
-			GenerateExpression(node->lhs, table, out);
-			GenerateExpression(node->rhs, table, out);
+			GenerateExpression(node->lhs, table, out, context);
+			GenerateExpression(node->rhs, table, out, context);
 
 			fprintf(out, "    pop rcx\n");
 			fprintf(out, "    pop rax\n");
@@ -117,6 +140,97 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeType_If:
+		{
+			int uniqueId = context->uniqueLabelId++;
+
+			if (node->elseBlock)
+			{
+				GenerateExpression(node->condition, table, out, context);
+
+				fprintf(out, "    pop rax\t\t; load the comparison result\n");
+				fprintf(out, "    cmp rax, 0\n");
+				fprintf(out, "    je .else_%d\n", uniqueId);
+				fprintf(out, "\n");
+
+				GenerateBlock(node->thenBlock, table, out, context);
+
+				fprintf(out, "    jmp .end_%d\n", uniqueId);
+				fprintf(out, ".else_%d:\n", uniqueId);
+
+				GenerateBlock(node->elseBlock, table, out, context);
+
+				fprintf(out, ".end_%d:\n", uniqueId);
+			}
+			else
+			{
+				GenerateExpression(node->condition, table, out, context);
+
+				fprintf(out, "    pop rax\t\t; load the comparison result\n");
+				fprintf(out, "    cmp rax, 0\n");
+				fprintf(out, "    je .end_%d\n", uniqueId);
+				fprintf(out, "\n");
+
+				GenerateBlock(node->thenBlock, table, out, context);
+
+				fprintf(out, ".end_%d:\n", uniqueId);
+			}
+
+			fprintf(out, "    push 123\t\t; push dummy value\n");
+			fprintf(out, "\n");
+		} break;
+
+		case NodeType_While:
+		{
+			int uniqueId = context->uniqueLabelId++;
+
+			fprintf(out, ".loop_%d:\n", uniqueId);
+
+			GenerateExpression(node->condition, table, out, context);
+
+			fprintf(out, "    cmp rax, 0\n");
+			fprintf(out, "    je .end_%d\n", uniqueId);
+			fprintf(out, "\n");
+
+			GenerateBlock(node->thenBlock, table, out, context);
+
+			fprintf(out, "    jmp .loop_%d\n", uniqueId);
+			fprintf(out, ".end_%d:\n", uniqueId);
+
+			fprintf(out, "    push 123\t\t; push dummy value\n");
+			fprintf(out, "\n");
+		} break;
+
+		case NodeType_Greater:
+		case NodeType_Less:
+		case NodeType_Equal:
+		{
+			GenerateExpression(node->lhs, table, out, context);
+			GenerateExpression(node->rhs, table, out, context);
+
+			const char *setccInstruction = "";
+			if (node->type == NodeType_Greater)
+			{
+				setccInstruction = "setg";
+			}
+			else if (node->type == NodeType_Less)
+			{
+				setccInstruction = "setl";
+			}
+			else if (node->type == NodeType_Equal)
+			{
+				setccInstruction = "sete";
+			}
+
+			fprintf(out, "    pop rcx\n");
+			fprintf(out, "    pop rax\n");
+			fprintf(out, "    cmp rax, rcx\n");
+			fprintf(out, "    %s al\n", setccInstruction);
+			fprintf(out, "    movzx rax, al\n");
+			fprintf(out, "    push rax\t\t; push the comparison result\n");
+			fprintf(out, "\n");
+		} break;
+
 		default:
 		{
 			Assert(false);
@@ -127,7 +241,8 @@ GenerateExpression(AstNode *node,
 internal void
 GenerateStatement(AstNode *node,
 				  SymbolTable *table,
-				  FILE *out)
+				  FILE *out,
+				  CodegenContext *context)
 {
 	switch (node->type)
 	{
@@ -137,7 +252,7 @@ GenerateStatement(AstNode *node,
 			Symbol *symbol = LookupSymbol(table, node->name);
 			Assert(symbol);
 
-			GenerateExpression(node->rhs, table, out);
+			GenerateExpression(node->rhs, table, out, context);
 
 			fprintf(out, "    pop rax\t\t\t; store into '" STR_FMT "'\n", STR_ARG(symbol->name));
 			fprintf(out, "    mov [rbp - %d], rax\n", symbol->offset);
@@ -146,8 +261,9 @@ GenerateStatement(AstNode *node,
 
 		default:
 		{
-			GenerateExpression(node, table, out);
-			fprintf(out, "    pop rax\n");
+			GenerateExpression(node, table, out, context);
+
+			fprintf(out, "    pop rax\t\t\t; discard the result\n");
 			fprintf(out, "\n");
 		} break;
 	}
@@ -176,7 +292,8 @@ CollectSymbols(AstNode *node, SymbolTable *table)
 
 void
 Generate_x86_64(AstNode *program,
-				FILE *out)
+				FILE *out,
+				CodegenContext *context)
 {
 	SymbolTable table = {};
 	CollectSymbols(program, &table);
@@ -192,14 +309,7 @@ Generate_x86_64(AstNode *program,
 	fprintf(out, "    sub rsp, %d\n", localSize);
 	fprintf(out, "\n");
 
-	Assert(program->type == NodeType_Block);
-
-	for (int i = 0;
-		 i < program->numStatements;
-		 i++)
-	{
-		GenerateStatement(program->statements[i], &table, out);
-	}
+	GenerateBlock(program, &table, out, context);
 
 	fprintf(out, "    mov rsp, rbp\n");
 	fprintf(out, "    pop rbp\n");

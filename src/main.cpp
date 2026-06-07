@@ -53,7 +53,8 @@ PrintTree(AstNode *node,
 		printf(" (%d)", node->numberValue);
 	}
 	else if (node->type == NodeType_VarDecl
-			 || node->type == NodeType_Var)
+			 || node->type == NodeType_Var
+			 || node->type == NodeType_Assign)
 	{
 		printf(" (" STR_FMT ")", STR_ARG(node->name));
 	}
@@ -73,6 +74,12 @@ PrintTree(AstNode *node,
 
 			PrintTree(statement, childPrefix, i != node->numStatements-1);
 		}
+	}
+	else if (node->type == NodeType_If)
+	{
+		PrintTree(node->condition, childPrefix, true);
+		PrintTree(node->thenBlock, childPrefix, true);
+		PrintTree(node->elseBlock, childPrefix, false);
 	}
 	else
 	{
@@ -144,8 +151,10 @@ int main(int argc, char *argv[])
 
 	PrintTree(program, "", false);
 
+	CodegenContext codegenContext = {};
+
 	FILE *out = fopen("test.asm", "wb");
-	Generate_x86_64(program, out);
+	Generate_x86_64(program, out, &codegenContext);
 	fclose(out);
 
 	if (system("%USERPROFILE%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 test.asm -o test.obj") != 0)

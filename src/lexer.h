@@ -30,7 +30,11 @@
 	X(TokenType_EqualEqual,   260) \
 	X(TokenType_GreaterEqual, 261) \
 	X(TokenType_LessEqual,    262) \
-	X(TokenType_Arrow,        263)
+	X(TokenType_Arrow,        263) \
+	X(TokenType_If,           264) \
+	X(TokenType_Else,         265) \
+	X(TokenType_While,        266) \
+	X(TokenType_Do,           267)
 
 DEFINE_ENUM_WITH_VALUES(TokenType, u32, TOKEN_TYPE_LIST);
 

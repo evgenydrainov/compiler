@@ -69,6 +69,30 @@ ErrorToken(Lexer *lexer, string message)
 	return result;
 }
 
+internal TokenType
+IdentifierType(string str)
+{
+	TokenType result = TokenType_Identifier;
+	if (str == "if")
+	{
+		result = TokenType_If;
+	}
+	else if (str == "else")
+	{
+		result = TokenType_Else;
+	}
+	else if (str == "while")
+	{
+		result = TokenType_While;
+	}
+	else if (str == "do")
+	{
+		result = TokenType_Do;
+	}
+
+	return result;
+}
+
 internal Token
 ParseIdentifier(Lexer *lexer)
 {
@@ -81,7 +105,8 @@ ParseIdentifier(Lexer *lexer)
 		str.count++;
 	}
 
-	Token result = MakeToken(lexer, TokenType_Identifier, str);
+	TokenType type = IdentifierType(str);
+	Token result = MakeToken(lexer, type, str);
 	return result;
 }
 
