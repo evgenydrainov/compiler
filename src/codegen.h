@@ -1,3 +1,5 @@
+#pragma once
+
 #include "common.h"
 #include "parser.h"
 #include <stdio.h>

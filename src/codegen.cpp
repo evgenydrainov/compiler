@@ -1,14 +1,64 @@
 #include "codegen.h"
 
+struct Symbol
+{
+	string name;
+	int offset;
+};
+
+struct SymbolTable
+{
+	Symbol symbols[256];
+	int count;
+	int stackSize;
+};
+
+internal Symbol *
+LookupSymbol(SymbolTable *table, string name)
+{
+	Symbol *result = nullptr;
+	for (int i = 0;
+		 i < table->count;
+		 i++)
+	{
+		Symbol *symbol = &table->symbols[i];
+		if (symbol->name == name)
+		{
+			result = symbol;
+			break;
+		}
+	}
+
+	return result;
+}
+
+internal Symbol *
+DeclareSymbol(SymbolTable *table, string name)
+{
+	table->stackSize += 8;
+
+	Assert(table->count < ArrayCount(table->symbols));
+
+	Symbol *symbol = &table->symbols[table->count++];
+	*symbol = {};
+	symbol->name = name;
+	symbol->offset = table->stackSize;
+
+	return symbol;
+}
+
 internal void
-GenerateExpression(AstNode *node, FILE *out)
+GenerateExpression(AstNode *node,
+				   SymbolTable *table,
+				   FILE *out)
 {
 	switch (node->type)
 	{
 		case NodeType_Number:
 		{
-			fprintf(out, "    mov rax, %d\n", node->numberValue);
+			fprintf(out, "    mov rax, %d\t\t; load integer literal\n", node->numberValue);
 			fprintf(out, "    push rax\n");
+			fprintf(out, "\n");
 		} break;
 
 		case NodeType_Add:
@@ -16,8 +66,9 @@ GenerateExpression(AstNode *node, FILE *out)
 		case NodeType_Multiply:
 		case NodeType_Divide:
 		{
-			GenerateExpression(node->lhs, out);
-			GenerateExpression(node->rhs, out);
+			GenerateExpression(node->lhs, table, out);
+			GenerateExpression(node->rhs, table, out);
+
 			fprintf(out, "    pop rcx\n");
 			fprintf(out, "    pop rax\n");
 
@@ -25,45 +76,132 @@ GenerateExpression(AstNode *node, FILE *out)
 			{
 				case NodeType_Add:
 				{
-					fprintf(out, "    add rax, rcx\n");
+					fprintf(out, "    add rax, rcx\t; perform addition\n");
 				} break;
 
 				case NodeType_Subtract:
 				{
-					fprintf(out, "    sub rax, rcx\n");
+					fprintf(out, "    sub rax, rcx\t; perform subtraction\n");
 				} break;
 
 				case NodeType_Multiply:
 				{
-					fprintf(out, "    imul rax, rcx\n");
+					fprintf(out, "    imul rax, rcx\t; perform multiplication\n");
 				} break;
 
 				case NodeType_Divide:
 				{
-					fprintf(out, "    cqo\n");
-					fprintf(out, "    idiv rcx\n");
+					fprintf(out, "    cqo     \t\t; perform division\n");
+					fprintf(out, "    idiv rcx\t\t;\n");
 				} break;
 
-				default: {} break;
+				default:
+				{
+					Assert(!"node->type not implemented");
+				} break;
 			}
 
 			fprintf(out, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
+		case NodeType_Var:
+		{
+			Symbol *symbol = LookupSymbol(table, node->name);
+			Assert(symbol);
+
+			fprintf(out, "    mov rax, [rbp - %d]\t; load variable '" STR_FMT "'\n",
+					symbol->offset,
+					STR_ARG(symbol->name));
+			fprintf(out, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
+		default:
+		{
+			Assert(false);
 		} break;
 	}
 }
 
-void
-Generate_x86_64(AstNode *root, FILE *out)
+internal void
+GenerateStatement(AstNode *node,
+				  SymbolTable *table,
+				  FILE *out)
 {
+	switch (node->type)
+	{
+		case NodeType_VarDecl:
+		case NodeType_Assign:
+		{
+			Symbol *symbol = LookupSymbol(table, node->name);
+			Assert(symbol);
+
+			GenerateExpression(node->rhs, table, out);
+
+			fprintf(out, "    pop rax\t\t\t; store into '" STR_FMT "'\n", STR_ARG(symbol->name));
+			fprintf(out, "    mov [rbp - %d], rax\n", symbol->offset);
+			fprintf(out, "\n");
+		} break;
+
+		default:
+		{
+			GenerateExpression(node, table, out);
+			fprintf(out, "    pop rax\n");
+			fprintf(out, "\n");
+		} break;
+	}
+}
+
+internal void
+CollectSymbols(AstNode *node, SymbolTable *table)
+{
+	if (node->type == NodeType_Block)
+	{
+		for (int i = 0;
+			 i < node->numStatements;
+			 i++)
+		{
+			CollectSymbols(node->statements[i], table);
+		}
+	}
+	else if (node->type == NodeType_VarDecl)
+	{
+		if (!LookupSymbol(table, node->name))
+		{
+			DeclareSymbol(table, node->name);
+		}
+	}
+}
+
+void
+Generate_x86_64(AstNode *program,
+				FILE *out)
+{
+	SymbolTable table = {};
+	CollectSymbols(program, &table);
+
+	int localSize = (table.stackSize + 15) & ~15;
+
 	fprintf(out, "default rel\n");
 	fprintf(out, "global main\n");
 	fprintf(out, "section .text\n");
 	fprintf(out, "main:\n");
-	fprintf(out, "    sub rsp, 40\n");
+	fprintf(out, "    push rbp\n");
+	fprintf(out, "    mov rbp, rsp\n");
+	fprintf(out, "    sub rsp, %d\n", localSize);
+	fprintf(out, "\n");
 
-	GenerateExpression(root, out);
+	Assert(program->type == NodeType_Block);
 
-	fprintf(out, "    pop rax\n");
-	fprintf(out, "    add rsp, 40\n");
+	for (int i = 0;
+		 i < program->numStatements;
+		 i++)
+	{
+		GenerateStatement(program->statements[i], &table, out);
+	}
+
+	fprintf(out, "    mov rsp, rbp\n");
+	fprintf(out, "    pop rbp\n");
 	fprintf(out, "    ret\n");
 }

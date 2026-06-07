@@ -52,24 +52,43 @@ PrintTree(AstNode *node,
 	{
 		printf(" (%d)", node->numberValue);
 	}
+	else if (node->type == NodeType_VarDecl
+			 || node->type == NodeType_Var)
+	{
+		printf(" (" STR_FMT ")", STR_ARG(node->name));
+	}
 
 	printf("\n");
 
 	char childPrefix[256];
 	snprintf(childPrefix, sizeof(childPrefix), "%s%s", prefix, isLeft ? "|   " : "    ");
 
-	if (node->lhs && node->rhs)
+	if (node->type == NodeType_Block)
 	{
-		PrintTree(node->lhs, childPrefix, true);
-		PrintTree(node->rhs, childPrefix, false);
+		for (int i = 0;
+			 i < node->numStatements;
+			 i++)
+		{
+			AstNode *statement = node->statements[i];
+
+			PrintTree(statement, childPrefix, i != node->numStatements-1);
+		}
 	}
-	else if (node->lhs)
+	else
 	{
-		PrintTree(node->lhs, childPrefix, false);
-	}
-	else if (node->rhs)
-	{
-		PrintTree(node->rhs, childPrefix, false);
+		if (node->lhs && node->rhs)
+		{
+			PrintTree(node->lhs, childPrefix, true);
+			PrintTree(node->rhs, childPrefix, false);
+		}
+		else if (node->lhs)
+		{
+			PrintTree(node->lhs, childPrefix, false);
+		}
+		else if (node->rhs)
+		{
+			PrintTree(node->rhs, childPrefix, false);
+		}
 	}
 }
 
@@ -114,15 +133,30 @@ int main(int argc, char *argv[])
 
 	Parser parser = {};
 	parser.current = GetToken(&lexer);
-	AstNode *node = ParseExpression(&parser, &lexer, 0, &arena);
 
-	PrintTree(node, "", false);
+	AstNode *program = ParseProgram(&parser, &lexer, &arena);
+
+	if (!program || parser.hadError)
+	{
+		fprintf(stderr, "parser failed\n");
+		return 1;
+	}
+
+	PrintTree(program, "", false);
 
 	FILE *out = fopen("test.asm", "wb");
-	Generate_x86_64(node, out);
+	Generate_x86_64(program, out);
 	fclose(out);
 
-	system("%USERPROFILE%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 test.asm -o test.obj");
+	if (system("%USERPROFILE%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 test.asm -o test.obj") != 0)
+	{
+		fprintf(stderr, "nasm failed\n");
+		return 1;
+	}
 
-	system("\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe\" /nologo test.obj /subsystem:console /entry:main");
+	if (system("\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe\" /nologo test.obj /subsystem:console /entry:main"))
+	{
+		fprintf(stderr, "link failed\n");
+		return 1;
+	}
 }

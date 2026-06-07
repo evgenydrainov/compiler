@@ -28,6 +28,8 @@ typedef double f64;
 
 #define Assert(cond) ((cond) ? (void)0 : __debugbreak())
 
+#define ArrayCount(array) (sizeof(array)/sizeof((array)[0]))
+
 struct string
 {
 	char *data;
@@ -48,6 +50,24 @@ struct string
 	const char &operator[](usize index) const
 	{
 		return data[index];
+	}
+
+	bool operator==(const string &other) const
+	{
+		if (count != other.count)
+		{
+			return false;
+		}
+
+		for (usize i = 0; i < count; i++)
+		{
+			if (data[i] != other.data[i])
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 };
 

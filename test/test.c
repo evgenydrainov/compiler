@@ -1,12 +1,5 @@
-(1 + 1 + 1 + 1 + 1 + 10)
-
-// != == >= <= : 
-// single line comment
-// int main(int argc, char *argv[])
-// {
-// 	int a = 1 + 2;
-// 	bool b = 1 > 2;
-// 	bool c = 1 <= 2;
-// 	printf("Hello, World!");
-// 	return 67;
-// }
+a: int = 1;
+b: int = 2;
+c: int = a + b;
+a = 2*b + 123;
+foo: int;
