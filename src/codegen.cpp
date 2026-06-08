@@ -140,70 +140,12 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_If:
-		{
-			int uniqueId = context->uniqueLabelId++;
-
-			if (node->elseBlock)
-			{
-				GenerateExpression(node->condition, table, out, context);
-
-				fprintf(out, "    pop rax\t\t; load the comparison result\n");
-				fprintf(out, "    cmp rax, 0\n");
-				fprintf(out, "    je .else_%d\n", uniqueId);
-				fprintf(out, "\n");
-
-				GenerateBlock(node->thenBlock, table, out, context);
-
-				fprintf(out, "    jmp .end_%d\n", uniqueId);
-				fprintf(out, ".else_%d:\n", uniqueId);
-
-				GenerateBlock(node->elseBlock, table, out, context);
-
-				fprintf(out, ".end_%d:\n", uniqueId);
-			}
-			else
-			{
-				GenerateExpression(node->condition, table, out, context);
-
-				fprintf(out, "    pop rax\t\t; load the comparison result\n");
-				fprintf(out, "    cmp rax, 0\n");
-				fprintf(out, "    je .end_%d\n", uniqueId);
-				fprintf(out, "\n");
-
-				GenerateBlock(node->thenBlock, table, out, context);
-
-				fprintf(out, ".end_%d:\n", uniqueId);
-			}
-
-			fprintf(out, "    push 123\t\t; push dummy value\n");
-			fprintf(out, "\n");
-		} break;
-
-		case NodeType_While:
-		{
-			int uniqueId = context->uniqueLabelId++;
-
-			fprintf(out, ".loop_%d:\n", uniqueId);
-
-			GenerateExpression(node->condition, table, out, context);
-
-			fprintf(out, "    cmp rax, 0\n");
-			fprintf(out, "    je .end_%d\n", uniqueId);
-			fprintf(out, "\n");
-
-			GenerateBlock(node->thenBlock, table, out, context);
-
-			fprintf(out, "    jmp .loop_%d\n", uniqueId);
-			fprintf(out, ".end_%d:\n", uniqueId);
-
-			fprintf(out, "    push 123\t\t; push dummy value\n");
-			fprintf(out, "\n");
-		} break;
-
 		case NodeType_Greater:
 		case NodeType_Less:
-		case NodeType_Equal:
+		case NodeType_EqualEqual:
+		case NodeType_GreaterEqual:
+		case NodeType_LessEqual:
+		case NodeType_NotEqual:
 		{
 			GenerateExpression(node->lhs, table, out, context);
 			GenerateExpression(node->rhs, table, out, context);
@@ -217,9 +159,25 @@ GenerateExpression(AstNode *node,
 			{
 				setccInstruction = "setl";
 			}
-			else if (node->type == NodeType_Equal)
+			else if (node->type == NodeType_EqualEqual)
 			{
 				setccInstruction = "sete";
+			}
+			else if (node->type == NodeType_GreaterEqual)
+			{
+				setccInstruction = "setge";
+			}
+			else if (node->type == NodeType_LessEqual)
+			{
+				setccInstruction = "setle";
+			}
+			else if (node->type == NodeType_NotEqual)
+			{
+				setccInstruction = "setne";
+			}
+			else
+			{
+				Assert(false);
 			}
 
 			fprintf(out, "    pop rcx\n");
@@ -256,6 +214,65 @@ GenerateStatement(AstNode *node,
 
 			fprintf(out, "    pop rax\t\t\t; store into '" STR_FMT "'\n", STR_ARG(symbol->name));
 			fprintf(out, "    mov [rbp - %d], rax\n", symbol->offset);
+			fprintf(out, "\n");
+		} break;
+
+		case NodeType_If:
+		{
+			int uniqueId = context->uniqueLabelId++;
+
+			if (node->elseBlock)
+			{
+				GenerateExpression(node->condition, table, out, context);
+
+				fprintf(out, "    pop rax\t\t; load the comparison result\n");
+				fprintf(out, "    cmp rax, 0\n");
+				fprintf(out, "    je .else_%d\n", uniqueId);
+				fprintf(out, "\n");
+
+				GenerateBlock(node->thenBlock, table, out, context);
+
+				fprintf(out, "    jmp .end_%d\n", uniqueId);
+				fprintf(out, ".else_%d:\n", uniqueId);
+
+				GenerateBlock(node->elseBlock, table, out, context);
+
+				fprintf(out, ".end_%d:\n", uniqueId);
+				fprintf(out, "\n");
+			}
+			else
+			{
+				GenerateExpression(node->condition, table, out, context);
+
+				fprintf(out, "    pop rax\t\t; load the comparison result\n");
+				fprintf(out, "    cmp rax, 0\n");
+				fprintf(out, "    je .end_%d\n", uniqueId);
+				fprintf(out, "\n");
+
+				GenerateBlock(node->thenBlock, table, out, context);
+
+				fprintf(out, ".end_%d:\n", uniqueId);
+				fprintf(out, "\n");
+			}
+		} break;
+
+		case NodeType_While:
+		{
+			int uniqueId = context->uniqueLabelId++;
+
+			fprintf(out, ".loop_%d:\n", uniqueId);
+
+			GenerateExpression(node->condition, table, out, context);
+
+			fprintf(out, "    pop rax\t\t; load the comparison result\n");
+			fprintf(out, "    cmp rax, 0\n");
+			fprintf(out, "    je .end_%d\n", uniqueId);
+			fprintf(out, "\n");
+
+			GenerateBlock(node->thenBlock, table, out, context);
+
+			fprintf(out, "    jmp .loop_%d\n", uniqueId);
+			fprintf(out, ".end_%d:\n", uniqueId);
 			fprintf(out, "\n");
 		} break;
 

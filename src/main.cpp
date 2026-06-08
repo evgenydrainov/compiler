@@ -46,7 +46,9 @@ PrintTree(AstNode *node,
 		return;
 	}
 
-	printf("%s%s%s", prefix, isLeft ? "+-- " : "|-- ", GetNodeTypeName(node->type));
+	printf("%s%s%s", prefix, isLeft ? "+-- " : "\\-- ", GetNodeTypeName(node->type));
+
+	printf(" (line=%d)", node->line);
 
 	if (node->type == NodeType_Number)
 	{
@@ -77,9 +79,22 @@ PrintTree(AstNode *node,
 	}
 	else if (node->type == NodeType_If)
 	{
+		if (node->elseBlock)
+		{
+			PrintTree(node->condition, childPrefix, true);
+			PrintTree(node->thenBlock, childPrefix, true);
+			PrintTree(node->elseBlock, childPrefix, false);
+		}
+		else
+		{
+			PrintTree(node->condition, childPrefix, true);
+			PrintTree(node->thenBlock, childPrefix, false);
+		}
+	}
+	else if (node->type == NodeType_While)
+	{
 		PrintTree(node->condition, childPrefix, true);
-		PrintTree(node->thenBlock, childPrefix, true);
-		PrintTree(node->elseBlock, childPrefix, false);
+		PrintTree(node->thenBlock, childPrefix, false);
 	}
 	else
 	{
