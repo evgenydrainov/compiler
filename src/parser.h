@@ -8,19 +8,19 @@
 	X(NodeType_Subtract,     1)  \
 	X(NodeType_Multiply,     2)  \
 	X(NodeType_Divide,       3)  \
-	X(NodeType_Number,       4)  \
-	X(NodeType_Var,          5)  \
-	X(NodeType_Assign,       6)  \
-	X(NodeType_VarDecl,      7)  \
-	X(NodeType_Block,        8)  \
-	X(NodeType_Less,         9)  \
-	X(NodeType_Greater,      10) \
-	X(NodeType_EqualEqual,   11) \
-	X(NodeType_If,           12) \
-	X(NodeType_While,        13) \
-	X(NodeType_LessEqual,    14) \
-	X(NodeType_GreaterEqual, 15) \
-	X(NodeType_NotEqual,     16) \
+	X(NodeType_Less,         4)  \
+	X(NodeType_Greater,      5)  \
+	X(NodeType_EqualEqual,   6)  \
+	X(NodeType_LessEqual,    7)  \
+	X(NodeType_GreaterEqual, 8)  \
+	X(NodeType_NotEqual,     9)  \
+	X(NodeType_Number,       10) \
+	X(NodeType_Var,          11) \
+	X(NodeType_Assign,       12) \
+	X(NodeType_VarDecl,      13) \
+	X(NodeType_Block,        14) \
+	X(NodeType_If,           15) \
+	X(NodeType_While,        16) \
 	X(NodeType_Print,        17)
 
 DEFINE_ENUM_WITH_VALUES(NodeType, u32, NODE_TYPE_LIST);
@@ -30,19 +30,57 @@ struct AstNode
 	NodeType type;
 	int line;
 
-	AstNode *lhs;
-	AstNode *rhs;
+	union
+	{
+		struct
+		{
+			AstNode *lhs;
+			AstNode *rhs;
+		} binary;
 
-	int numberValue;
+		struct
+		{
+			string name;
+			int stackOffset;
+			AstNode *expr;
+		} assign;
 
-	string name;
+		struct
+		{
+			string name;
+			int stackOffset;
+		} var;
 
-	AstNode **statements;
-	int numStatements;
+		struct
+		{
+			int value;
+		} number;
 
-	AstNode *condition;
-	AstNode *thenBlock;
-	AstNode *elseBlock;
+		struct
+		{
+			AstNode **statements;
+			int numStatements;
+			int stackSize;
+		} block;
+
+		struct
+		{
+			AstNode *condition;
+			AstNode *thenBlock;
+			AstNode *elseBlock;
+		} _if;
+
+		struct
+		{
+			AstNode *condition;
+			AstNode *body;
+		} _while;
+
+		struct
+		{
+			AstNode *expr;
+		} print;
+	};
 };
 
 struct Parser

@@ -14,6 +14,8 @@ add_executable(
     src/main.cpp
     src/parser.cpp
     src/parser.h
+    src/semantic_pass.cpp
+    src/semantic_pass.h
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

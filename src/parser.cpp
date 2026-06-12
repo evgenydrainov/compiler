@@ -49,8 +49,8 @@ MakeBinaryNode(NodeType type,
 			   Arena *arena)
 {
 	AstNode *node = MakeNode(type, line, arena);
-	node->lhs = lhs;
-	node->rhs = rhs;
+	node->binary.lhs = lhs;
+	node->binary.rhs = rhs;
 
 	return node;
 }
@@ -61,7 +61,7 @@ MakeNumberNode(int line,
 			   Arena *arena)
 {
 	AstNode *node = MakeNode(NodeType_Number, line, arena);
-	node->numberValue = numberValue;
+	node->number.value = numberValue;
 
 	return node;
 }
@@ -153,8 +153,8 @@ ParseAtom(Parser *parser,
 		AstNode *rhs = ParseAtom(parser, lexer, arena);
 
 		AstNode *node = MakeNode(NodeType_Subtract, line, arena);
-		node->lhs = lhs;
-		node->rhs = rhs;
+		node->binary.lhs = lhs;
+		node->binary.rhs = rhs;
 
 		return node;
 	}
@@ -162,7 +162,7 @@ ParseAtom(Parser *parser,
 	if (parser->current.type == TokenType_Identifier)
 	{
 		AstNode *node = MakeNode(NodeType_Var, parser->current.line, arena);
-		node->name = parser->current.str;
+		node->var.name = parser->current.str;
 
 		NextToken(parser, lexer);
 
@@ -274,8 +274,8 @@ ParseBlock(Parser *parser,
 	}
 
 	AstNode *block = MakeNode(NodeType_Block, openBraceTokenLine, arena);
-	block->statements = PushArray(arena, MAX_STATEMENTS, AstNode *);
-	block->numStatements = 0;
+	block->block.statements = PushArray(arena, MAX_STATEMENTS, AstNode *);
+	block->block.numStatements = 0;
 
 	while (parser->current.type != TokenType_RightBrace
 		   && !parser->hadError)
@@ -286,8 +286,8 @@ ParseBlock(Parser *parser,
 			break;
 		}
 
-		Assert(block->numStatements < MAX_STATEMENTS);
-		block->statements[block->numStatements++] = statement;
+		Assert(block->block.numStatements < MAX_STATEMENTS);
+		block->block.statements[block->block.numStatements++] = statement;
 	}
 
 	if (!ExpectToken(parser, lexer, TokenType_RightBrace))
@@ -330,9 +330,9 @@ ParseStatement(Parser *parser,
 		}
 
 		AstNode *node = MakeNode(NodeType_If, ifTokenLine, arena);
-		node->condition = condition;
-		node->thenBlock = thenBlock;
-		node->elseBlock = elseBlock;
+		node->_if.condition = condition;
+		node->_if.thenBlock = thenBlock;
+		node->_if.elseBlock = elseBlock;
 
 		return node;
 	}
@@ -355,8 +355,8 @@ ParseStatement(Parser *parser,
 		AstNode *loopBody = ParseBlock(parser, lexer, arena);
 
 		AstNode *node = MakeNode(NodeType_While, whileTokenLine, arena);
-		node->condition = condition;
-		node->thenBlock = loopBody;
+		node->_while.condition = condition;
+		node->_while.body = loopBody;
 
 		return node;
 	}
@@ -377,7 +377,7 @@ ParseStatement(Parser *parser,
 		}
 
 		AstNode *node = MakeNode(NodeType_Print, printTokenLine, arena);
-		node->rhs = expr;
+		node->print.expr = expr;
 
 		return node;
 	}
@@ -400,7 +400,7 @@ ParseStatement(Parser *parser,
 			return nullptr;
 		}
 
-		string name = expr->name;
+		string name = expr->var.name;
 
 		// eat the colon
 		NextToken(parser, lexer);
@@ -427,8 +427,8 @@ ParseStatement(Parser *parser,
 			}
 
 			AstNode *node = MakeNode(NodeType_VarDecl, equalTokenLine, arena);
-			node->rhs = rhs;
-			node->name = name;
+			node->assign.expr = rhs;
+			node->assign.name = name;
 
 			return node;
 		}
@@ -445,8 +445,8 @@ ParseStatement(Parser *parser,
 			AstNode *rhs = MakeNumberNode(-1, 0, arena);
 
 			AstNode *node = MakeNode(NodeType_VarDecl, semicolonTokenLine, arena);
-			node->rhs = rhs;
-			node->name = name;
+			node->assign.expr = rhs;
+			node->assign.name = name;
 
 			return node;
 		}
@@ -465,7 +465,7 @@ ParseStatement(Parser *parser,
 			return nullptr;
 		}
 
-		string name = expr->name;
+		string name = expr->var.name;
 
 		int equalTokenLine = parser->current.line;
 
@@ -475,8 +475,8 @@ ParseStatement(Parser *parser,
 		AstNode *rhs = ParseExpression(parser, lexer, 0, arena);
 
 		AstNode *node = MakeNode(NodeType_Assign, equalTokenLine, arena);
-		node->rhs = rhs;
-		node->name = name;
+		node->assign.expr = rhs;
+		node->assign.name = name;
 
 		if (!ExpectToken(parser, lexer, TokenType_Semicolon))
 		{

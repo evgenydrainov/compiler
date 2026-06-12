@@ -7,6 +7,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "codegen.h"
+#include "semantic_pass.h"
 
 internal string
 LoadFile(const char *fileName)
@@ -52,13 +53,16 @@ PrintTree(AstNode *node,
 
 	if (node->type == NodeType_Number)
 	{
-		printf(" (%d)", node->numberValue);
+		printf(" (%d)", node->number.value);
 	}
 	else if (node->type == NodeType_VarDecl
-			 || node->type == NodeType_Var
 			 || node->type == NodeType_Assign)
 	{
-		printf(" (" STR_FMT ")", STR_ARG(node->name));
+		printf(" (" STR_FMT ")", STR_ARG(node->assign.name));
+	}
+	else if (node->type == NodeType_Var)
+	{
+		printf(" (" STR_FMT ")", STR_ARG(node->var.name));
 	}
 
 	printf("\n");
@@ -66,51 +70,82 @@ PrintTree(AstNode *node,
 	char childPrefix[256];
 	snprintf(childPrefix, sizeof(childPrefix), "%s%s", prefix, isLeft ? "|   " : "    ");
 
-	if (node->type == NodeType_Block)
+	switch (node->type)
 	{
-		for (int i = 0;
-			 i < node->numStatements;
-			 i++)
+		case NodeType_Block:
 		{
-			AstNode *statement = node->statements[i];
+			for (int i = 0;
+				 i < node->block.numStatements;
+				 i++)
+			{
+				AstNode *statement = node->block.statements[i];
 
-			PrintTree(statement, childPrefix, i != node->numStatements-1);
-		}
-	}
-	else if (node->type == NodeType_If)
-	{
-		if (node->elseBlock)
+				PrintTree(statement, childPrefix, i != node->block.numStatements-1);
+			}
+		} break;
+
+		case NodeType_If:
 		{
-			PrintTree(node->condition, childPrefix, true);
-			PrintTree(node->thenBlock, childPrefix, true);
-			PrintTree(node->elseBlock, childPrefix, false);
-		}
-		else
+			if (node->_if.elseBlock)
+			{
+				PrintTree(node->_if.condition, childPrefix, true);
+				PrintTree(node->_if.thenBlock, childPrefix, true);
+				PrintTree(node->_if.elseBlock, childPrefix, false);
+			}
+			else
+			{
+				PrintTree(node->_if.condition, childPrefix, true);
+				PrintTree(node->_if.thenBlock, childPrefix, false);
+			}
+		} break;
+
+		case NodeType_While:
 		{
-			PrintTree(node->condition, childPrefix, true);
-			PrintTree(node->thenBlock, childPrefix, false);
-		}
-	}
-	else if (node->type == NodeType_While)
-	{
-		PrintTree(node->condition, childPrefix, true);
-		PrintTree(node->thenBlock, childPrefix, false);
-	}
-	else
-	{
-		if (node->lhs && node->rhs)
+			PrintTree(node->_while.condition, childPrefix, true);
+			PrintTree(node->_while.body, childPrefix, false);
+		} break;
+
+		case NodeType_Add:
+		case NodeType_Subtract:
+		case NodeType_Multiply:
+		case NodeType_Divide:
+		case NodeType_Less:
+		case NodeType_Greater:
+		case NodeType_EqualEqual:
+		case NodeType_LessEqual:
+		case NodeType_GreaterEqual:
+		case NodeType_NotEqual:
 		{
-			PrintTree(node->lhs, childPrefix, true);
-			PrintTree(node->rhs, childPrefix, false);
-		}
-		else if (node->lhs)
+			if (node->binary.lhs && node->binary.rhs)
+			{
+				PrintTree(node->binary.lhs, childPrefix, true);
+				PrintTree(node->binary.rhs, childPrefix, false);
+			}
+			else if (node->binary.lhs)
+			{
+				PrintTree(node->binary.lhs, childPrefix, false);
+			}
+			else if (node->binary.rhs)
+			{
+				PrintTree(node->binary.rhs, childPrefix, false);
+			}
+		} break;
+
+		case NodeType_Print:
 		{
-			PrintTree(node->lhs, childPrefix, false);
-		}
-		else if (node->rhs)
+			PrintTree(node->print.expr, childPrefix, false);
+		} break;
+
+		case NodeType_Assign:
+		case NodeType_VarDecl:
 		{
-			PrintTree(node->rhs, childPrefix, false);
-		}
+			PrintTree(node->assign.expr, childPrefix, false);
+		} break;
+
+		case NodeType_Var:
+		case NodeType_Number:
+		{
+		} break;
 	}
 }
 
@@ -164,33 +199,44 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	PrintTree(program, "", false);
+	SemanticPassContext semanticContext = {};
+	SemanticPass(program, &semanticContext);
 
-	CodegenContext codegenContext = {};
-
-	FILE *out = fopen("test.asm", "wb");
-	Generate_x86_64(program, out, &codegenContext);
-	fclose(out);
-
-	if (system("%USERPROFILE%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 test.asm -o test.obj") == 0)
+	if (!semanticContext.hadError)
 	{
-		if (system("\"\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe\" "
-           "/nologo test.obj libcmtd.lib "
-           "/LIBPATH:\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x64\" "
-           "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\" "
-           "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"\"") == 0)
+		PrintTree(program, "", false);
+
+		CodegenContext codegenContext = {};
+
+		FILE *out = fopen("test.asm", "wb");
+		Generate_x86_64(program, out, &codegenContext);
+		fclose(out);
+
+		if (system("%USERPROFILE%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 test.asm -o test.obj") == 0)
 		{
-			system("test.exe");
+			if (system("\"\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe\" "
+			   "/nologo test.obj libcmtd.lib "
+			   "/LIBPATH:\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x64\" "
+			   "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\" "
+			   "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"\"") == 0)
+			{
+				system("test.exe");
+			}
+			else
+			{
+				fprintf(stderr, "link failed\n");
+				return 1;
+			}
 		}
 		else
 		{
-			fprintf(stderr, "link failed\n");
+			fprintf(stderr, "nasm failed\n");
 			return 1;
 		}
 	}
 	else
 	{
-		fprintf(stderr, "nasm failed\n");
+		fprintf(stderr, "semantic error\n");
 		return 1;
 	}
 }
