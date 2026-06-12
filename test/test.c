@@ -1,13 +1,8 @@
 {
-	a: int;
-
-	if 2 > 1
-	{
-		a = 1;
-	}
-
-	while 2 > 1
-	{
-		a = 2;
-	}
+	a: int = 12;
+	b: int = 24;
+	print a * b;
+	print a + b;
+	print a - b;
+	print b / a;
 }

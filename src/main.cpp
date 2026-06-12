@@ -172,15 +172,25 @@ int main(int argc, char *argv[])
 	Generate_x86_64(program, out, &codegenContext);
 	fclose(out);
 
-	if (system("%USERPROFILE%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 test.asm -o test.obj") != 0)
+	if (system("%USERPROFILE%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 test.asm -o test.obj") == 0)
+	{
+		if (system("\"\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe\" "
+           "/nologo test.obj libcmtd.lib "
+           "/LIBPATH:\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x64\" "
+           "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\" "
+           "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"\"") == 0)
+		{
+			system("test.exe");
+		}
+		else
+		{
+			fprintf(stderr, "link failed\n");
+			return 1;
+		}
+	}
+	else
 	{
 		fprintf(stderr, "nasm failed\n");
-		return 1;
-	}
-
-	if (system("\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe\" /nologo test.obj /subsystem:console /entry:main"))
-	{
-		fprintf(stderr, "link failed\n");
 		return 1;
 	}
 }

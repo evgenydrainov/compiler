@@ -89,6 +89,10 @@ IdentifierType(string str)
 	{
 		result = TokenType_Do;
 	}
+	else if (str == "print")
+	{
+		result = TokenType_Print;
+	}
 
 	return result;
 }

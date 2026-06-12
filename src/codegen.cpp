@@ -276,6 +276,21 @@ GenerateStatement(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeType_Print:
+		{
+			GenerateExpression(node->rhs, table, out, context);
+
+			fprintf(out, "    pop rax\t\t\t; store expression result into rax\n");
+			fprintf(out, "\n");
+
+			fprintf(out, "    lea rcx, [rel format]\t\t; put 1st argument into rcx\n");
+			fprintf(out, "    mov rdx, rax\t\t\t; put 2nd argument into rdx\n");
+			fprintf(out, "    sub rsp, 32\t\t; push shadow space\n");
+			fprintf(out, "    call printf\n");
+			fprintf(out, "    add rsp, 32\t\t; pop shadow space\n");
+			fprintf(out, "\n");
+		} break;
+
 		default:
 		{
 			GenerateExpression(node, table, out, context);
@@ -319,6 +334,13 @@ Generate_x86_64(AstNode *program,
 
 	fprintf(out, "default rel\n");
 	fprintf(out, "global main\n");
+	fprintf(out, "extern printf\n");
+	fprintf(out, "\n");
+
+	fprintf(out, "section .data\n");
+	fprintf(out, "format: db \"%%d\", 10, 0\t\t; 10 is newline, 0 is null terminator\n");
+	fprintf(out, "\n");
+
 	fprintf(out, "section .text\n");
 	fprintf(out, "main:\n");
 	fprintf(out, "    push rbp\n");

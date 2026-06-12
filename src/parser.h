@@ -20,7 +20,8 @@
 	X(NodeType_While,        13) \
 	X(NodeType_LessEqual,    14) \
 	X(NodeType_GreaterEqual, 15) \
-	X(NodeType_NotEqual,     16)
+	X(NodeType_NotEqual,     16) \
+	X(NodeType_Print,        17)
 
 DEFINE_ENUM_WITH_VALUES(NodeType, u32, NODE_TYPE_LIST);
 

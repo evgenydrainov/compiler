@@ -361,6 +361,27 @@ ParseStatement(Parser *parser,
 		return node;
 	}
 
+	// print expr;
+	if (parser->current.type == TokenType_Print)
+	{
+		int printTokenLine = parser->current.line;
+
+		// eat the 'print'
+		NextToken(parser, lexer);
+
+		AstNode *expr = ParseExpression(parser, lexer, 0, arena);	
+
+		if (!ExpectToken(parser, lexer, TokenType_Semicolon))
+		{
+			return nullptr;
+		}
+
+		AstNode *node = MakeNode(NodeType_Print, printTokenLine, arena);
+		node->rhs = expr;
+
+		return node;
+	}
+
 	AstNode *expr = ParseExpression(parser, lexer, 0, arena);
 
 	if (parser->hadError)
