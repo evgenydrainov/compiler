@@ -13,16 +13,20 @@ struct SymbolTable
 	Symbol symbols[256];
 	int count;
 	int stackSize;
+	int maxStackSize;
+	int scopeStart;
 };
 
 inline Symbol *
-LookupSymbol(SymbolTable *table, string name)
+LookupSymbol(SymbolTable *table,
+			 string name,
+			 int scopeStart)
 {
 	Symbol *result = nullptr;
 
 	// search backwards
 	for (int i = table->count;
-		 i--;)
+		 i-- != scopeStart;)
 	{
 		Symbol *symbol = &table->symbols[i];
 		if (symbol->name == name)
@@ -39,6 +43,8 @@ inline Symbol *
 DeclareSymbol(SymbolTable *table, string name)
 {
 	table->stackSize += 8;
+
+	table->maxStackSize = Max(table->maxStackSize, table->stackSize);
 
 	Assert(table->count < ArrayCount(table->symbols));
 

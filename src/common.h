@@ -30,6 +30,9 @@ typedef double f64;
 
 #define ArrayCount(array) (sizeof(array)/sizeof((array)[0]))
 
+#define Max(A, B) ((A) >= (B) ? (A) : (B))
+#define Min(A, B) ((A) < (B) ? (A) : (B))
+
 struct string
 {
 	char *data;

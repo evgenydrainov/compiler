@@ -17,6 +17,10 @@ SemanticPassInner(AstNode *node,
 		case NodeType_Block:
 		{
 			int numSymbols = table->count;
+			int stackSize = table->stackSize;
+			int scopeStart = table->scopeStart;
+
+			table->scopeStart = table->count;
 
 			for (int i = 0;
 				 i < node->block.numStatements;
@@ -26,13 +30,15 @@ SemanticPassInner(AstNode *node,
 			}
 
 			table->count = numSymbols;
+			table->stackSize = stackSize;
+			table->scopeStart = scopeStart;
 		} break;
 
 		case NodeType_VarDecl:
 		{
 			SemanticPassInner(node->assign.expr, table, context);
 
-			if (LookupSymbol(table, node->assign.name))
+			if (LookupSymbol(table, node->assign.name, table->scopeStart))
 			{
 				fprintf(stderr, "'" STR_FMT "': redefinition\n", STR_ARG(node->assign.name));
 				context->hadError = true;
@@ -48,7 +54,7 @@ SemanticPassInner(AstNode *node,
 		{
 			SemanticPassInner(node->assign.expr, table, context);
 
-			Symbol *symbol = LookupSymbol(table, node->assign.name);
+			Symbol *symbol = LookupSymbol(table, node->assign.name, 0);
 			if (symbol)
 			{
 				node->assign.stackOffset = symbol->offset;
@@ -62,7 +68,7 @@ SemanticPassInner(AstNode *node,
 
 		case NodeType_Var:
 		{
-			Symbol *symbol = LookupSymbol(table, node->var.name);
+			Symbol *symbol = LookupSymbol(table, node->var.name, 0);
 			if (symbol)
 			{
 				node->var.stackOffset = symbol->offset;
@@ -118,6 +124,6 @@ SemanticPass(AstNode *program,
 	SymbolTable table = {};
 	SemanticPassInner(program, &table, context);
 
-	int localSize = (table.stackSize + 15) & ~15;
+	int localSize = (table.maxStackSize + 15) & ~15;
 	program->block.stackSize = localSize;
 }

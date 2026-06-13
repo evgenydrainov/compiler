@@ -382,6 +382,14 @@ ParseStatement(Parser *parser,
 		return node;
 	}
 
+	// empty scope
+	// { statements; }
+	if (parser->current.type == TokenType_LeftBrace)
+	{
+		AstNode *block = ParseBlock(parser, lexer, arena);
+		return block;
+	}
+
 	AstNode *expr = ParseExpression(parser, lexer, 0, arena);
 
 	if (parser->hadError)

@@ -234,6 +234,11 @@ GenerateStatement(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeType_Block:
+		{
+			GenerateBlock(node, out, context);
+		} break;
+
 		default:
 		{
 			GenerateExpression(node, out, context);

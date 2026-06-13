@@ -16,6 +16,7 @@ add_executable(
     src/parser.h
     src/semantic_pass.cpp
     src/semantic_pass.h
+    src/symbol_table.h
 )
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

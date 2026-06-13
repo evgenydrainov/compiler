@@ -220,7 +220,8 @@ int main(int argc, char *argv[])
 			   "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\" "
 			   "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"\"") == 0)
 			{
-				system("test.exe");
+				int code = system("test.exe");
+				printf("return code: %d\n", code);
 			}
 			else
 			{
