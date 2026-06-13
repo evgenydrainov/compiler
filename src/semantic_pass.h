@@ -3,10 +3,15 @@
 #include "common.h"
 #include "parser.h"
 
-struct SemanticPassContext
+struct SymbolTable;
+struct FunctionTable;
+
+struct SemanticContext
 {
 	bool hadError;
+	SymbolTable *symTable;
+	FunctionTable *funcTable;
 };
 
 void SemanticPass(AstNode *program,
-				  SemanticPassContext *context);
+				  SemanticContext *context);

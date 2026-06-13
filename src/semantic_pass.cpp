@@ -1,10 +1,11 @@
 #include "semantic_pass.h"
 #include "symbol_table.h"
+#include "function_table.h"
 #include <stdio.h>
 #include <stdarg.h>
 
 internal void
-Error(SemanticPassContext *context,
+Error(SemanticContext *context,
 	  AstNode *node,
 	  const char *format,
 	  ...)
@@ -22,57 +23,59 @@ Error(SemanticPassContext *context,
 }
 
 internal void
-SemanticPassInner(AstNode *node,
-				  SymbolTable *table,
-				  SemanticPassContext *context)
+Analyze(AstNode *node,
+		SemanticContext *context)
 {
 	if (!node)
 	{
 		return;
 	}
 
+	SymbolTable *symTable = context->symTable;
+	FunctionTable *funcTable = context->funcTable;
+
 	switch (node->type)
 	{
 		case NodeType_Block:
 		{
-			int numSymbols = table->count;
-			int stackSize = table->stackSize;
-			int scopeStart = table->scopeStart;
+			int numSymbols = symTable->count;
+			int stackSize = symTable->stackSize;
+			int scopeStart = symTable->scopeStart;
 
-			table->scopeStart = table->count;
+			symTable->scopeStart = symTable->count;
 
 			for (int i = 0;
 				 i < node->block.numStatements;
 				 i++)
 			{
-				SemanticPassInner(node->block.statements[i], table, context);
+				Analyze(node->block.statements[i], context);
 			}
 
-			table->count = numSymbols;
-			table->stackSize = stackSize;
-			table->scopeStart = scopeStart;
+			symTable->count = numSymbols;
+			symTable->stackSize = stackSize;
+			symTable->scopeStart = scopeStart;
 		} break;
 
 		case NodeType_VarDecl:
 		{
-			SemanticPassInner(node->assign.expr, table, context);
+			Analyze(node->assign.expr, context);
 
-			if (LookupSymbol(table, node->assign.name, table->scopeStart))
+			if (LookupSymbol(symTable, node->assign.name, symTable->scopeStart))
 			{
 				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->assign.name));
 			}
 			else
 			{
-				Symbol *symbol = DeclareSymbol(table, node->assign.name);
+				Symbol *symbol = DeclareSymbol(symTable, node->assign.name);
 				node->assign.stackOffset = symbol->offset;
 			}
 		} break;
 
 		case NodeType_Assign:
 		{
-			SemanticPassInner(node->assign.expr, table, context);
+			Analyze(node->assign.expr, context);
 
-			Symbol *symbol = LookupSymbol(table, node->assign.name, 0);
+			Symbol *symbol = LookupSymbol(symTable, node->assign.name, 0);
 			if (symbol)
 			{
 				node->assign.stackOffset = symbol->offset;
@@ -85,7 +88,7 @@ SemanticPassInner(AstNode *node,
 
 		case NodeType_Var:
 		{
-			Symbol *symbol = LookupSymbol(table, node->var.name, 0);
+			Symbol *symbol = LookupSymbol(symTable, node->var.name, 0);
 			if (symbol)
 			{
 				node->var.stackOffset = symbol->offset;
@@ -98,15 +101,15 @@ SemanticPassInner(AstNode *node,
 
 		case NodeType_If:
 		{
-			SemanticPassInner(node->_if.condition, table, context);
-			SemanticPassInner(node->_if.thenBlock, table, context);
-			SemanticPassInner(node->_if.elseBlock, table, context);
+			Analyze(node->_if.condition, context);
+			Analyze(node->_if.thenBlock, context);
+			Analyze(node->_if.elseBlock, context);
 		} break;
 
 		case NodeType_While:
 		{
-			SemanticPassInner(node->_while.condition, table, context);
-			SemanticPassInner(node->_while.body, table, context);
+			Analyze(node->_while.condition, context);
+			Analyze(node->_while.body, context);
 		} break;
 
 		case NodeType_Add:
@@ -120,22 +123,30 @@ SemanticPassInner(AstNode *node,
 		case NodeType_GreaterEqual:
 		case NodeType_NotEqual:
 		{
-			SemanticPassInner(node->binary.lhs, table, context);
-			SemanticPassInner(node->binary.rhs, table, context);
+			Analyze(node->binary.lhs, context);
+			Analyze(node->binary.rhs, context);
 		} break;
 
 		case NodeType_Print:
 		{
-			SemanticPassInner(node->print.expr, table, context);
+			Analyze(node->print.expr, context);
 		} break;
 
 		case NodeType_Func:
 		{
-			SemanticPassInner(node->func.body, table, context);
+			Analyze(node->func.body, context);
+		} break;
+
+		case NodeType_Call:
+		{
+			Function *function = LookupFunction(funcTable, node->call.name);
+			if (!function)
+			{
+				Error(context, node, STR_FMT_QUOTED ": identifier not found", STR_ARG(node->call.name));
+			}
 		} break;
 
 		case NodeType_Number:
-		case NodeType_Call:
 		{
 		} break;
 	}
@@ -143,21 +154,51 @@ SemanticPassInner(AstNode *node,
 
 void
 SemanticPass(AstNode *program,
-			 SemanticPassContext *context)
+			 SemanticContext *context)
 {
 	Assert(program->type == NodeType_Block);
+
+	FunctionTable funcTable = {};
+	context->funcTable = &funcTable;
+
 	for (int i = 0;
 		 i < program->block.numStatements;
 		 i++)
 	{
+		Assert(program->block.statements[i]->type == NodeType_Func);
+
+		AstNode *functionDef = program->block.statements[i];
+
+		if (LookupFunction(&funcTable, functionDef->func.name))
+		{
+			Error(context, functionDef, "function " STR_FMT_QUOTED " already has a body", STR_ARG(functionDef->func.name));
+		}
+		else
+		{
+			DeclareFunction(&funcTable, functionDef->func.name);
+		}
+	}
+
+	if (context->hadError)
+	{
+		return;
+	}
+
+	for (int i = 0;
+		 i < program->block.numStatements;
+		 i++)
+	{
+		Assert(program->block.statements[i]->type == NodeType_Func);
+
 		AstNode *functionDef = program->block.statements[i];
 		AstNode *functionBody = functionDef->func.body;
 
-		SymbolTable table = {};
+		SymbolTable symTable = {};
+		context->symTable = &symTable;
 
-		SemanticPassInner(functionDef, &table, context);
+		Analyze(functionDef, context);
 
-		int stackSize = (table.maxStackSize + 15) & ~15;
+		int stackSize = (symTable.maxStackSize + 15) & ~15;
 		functionBody->block.stackSize = stackSize;
 	}
 }

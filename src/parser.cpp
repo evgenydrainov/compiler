@@ -560,7 +560,8 @@ ParseTopLevelStatement(Parser *parser,
 		return node;
 	}
 
-	Error(parser, "expected function definition");
+	Error(parser, "unexpected token %s", GetTokenTypeName(parser->current.type));
+
 	return nullptr;
 }
 

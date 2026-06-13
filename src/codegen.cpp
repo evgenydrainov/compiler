@@ -294,8 +294,6 @@ Generate_x86_64(AstNode *program,
 				FILE *out,
 				CodegenContext *context)
 {
-	int localSize = program->block.stackSize;
-
 	fprintf(out, "default rel\n");
 	fprintf(out, "global main\n");
 	fprintf(out, "extern printf\n");
@@ -308,6 +306,7 @@ Generate_x86_64(AstNode *program,
 	fprintf(out, "section .text\n");
 
 	Assert(program->type == NodeType_Block);
+
 	for (int i = 0;
 		 i < program->block.numStatements;
 		 i++)

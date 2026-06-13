@@ -64,6 +64,14 @@ PrintTree(AstNode *node,
 	{
 		printf(" (" STR_FMT ")", STR_ARG(node->var.name));
 	}
+	else if (node->type == NodeType_Func)
+	{
+		printf(" (" STR_FMT ")", STR_ARG(node->func.name));
+	}
+	else if (node->type == NodeType_Call)
+	{
+		printf(" (" STR_FMT ")", STR_ARG(node->call.name));
+	}
 
 	printf("\n");
 
@@ -205,7 +213,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	SemanticPassContext semanticContext = {};
+	SemanticContext semanticContext = {};
 	SemanticPass(program, &semanticContext);
 
 	if (!semanticContext.hadError)
