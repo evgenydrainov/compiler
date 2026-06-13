@@ -97,6 +97,10 @@ IdentifierType(string str)
 	{
 		result = TokenType_Proc;
 	}
+	else if (str == "return")
+	{
+		result = TokenType_Return;
+	}
 
 	return result;
 }

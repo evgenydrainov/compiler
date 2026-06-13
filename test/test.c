@@ -1,15 +1,15 @@
-
-
 main :: proc()
 {
 	print 100;
-	foo();
+	a: int = foo();
 
 	print 200;
-	foo();
+	b: int = foo();
 
 	print 300;
-	foo();
+	c: int = foo();
+
+	return a + b + c;
 }
 
 foo :: proc()
@@ -20,4 +20,6 @@ foo :: proc()
 		print i;
 		i = i + 1;
 	}
+
+	return i;
 }

@@ -23,7 +23,8 @@
 	X(NodeType_While,        16) \
 	X(NodeType_Print,        17) \
 	X(NodeType_Func,         18) \
-	X(NodeType_Call,         19)
+	X(NodeType_Call,         19) \
+	X(NodeType_Return,       20)
 
 DEFINE_ENUM_WITH_VALUES(NodeType, u32, NODE_TYPE_LIST);
 
@@ -93,6 +94,11 @@ struct AstNode
 		{
 			string name;
 		} call;
+
+		struct
+		{
+			AstNode *expr;
+		} ret;
 	};
 };
 

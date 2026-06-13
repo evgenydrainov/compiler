@@ -136,6 +136,15 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeType_Call:
+		{
+			fprintf(out, "    sub rsp, 32\t\t; push shadow space\n");
+			fprintf(out, "    call " STR_FMT "\n", STR_ARG(node->call.name));
+			fprintf(out, "    add rsp, 32\t\t; pop shadow space\n");
+			fprintf(out, "    push rax\t\t; push the function return value\n");
+			fprintf(out, "\n");
+		} break;
+
 		default:
 		{
 			Assert(false);
@@ -239,11 +248,12 @@ GenerateStatement(AstNode *node,
 			GenerateBlock(node, out, context);
 		} break;
 
-		case NodeType_Call:
+		case NodeType_Return:
 		{
-			fprintf(out, "    sub rsp, 32\t\t; push shadow space\n");
-			fprintf(out, "    call " STR_FMT "\n", STR_ARG(node->call.name));
-			fprintf(out, "    add rsp, 32\t\t; pop shadow space\n");
+			GenerateExpression(node->ret.expr, out, context);
+
+			fprintf(out, "    pop rax\t\t\t; store expression result into rax\n");
+			fprintf(out, "    jmp .epilogue\t\t; return\n");
 			fprintf(out, "\n");
 		} break;
 
@@ -276,6 +286,7 @@ GenerateTopLevelStatement(AstNode *node,
 
 			GenerateBlock(node->func.body, out, context);
 
+			fprintf(out, ".epilogue:\n");
 			fprintf(out, "    mov rsp, rbp\n");
 			fprintf(out, "    pop rbp\n");
 			fprintf(out, "    ret\n");

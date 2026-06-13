@@ -155,6 +155,11 @@ PrintTree(AstNode *node,
 			PrintTree(node->func.body, childPrefix, false);
 		} break;
 
+		case NodeType_Return:
+		{
+			PrintTree(node->ret.expr, childPrefix, false);
+		} break;
+
 		case NodeType_Var:
 		case NodeType_Number:
 		case NodeType_Call:
@@ -254,4 +259,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "semantic error\n");
 		return 1;
 	}
+
+	printf("Arena usage: %.2f%%\n", 100.0f*(arena.pos/(float)arena.capacity));
 }

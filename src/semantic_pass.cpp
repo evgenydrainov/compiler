@@ -146,6 +146,11 @@ Analyze(AstNode *node,
 			}
 		} break;
 
+		case NodeType_Return:
+		{
+			Analyze(node->ret.expr, context);
+		} break;
+
 		case NodeType_Number:
 		{
 		} break;
