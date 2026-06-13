@@ -129,7 +129,15 @@ SemanticPassInner(AstNode *node,
 			SemanticPassInner(node->print.expr, table, context);
 		} break;
 
-		case NodeType_Number: {} break;
+		case NodeType_Func:
+		{
+			SemanticPassInner(node->func.body, table, context);
+		} break;
+
+		case NodeType_Number:
+		case NodeType_Call:
+		{
+		} break;
 	}
 }
 
@@ -137,9 +145,19 @@ void
 SemanticPass(AstNode *program,
 			 SemanticPassContext *context)
 {
-	SymbolTable table = {};
-	SemanticPassInner(program, &table, context);
+	Assert(program->type == NodeType_Block);
+	for (int i = 0;
+		 i < program->block.numStatements;
+		 i++)
+	{
+		AstNode *functionDef = program->block.statements[i];
+		AstNode *functionBody = functionDef->func.body;
 
-	int localSize = (table.maxStackSize + 15) & ~15;
-	program->block.stackSize = localSize;
+		SymbolTable table = {};
+
+		SemanticPassInner(functionDef, &table, context);
+
+		int stackSize = (table.maxStackSize + 15) & ~15;
+		functionBody->block.stackSize = stackSize;
+	}
 }

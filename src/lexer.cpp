@@ -93,6 +93,10 @@ IdentifierType(string str)
 	{
 		result = TokenType_Print;
 	}
+	else if (str == "proc")
+	{
+		result = TokenType_Proc;
+	}
 
 	return result;
 }

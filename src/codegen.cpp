@@ -226,7 +226,7 @@ GenerateStatement(AstNode *node,
 			fprintf(out, "    pop rax\t\t\t; store expression result into rax\n");
 			fprintf(out, "\n");
 
-			fprintf(out, "    lea rcx, [rel format]\t\t; put 1st argument into rcx\n");
+			fprintf(out, "    lea rcx, [rel builtin_print_format]\t\t; put 1st argument into rcx\n");
 			fprintf(out, "    mov rdx, rax\t\t\t; put 2nd argument into rdx\n");
 			fprintf(out, "    sub rsp, 32\t\t; push shadow space\n");
 			fprintf(out, "    call printf\n");
@@ -239,12 +239,52 @@ GenerateStatement(AstNode *node,
 			GenerateBlock(node, out, context);
 		} break;
 
+		case NodeType_Call:
+		{
+			fprintf(out, "    sub rsp, 32\t\t; push shadow space\n");
+			fprintf(out, "    call " STR_FMT "\n", STR_ARG(node->call.name));
+			fprintf(out, "    add rsp, 32\t\t; pop shadow space\n");
+			fprintf(out, "\n");
+		} break;
+
 		default:
 		{
 			GenerateExpression(node, out, context);
 
 			fprintf(out, "    pop rax\t\t\t; discard the result\n");
 			fprintf(out, "\n");
+		} break;
+	}
+}
+
+internal void
+GenerateTopLevelStatement(AstNode *node,
+						  FILE *out,
+						  CodegenContext *context)
+{
+	switch (node->type)
+	{
+		case NodeType_Func:
+		{
+			AstNode *functionBody = node->func.body;
+
+			fprintf(out, STR_FMT ":\n", STR_ARG(node->func.name));
+			fprintf(out, "    push rbp\n");
+			fprintf(out, "    mov rbp, rsp\n");
+			fprintf(out, "    sub rsp, %d\n", functionBody->block.stackSize);
+			fprintf(out, "\n");
+
+			GenerateBlock(node->func.body, out, context);
+
+			fprintf(out, "    mov rsp, rbp\n");
+			fprintf(out, "    pop rbp\n");
+			fprintf(out, "    ret\n");
+			fprintf(out, "\n");
+		} break;
+
+		default:
+		{
+			Assert(false);
 		} break;
 	}
 }
@@ -262,19 +302,16 @@ Generate_x86_64(AstNode *program,
 	fprintf(out, "\n");
 
 	fprintf(out, "section .data\n");
-	fprintf(out, "format: db \"%%d\", 10, 0\t\t; 10 is newline, 0 is null terminator\n");
+	fprintf(out, "builtin_print_format: db \"%%d\", 10, 0\t\t; 10 is newline, 0 is null terminator\n");
 	fprintf(out, "\n");
 
 	fprintf(out, "section .text\n");
-	fprintf(out, "main:\n");
-	fprintf(out, "    push rbp\n");
-	fprintf(out, "    mov rbp, rsp\n");
-	fprintf(out, "    sub rsp, %d\n", localSize);
-	fprintf(out, "\n");
 
-	GenerateBlock(program, out, context);
-
-	fprintf(out, "    mov rsp, rbp\n");
-	fprintf(out, "    pop rbp\n");
-	fprintf(out, "    ret\n");
+	Assert(program->type == NodeType_Block);
+	for (int i = 0;
+		 i < program->block.numStatements;
+		 i++)
+	{
+		GenerateTopLevelStatement(program->block.statements[i], out, context);
+	}
 }

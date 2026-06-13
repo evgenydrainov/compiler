@@ -161,12 +161,36 @@ ParseAtom(Parser *parser,
 
 	if (parser->current.type == TokenType_Identifier)
 	{
-		AstNode *node = MakeNode(NodeType_Var, parser->current.line, arena);
-		node->var.name = parser->current.str;
+		int identifierLine = parser->current.line;
+		string identifierStr = parser->current.str;
 
+		// eat the identifier
 		NextToken(parser, lexer);
 
-		return node;
+		if (parser->current.type == TokenType_LeftParen)
+		{
+			// function call
+			// foo()
+
+			// eat the '('
+			NextToken(parser, lexer);
+
+			ExpectToken(parser, lexer, TokenType_RightParen);
+
+			AstNode *node = MakeNode(NodeType_Call, identifierLine, arena);
+			node->call.name = identifierStr;
+
+			return node;
+		}
+		else
+		{
+			// variable access
+
+			AstNode *node = MakeNode(NodeType_Var, identifierLine, arena);
+			node->var.name = identifierStr;
+
+			return node;
+		}
 	}
 
 	Error(parser, "unexpected token %s", GetTokenTypeName(parser->current.type));
@@ -504,12 +528,65 @@ ParseStatement(Parser *parser,
 	return expr;
 }
 
+internal AstNode *
+ParseTopLevelStatement(Parser *parser,
+					   Lexer *lexer,
+					   Arena *arena)
+{
+	// function definition
+	// main :: proc() { statements; }
+	if (parser->current.type == TokenType_Identifier)
+	{
+		int identifierTokenLine = parser->current.line;
+		string functionName = parser->current.str;
+
+		// eat the function name
+		NextToken(parser, lexer);
+
+		ExpectToken(parser, lexer, TokenType_Colon);
+		ExpectToken(parser, lexer, TokenType_Colon);
+
+		ExpectToken(parser, lexer, TokenType_Proc);
+
+		ExpectToken(parser, lexer, TokenType_LeftParen);
+		ExpectToken(parser, lexer, TokenType_RightParen);
+
+		AstNode *functionBody = ParseBlock(parser, lexer, arena);
+
+		AstNode *node = MakeNode(NodeType_Func, identifierTokenLine, arena);
+		node->func.name = functionName;
+		node->func.body = functionBody;
+
+		return node;
+	}
+
+	Error(parser, "expected function definition");
+	return nullptr;
+}
+
 AstNode *
 ParseProgram(Parser *parser,
 			 Lexer *lexer,
 			 Arena *arena)
 {
-	AstNode *block = ParseBlock(parser, lexer, arena);
+	const int MAX_STATEMENTS = 1024;
+
+	AstNode *block = MakeNode(NodeType_Block, 1, arena);
+	block->block.statements = PushArray(arena, MAX_STATEMENTS, AstNode *);
+	block->block.numStatements = 0;
+
+	while (parser->current.type != TokenType_EOF
+		   && !parser->hadError)
+	{
+		AstNode *statement = ParseTopLevelStatement(parser, lexer, arena);
+		if (parser->hadError)
+		{
+			break;
+		}
+
+		Assert(block->block.numStatements < MAX_STATEMENTS);
+		block->block.statements[block->block.numStatements++] = statement;
+	}
 
 	return block;
 }

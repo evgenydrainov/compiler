@@ -142,8 +142,14 @@ PrintTree(AstNode *node,
 			PrintTree(node->assign.expr, childPrefix, false);
 		} break;
 
+		case NodeType_Func:
+		{
+			PrintTree(node->func.body, childPrefix, false);
+		} break;
+
 		case NodeType_Var:
 		case NodeType_Number:
+		case NodeType_Call:
 		{
 		} break;
 	}
