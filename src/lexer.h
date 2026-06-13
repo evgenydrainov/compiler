@@ -5,10 +5,10 @@
 #define TOKEN_TYPE_LIST(X) \
 	X(TokenType_EOF,          0) \
 	X(TokenType_Error,        1) \
-	X(TokenType_LeftParen,    '(') \
-	X(TokenType_RightParen,   ')') \
-	X(TokenType_LeftBrace,    '{') \
-	X(TokenType_RightBrace,   '}') \
+	X(TokenType_OpenParen,    '(') \
+	X(TokenType_CloseParen,   ')') \
+	X(TokenType_OpenBrace,    '{') \
+	X(TokenType_CloseBrace,   '}') \
 	X(TokenType_Comma,        ',') \
 	X(TokenType_Dot,          '.') \
 	X(TokenType_Minus,        '-') \
@@ -20,8 +20,8 @@
 	X(TokenType_Equal,        '=') \
 	X(TokenType_Greater,      '>') \
 	X(TokenType_Less,         '<') \
-	X(TokenType_LeftBracket,  '[') \
-	X(TokenType_RightBracket, ']') \
+	X(TokenType_OpenBracket,  '[') \
+	X(TokenType_CloseBracket, ']') \
 	X(TokenType_Colon,        ':') \
 	X(TokenType_Identifier,   256) \
 	X(TokenType_String,       257) \
@@ -56,3 +56,13 @@ struct Lexer
 };
 
 Token GetToken(Lexer *lexer);
+
+inline Token
+PeekToken(Lexer *lexer)
+{
+	Lexer copyLexer = *lexer;
+
+	Token result = GetToken(&copyLexer);
+
+	return result;
+}

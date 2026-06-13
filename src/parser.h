@@ -28,6 +28,12 @@
 
 DEFINE_ENUM_WITH_VALUES(NodeType, u32, NODE_TYPE_LIST);
 
+struct Parameter
+{
+	string name;
+	int stackOffset;
+};
+
 struct AstNode
 {
 	NodeType type;
@@ -88,11 +94,17 @@ struct AstNode
 		{
 			string name;
 			AstNode *body;
+
+			Parameter *params;
+			int numParams;
 		} func;
 
 		struct
 		{
 			string name;
+
+			AstNode **expressions;
+			int numExpressions;
 		} call;
 
 		struct

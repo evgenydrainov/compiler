@@ -7,6 +7,7 @@
 struct CodegenContext
 {
 	int uniqueLabelId;
+	int stackDepth;
 };
 
 void Generate_x86_64(AstNode *root,

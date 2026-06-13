@@ -5,6 +5,7 @@
 struct Function
 {
 	string name;
+	int numParams;
 };
 
 struct FunctionTable

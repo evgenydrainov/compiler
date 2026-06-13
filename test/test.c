@@ -1,25 +1,13 @@
 main :: proc()
 {
-	print 100;
-	a: int = foo();
-
-	print 200;
-	b: int = foo();
-
-	print 300;
-	c: int = foo();
-
-	return a + b + c;
+	print factorial(5);
 }
 
-foo :: proc()
+factorial :: proc(a: int)
 {
-	i: int = 0;
-	while i < 5
+	if a <= 1
 	{
-		print i;
-		i = i + 1;
+		return a;
 	}
-
-	return i;
+	return a * factorial(a - 1);
 }
