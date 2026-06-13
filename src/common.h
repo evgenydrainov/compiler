@@ -75,6 +75,7 @@ struct string
 };
 
 #define STR_FMT "%.*s"
+#define STR_FMT_QUOTED "'%.*s'"
 #define STR_ARG(str) (int)(str).count, (str).data
 
 #define DEFINE_ENUM_WITH_VALUES(Type, Underlying, List) \

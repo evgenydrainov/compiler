@@ -1,6 +1,25 @@
 #include "semantic_pass.h"
 #include "symbol_table.h"
 #include <stdio.h>
+#include <stdarg.h>
+
+internal void
+Error(SemanticPassContext *context,
+	  AstNode *node,
+	  const char *format,
+	  ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	fprintf(stderr, "line %d: ", node->line);
+	vfprintf(stderr, format, args);
+	fprintf(stderr, "\n");
+
+	va_end(args);
+	
+	context->hadError = true;
+}
 
 internal void
 SemanticPassInner(AstNode *node,
@@ -40,8 +59,7 @@ SemanticPassInner(AstNode *node,
 
 			if (LookupSymbol(table, node->assign.name, table->scopeStart))
 			{
-				fprintf(stderr, "'" STR_FMT "': redefinition\n", STR_ARG(node->assign.name));
-				context->hadError = true;
+				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->assign.name));
 			}
 			else
 			{
@@ -61,8 +79,7 @@ SemanticPassInner(AstNode *node,
 			}
 			else
 			{
-				fprintf(stderr, "'" STR_FMT "': undeclared identifier\n", STR_ARG(node->assign.name));
-				context->hadError = true;
+				Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->assign.name));
 			}
 		} break;
 
@@ -75,8 +92,7 @@ SemanticPassInner(AstNode *node,
 			}
 			else
 			{
-				fprintf(stderr, "'" STR_FMT "': undeclared identifier\n", STR_ARG(node->var.name));
-				context->hadError = true;
+				Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->var.name));
 			}
 		} break;
 

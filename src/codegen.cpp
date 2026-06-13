@@ -80,7 +80,7 @@ GenerateExpression(AstNode *node,
 
 		case NodeType_Var:
 		{
-			fprintf(out, "    mov rax, [rbp - %d]\t; load variable '" STR_FMT "'\n",
+			fprintf(out, "    mov rax, [rbp - %d]\t; load variable " STR_FMT_QUOTED "\n",
 					node->var.stackOffset,
 					STR_ARG(node->var.name));
 			fprintf(out, "    push rax\n");
@@ -155,7 +155,7 @@ GenerateStatement(AstNode *node,
 		{
 			GenerateExpression(node->assign.expr, out, context);
 
-			fprintf(out, "    pop rax\t\t\t; store into '" STR_FMT "'\n", STR_ARG(node->assign.name));
+			fprintf(out, "    pop rax\t\t\t; store into " STR_FMT_QUOTED "\n", STR_ARG(node->assign.name));
 			fprintf(out, "    mov [rbp - %d], rax\n", node->assign.stackOffset);
 			fprintf(out, "\n");
 		} break;

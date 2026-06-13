@@ -148,7 +148,7 @@ ParseAtom(Parser *parser,
 
 		NextToken(parser, lexer);
 
-		AstNode *lhs = MakeNumberNode(-1, 0, arena);
+		AstNode *lhs = MakeNumberNode(line, 0, arena);
 
 		AstNode *rhs = ParseAtom(parser, lexer, arena);
 
@@ -450,7 +450,7 @@ ParseStatement(Parser *parser,
 			NextToken(parser, lexer);
 
 			// initialize to zero by default
-			AstNode *rhs = MakeNumberNode(-1, 0, arena);
+			AstNode *rhs = MakeNumberNode(semicolonTokenLine, 0, arena);
 
 			AstNode *node = MakeNode(NodeType_VarDecl, semicolonTokenLine, arena);
 			node->assign.expr = rhs;
