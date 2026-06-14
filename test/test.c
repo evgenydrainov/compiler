@@ -3,7 +3,7 @@ main :: proc()
 	print factorial(5);
 }
 
-factorial :: proc(a: int)
+factorial :: proc(a: i64) -> i64
 {
 	if a <= 1
 	{
@@ -11,3 +11,4 @@ factorial :: proc(a: int)
 	}
 	return a * factorial(a - 1);
 }
+

@@ -1,11 +1,13 @@
 #pragma once
 
 #include "common.h"
+#include "type.h"
 
 struct Symbol
 {
 	string name;
-	int offset;
+	int stackOffset;
+	Type type;
 };
 
 struct SymbolTable
@@ -51,7 +53,7 @@ DeclareSymbol(SymbolTable *table, string name)
 	Symbol *symbol = &table->symbols[table->count++];
 	*symbol = {};
 	symbol->name = name;
-	symbol->offset = table->stackSize;
+	symbol->stackOffset = table->stackSize;
 
 	return symbol;
 }

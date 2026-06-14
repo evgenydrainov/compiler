@@ -1,11 +1,21 @@
 #pragma once
 
 #include "common.h"
+#include "type.h"
+
+struct Parameter
+{
+	Type type;
+};
 
 struct Function
 {
 	string name;
+
+	Parameter params[32];
 	int numParams;
+
+	Type returnType;
 };
 
 struct FunctionTable

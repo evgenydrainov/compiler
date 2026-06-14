@@ -55,10 +55,13 @@ PrintTree(AstNode *node,
 	{
 		printf(" (%d)", node->number.value);
 	}
-	else if (node->type == NodeType_VarDecl
-			 || node->type == NodeType_Assign)
+	else if (node->type == NodeType_Assign)
 	{
 		printf(" (" STR_FMT ")", STR_ARG(node->assign.name));
+	}
+	else if (node->type == NodeType_VarDecl)
+	{
+		printf(" (" STR_FMT ")", STR_ARG(node->varDecl.name));
 	}
 	else if (node->type == NodeType_Var)
 	{
@@ -144,8 +147,12 @@ PrintTree(AstNode *node,
 			PrintTree(node->print.expr, childPrefix, false);
 		} break;
 
-		case NodeType_Assign:
 		case NodeType_VarDecl:
+		{
+			PrintTree(node->varDecl.expr, childPrefix, false);
+		} break;
+
+		case NodeType_Assign:
 		{
 			PrintTree(node->assign.expr, childPrefix, false);
 		} break;
@@ -163,8 +170,7 @@ PrintTree(AstNode *node,
 		case NodeType_Var:
 		case NodeType_Number:
 		case NodeType_Call:
-		{
-		} break;
+		case NodeType_Param: {} break;
 	}
 }
 
@@ -219,7 +225,7 @@ int main(int argc, char *argv[])
 	}
 
 	SemanticContext semanticContext = {};
-	SemanticPass(program, &semanticContext);
+	SemanticPass(program, &semanticContext, &arena);
 
 	if (!semanticContext.hadError)
 	{

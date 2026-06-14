@@ -3,6 +3,7 @@
 #include "function_table.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 internal void
 Error(SemanticContext *context,
@@ -86,22 +87,85 @@ AnalyzeExpression(AstNode *node,
 	{
 		case NodeType_Number:
 		{
-			// do nothing
+			node->inferredType = Type_Int64;
 		} break;
 
 		case NodeType_Add:
 		case NodeType_Subtract:
 		case NodeType_Multiply:
 		case NodeType_Divide:
+		{
+			AnalyzeExpression(node->binary.lhs, context);
+			AnalyzeExpression(node->binary.rhs, context);
+
+			if (node->binary.lhs->inferredType == node->binary.rhs->inferredType)
+			{
+				if (node->binary.lhs->inferredType == Type_Int64)
+				{
+					node->inferredType = node->binary.lhs->inferredType;
+				}
+				else
+				{
+					Error(context, node, "cannot %s '%s' and '%s': types are not numeric",
+						  GetNodeTypePrettyName(node->type),
+						  GetTypePrettyName(node->binary.lhs->inferredType),
+						  GetTypePrettyName(node->binary.rhs->inferredType));
+				}
+			}
+			else
+			{
+				Error(context, node, "cannot %s '%s' and '%s': types are different",
+					  GetNodeTypePrettyName(node->type),
+					  GetTypePrettyName(node->binary.lhs->inferredType),
+					  GetTypePrettyName(node->binary.rhs->inferredType));
+			}
+		} break;
+
 		case NodeType_Less:
 		case NodeType_Greater:
-		case NodeType_EqualEqual:
 		case NodeType_LessEqual:
 		case NodeType_GreaterEqual:
+		{
+			AnalyzeExpression(node->binary.lhs, context);
+			AnalyzeExpression(node->binary.rhs, context);
+
+			if (node->binary.lhs->inferredType == node->binary.rhs->inferredType)
+			{
+				if (node->binary.lhs->inferredType == Type_Int64)
+				{
+					node->inferredType = Type_Bool;
+				}
+				else
+				{
+					Error(context, node, "cannot compare '%s' and '%s': types are not numeric",
+						  GetTypePrettyName(node->binary.lhs->inferredType),
+						  GetTypePrettyName(node->binary.rhs->inferredType));
+				}
+			}
+			else
+			{
+				Error(context, node, "cannot compare '%s' and '%s': types are different",
+					  GetTypePrettyName(node->binary.lhs->inferredType),
+					  GetTypePrettyName(node->binary.rhs->inferredType));
+			}
+		} break;
+
+		case NodeType_EqualEqual:
 		case NodeType_NotEqual:
 		{
 			AnalyzeExpression(node->binary.lhs, context);
 			AnalyzeExpression(node->binary.rhs, context);
+
+			if (node->binary.lhs->inferredType == node->binary.rhs->inferredType)
+			{
+				node->inferredType = Type_Bool;
+			}
+			else
+			{
+				Error(context, node, "cannot compare '%s' and '%s': types are different",
+					  GetTypePrettyName(node->binary.lhs->inferredType),
+					  GetTypePrettyName(node->binary.rhs->inferredType));
+			}
 		} break;
 
 		case NodeType_Var:
@@ -109,7 +173,8 @@ AnalyzeExpression(AstNode *node,
 			Symbol *symbol = LookupSymbol(symTable, node->var.name, 0);
 			if (symbol)
 			{
-				node->var.stackOffset = symbol->offset;
+				node->var.stackOffset = symbol->stackOffset;
+				node->inferredType = symbol->type;
 			}
 			else
 			{
@@ -128,12 +193,26 @@ AnalyzeExpression(AstNode *node,
 						 i < node->call.numExpressions;
 						 i++)
 					{
-						AnalyzeExpression(node->call.expressions[i], context);
+						AstNode *expr = node->call.expressions[i];
+
+						AnalyzeExpression(expr, context);
+
+						if (expr->inferredType != function->params[i].type)
+						{
+							Error(context, expr, "cannot pass argument of type '%s': function expects '%s'",
+								  GetTypePrettyName(expr->inferredType),
+								  GetTypePrettyName(function->params[i].type));
+						}
 					}
+
+					node->inferredType = function->returnType;
 				}
 				else
 				{
-					Error(context, node, "expected %d arguments, but got %d", function->numParams, node->call.numExpressions);
+					Error(context, node, "cannot call " STR_FMT_QUOTED ": expected %d arguments, but got %d",
+						  STR_ARG(function->name),
+						  function->numParams,
+						  node->call.numExpressions);
 				}
 			}
 			else
@@ -159,16 +238,31 @@ AnalyzeStatement(AstNode *node,
 	{
 		case NodeType_VarDecl:
 		{
-			AnalyzeExpression(node->assign.expr, context);
-
-			if (LookupSymbol(symTable, node->assign.name, symTable->scopeStart))
+			if (node->varDecl.expr)
 			{
-				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->assign.name));
+				AnalyzeExpression(node->varDecl.expr, context);
+			}
+
+			if (!LookupSymbol(symTable, node->varDecl.name, symTable->scopeStart))
+			{
+				Symbol *symbol = DeclareSymbol(symTable, node->varDecl.name);
+				symbol->type = node->varDecl.type;
+
+				node->varDecl.stackOffset = symbol->stackOffset;
+
+				if (node->varDecl.expr)
+				{
+					if (node->varDecl.expr->inferredType != symbol->type)
+					{
+						Error(context, node->varDecl.expr, "cannot assign '%s' to '%s'",
+							  GetTypePrettyName(node->varDecl.expr->inferredType),
+							  GetTypePrettyName(symbol->type));
+					}
+				}
 			}
 			else
 			{
-				Symbol *symbol = DeclareSymbol(symTable, node->assign.name);
-				node->assign.stackOffset = symbol->offset;
+				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->varDecl.name));
 			}
 		} break;
 
@@ -179,7 +273,14 @@ AnalyzeStatement(AstNode *node,
 			Symbol *symbol = LookupSymbol(symTable, node->assign.name, 0);
 			if (symbol)
 			{
-				node->assign.stackOffset = symbol->offset;
+				node->assign.stackOffset = symbol->stackOffset;
+
+				if (node->assign.expr->inferredType != symbol->type)
+				{
+					Error(context, node->assign.expr, "cannot assign '%s' to '%s'",
+						  GetTypePrettyName(node->assign.expr->inferredType),
+						  GetTypePrettyName(symbol->type));
+				}
 			}
 			else
 			{
@@ -200,12 +301,22 @@ AnalyzeStatement(AstNode *node,
 				AnalyzeExpression(node->_if.condition, context);
 				AnalyzeBlock(node->_if.thenBlock, context);
 			}
+
+			if (node->_if.condition->inferredType != Type_Bool)
+			{
+				Error(context, node->_if.condition, "'if' condition must be bool");
+			}
 		} break;
 
 		case NodeType_While:
 		{
 			AnalyzeExpression(node->_while.condition, context);
 			AnalyzeBlock(node->_while.body, context);
+
+			if (node->_while.condition->inferredType != Type_Bool)
+			{
+				Error(context, node->_while.condition, "'while' condition must be bool");
+			}
 		} break;
 
 		case NodeType_Print:
@@ -220,7 +331,21 @@ AnalyzeStatement(AstNode *node,
 
 		case NodeType_Return:
 		{
-			AnalyzeExpression(node->ret.expr, context);
+			Type returnExpressionType = Type_Void;
+
+			if (node->ret.expr)
+			{
+				AnalyzeExpression(node->ret.expr, context);
+				
+				returnExpressionType = node->ret.expr->inferredType;
+			}
+
+			if (returnExpressionType != context->currentFunction->func.returnType)
+			{
+				Error(context, node, "cannot return '%s': function return type is '%s'",
+					  GetTypePrettyName(returnExpressionType),
+					  GetTypePrettyName(context->currentFunction->func.returnType));
+			}
 		} break;
 
 		default:
@@ -246,11 +371,27 @@ AnalyzeTopLevelStatement(AstNode *node,
 				 i < node->func.numParams;
 				 i++)
 			{
-				Symbol *symbol = DeclareSymbol(symTable, node->func.params[i].name);
-				node->func.params[i].stackOffset = symbol->offset;
+				AstNode *param = node->func.params[i];
+
+				if (LookupSymbol(symTable, param->param.name, 0))
+				{
+					Error(context, param, STR_FMT_QUOTED ": redefinition", STR_ARG(param->param.name));
+				}
+				else
+				{
+					Symbol *symbol = DeclareSymbol(symTable, param->param.name);
+					symbol->type = param->param.type;
+
+					param->param.stackOffset = symbol->stackOffset;
+				}
 			}
 
+			AstNode *saveCurrentFunction = context->currentFunction;
+			context->currentFunction = node;
+
 			AnalyzeBlock(node->func.body, context);
+
+			context->currentFunction = saveCurrentFunction;
 
 			LeaveScope(symTable, scope);
 		} break;
@@ -264,12 +405,18 @@ AnalyzeTopLevelStatement(AstNode *node,
 
 void
 SemanticPass(AstNode *program,
-			 SemanticContext *context)
+			 SemanticContext *context,
+			 Arena *arena)
 {
 	Assert(program->type == NodeType_Block);
 
-	FunctionTable funcTable = {};
-	context->funcTable = &funcTable;
+	FunctionTable *funcTable = PushStruct(arena, FunctionTable);
+	memset(funcTable, 0, sizeof(*funcTable));
+
+	SymbolTable *symTable = PushStruct(arena, SymbolTable);
+	memset(symTable, 0, sizeof(*symTable));
+
+	context->funcTable = funcTable;
 
 	for (int i = 0;
 		 i < program->block.numStatements;
@@ -279,14 +426,24 @@ SemanticPass(AstNode *program,
 
 		AstNode *functionDef = program->block.statements[i];
 
-		if (LookupFunction(&funcTable, functionDef->func.name))
+		if (!LookupFunction(funcTable, functionDef->func.name))
 		{
-			Error(context, functionDef, "function " STR_FMT_QUOTED " already has a body", STR_ARG(functionDef->func.name));
+			Function *func = DeclareFunction(funcTable, functionDef->func.name);
+			func->numParams = functionDef->func.numParams;
+			func->returnType = functionDef->func.returnType;
+
+			for (int paramIndex = 0;
+				 paramIndex < functionDef->func.numParams;
+				 paramIndex++)
+			{
+				AstNode *paramNode = functionDef->func.params[paramIndex];
+
+				func->params[paramIndex].type = paramNode->param.type;
+			}
 		}
 		else
 		{
-			Function *func = DeclareFunction(&funcTable, functionDef->func.name);
-			func->numParams = functionDef->func.numParams;
+			Error(context, functionDef, "function " STR_FMT_QUOTED " was already defined", STR_ARG(functionDef->func.name));
 		}
 	}
 
@@ -304,12 +461,13 @@ SemanticPass(AstNode *program,
 		AstNode *functionDef = program->block.statements[i];
 		AstNode *functionBody = functionDef->func.body;
 
-		SymbolTable symTable = {};
-		context->symTable = &symTable;
+		// clear the symbol table for every function
+		memset(symTable, 0, sizeof(*symTable));
+		context->symTable = symTable;
 
 		AnalyzeTopLevelStatement(functionDef, context);
 
-		int stackSize = (symTable.maxStackSize + 15) & ~15;
+		int stackSize = (symTable->maxStackSize + 15) & ~15;
 		functionBody->block.stackSize = stackSize;
 	}
 }

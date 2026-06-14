@@ -206,6 +206,8 @@ GenerateExpression(AstNode *node,
 				"r9",
 			};
 
+			Assert(node->call.numExpressions <= 4);
+
 			int numArgumentsInRegs = Min(node->call.numExpressions, 4);
 
 			for (int i = 0;
@@ -244,6 +246,17 @@ GenerateStatement(AstNode *node,
 	switch (node->type)
 	{
 		case NodeType_VarDecl:
+		{
+			if (node->varDecl.expr)
+			{
+				GenerateExpression(node->varDecl.expr, out, context);
+
+				WritePop(out, context, "    pop rax\t\t\t; store into " STR_FMT_QUOTED "\n", STR_ARG(node->varDecl.name));
+				fprintf(out, "    mov [rbp - %d], rax\n", node->varDecl.stackOffset);
+				fprintf(out, "\n");
+			}
+		} break;
+
 		case NodeType_Assign:
 		{
 			GenerateExpression(node->assign.expr, out, context);
@@ -334,9 +347,13 @@ GenerateStatement(AstNode *node,
 
 		case NodeType_Return:
 		{
-			GenerateExpression(node->ret.expr, out, context);
+			if (node->ret.expr)
+			{
+				GenerateExpression(node->ret.expr, out, context);
 
-			WritePop(out, context, "    pop rax\t\t\t; store expression result into rax\n");
+				WritePop(out, context, "    pop rax\t\t\t; store expression result into rax\n");
+			}
+			
 			fprintf(out, "    jmp .epilogue\t\t; return\n");
 			fprintf(out, "\n");
 		} break;
@@ -376,12 +393,17 @@ GenerateTopLevelStatement(AstNode *node,
 				"r9",
 			};
 
+			Assert(node->func.numParams <= 4);
+
 			int numParamsInRegs = Min(node->func.numParams, 4);
+
 			for (int i = 0;
 				 i < numParamsInRegs;
 				 i++)
 			{
-				fprintf(out, "    mov [rbp - %d], %s\t\t; unpack argument\n", node->func.params[i].stackOffset, paramRegs[i]);
+				AstNode *param = node->func.params[i];
+
+				fprintf(out, "    mov [rbp - %d], %s\t\t; unpack argument\n", param->param.stackOffset, paramRegs[i]);
 			}
 			fprintf(out, "\n");
 

@@ -89,13 +89,23 @@ struct string
 	{                                                   \
 		switch (value)                                  \
 		{                                               \
-			List(GENERATE_ENUM_CASE)                    \
+			List(GENERATE_ENUM_NAME)                    \
+		}                                               \
+		return "unknown";                               \
+	}                                                   \
+	inline const char *                                 \
+	Get##Type##PrettyName(Type value)                   \
+	{                                                   \
+		switch (value)                                  \
+		{                                               \
+			List(GENERATE_ENUM_PRETTY_NAME)             \
 		}                                               \
 		return "unknown";                               \
 	}
 
-#define GENERATE_ENUM(Name, Value) Name=Value,
-#define GENERATE_ENUM_CASE(Name, Value) case Name: return #Name;
+#define GENERATE_ENUM(Name, Value, PrettyName) Name=Value,
+#define GENERATE_ENUM_NAME(Name, Value, PrettyName) case Name: return #Name;
+#define GENERATE_ENUM_PRETTY_NAME(Name, Value, PrettyName) case Name: return PrettyName;
 
 struct Arena
 {
