@@ -26,7 +26,8 @@
 	X(NodeType_Func,             18,     ""             ) \
 	X(NodeType_Call,             19,     ""             ) \
 	X(NodeType_Return,           20,     ""             ) \
-	X(NodeType_Param,            21,     ""             )
+	X(NodeType_Param,            21,     ""             ) \
+	X(NodeType_Bool,             22,     ""             )
 
 DEFINE_ENUM_WITH_VALUES(NodeType, u32, NODE_TYPE_LIST);
 
@@ -125,6 +126,11 @@ struct AstNode
 			int stackOffset;
 			Type type;
 		} param;
+
+		struct
+		{
+			bool value;
+		} _bool;
 	};
 };
 

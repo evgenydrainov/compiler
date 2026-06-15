@@ -94,6 +94,13 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeType_Bool:
+		{
+			fprintf(out, "    mov rax, %d\t\t; load boolean literal\n", (int)node->_bool.value);
+			WritePush(out, context, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
 		case NodeType_Add:
 		case NodeType_Subtract:
 		case NodeType_Multiply:

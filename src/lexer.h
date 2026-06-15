@@ -37,7 +37,9 @@
 	X(TokenType_Do,               267,       "do"             ) \
 	X(TokenType_Print,            268,       "print"          ) \
 	X(TokenType_Proc,             269,       "proc"           ) \
-	X(TokenType_Return,           270,       "return"         )
+	X(TokenType_Return,           270,       "return"         ) \
+	X(TokenType_True,             271,       "true"           ) \
+	X(TokenType_False,            272,       "false"          )
 
 DEFINE_ENUM_WITH_VALUES(TokenType, u32, TOKEN_TYPE_LIST);
 

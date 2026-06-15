@@ -101,6 +101,14 @@ IdentifierType(string str)
 	{
 		result = TokenType_Return;
 	}
+	else if (str == "true")
+	{
+		result = TokenType_True;
+	}
+	else if (str == "false")
+	{
+		result = TokenType_False;
+	}
 
 	return result;
 }

@@ -1,6 +1,10 @@
 main :: proc()
 {
-	print factorial(5);
+	a: bool = true;
+	if a
+	{
+		print factorial(5);
+	}
 }
 
 factorial :: proc(a: i64) -> i64

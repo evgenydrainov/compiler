@@ -90,6 +90,11 @@ AnalyzeExpression(AstNode *node,
 			node->inferredType = Type_Int64;
 		} break;
 
+		case NodeType_Bool:
+		{
+			node->inferredType = Type_Bool;
+		} break;
+
 		case NodeType_Add:
 		case NodeType_Subtract:
 		case NodeType_Multiply:

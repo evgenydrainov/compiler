@@ -219,6 +219,20 @@ ParseAtom(Parser *parser,
 			}
 		} break;
 
+		case TokenType_True:
+		{
+			node = MakeNode(NodeType_Bool, parser->current.line, arena);
+			node->_bool.value = true;
+			AdvanceToken(parser, lexer);
+		} break;
+
+		case TokenType_False:
+		{
+			node = MakeNode(NodeType_Bool, parser->current.line, arena);
+			node->_bool.value = false;
+			AdvanceToken(parser, lexer);
+		} break;
+
 		default:
 		{
 			UnexpectedCurrentToken(parser);

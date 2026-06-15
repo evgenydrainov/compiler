@@ -170,6 +170,7 @@ PrintTree(AstNode *node,
 		case NodeType_Var:
 		case NodeType_Number:
 		case NodeType_Call:
+		case NodeType_Bool:
 		case NodeType_Param: {} break;
 	}
 }
