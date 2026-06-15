@@ -21,11 +21,22 @@ add_executable(
     src/type.h
 )
 
+add_executable(
+    run_tests
+    src/common.h
+    src/run_tests.cpp
+)
+
+add_dependencies(run_tests compiler)
+
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    PROPERTY VS_STARTUP_PROJECT compiler
+    PROPERTY VS_STARTUP_PROJECT run_tests
 )
 
 set_property(TARGET compiler PROPERTY
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+set_property(TARGET run_tests PROPERTY
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
@@ -36,4 +47,5 @@ if(MSVC)
         /we4062 /we5262
     )
     target_compile_options(compiler PRIVATE ${FLAGS})
+    target_compile_options(run_tests PRIVATE ${FLAGS})
 endif()
