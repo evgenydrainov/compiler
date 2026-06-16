@@ -9,6 +9,8 @@ add_executable(
     src/codegen.cpp
     src/codegen.h
     src/common.h
+    src/compiler.cpp
+    src/compiler.h
     src/function_table.h
     src/lexer.cpp
     src/lexer.h

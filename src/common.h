@@ -130,10 +130,6 @@ PushSize(Arena *arena,
 		 usize size,
 		 usize alignment = DEFAULT_ALIGNMENT)
 {
-	//
-	// Assume that arena->data is already aligned
-	//
-
 	usize alignedPos = AlignForward(arena->pos, alignment);
 
 	Assert(alignedPos + size <= arena->capacity);
@@ -157,3 +153,25 @@ PushArena(Arena *arena, usize capacity)
 
 	return result;
 }
+
+template <typename T>
+struct ExitScope
+{
+	T lambda;
+	ExitScope(T lambda) : lambda(lambda) {}
+	~ExitScope() { lambda(); }
+	ExitScope(const ExitScope&);
+private:
+	ExitScope &operator=(const ExitScope&);
+};
+
+struct ExitScopeHelp
+{
+	template <typename T>
+	ExitScope<T> operator+(T t) { return t; }
+};
+
+#define defer const auto &CONCATENATE(_defer, __LINE__) = ExitScopeHelp() + [&]()
+
+#define CONCATENATE2(a, b) a##b
+#define CONCATENATE(a, b) CONCATENATE2(a, b)

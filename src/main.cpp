@@ -1,42 +1,10 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <stdio.h>
 #include <stdlib.h>
-#include <direct.h>
+#include <string.h>
 
-#include "lexer.h"
-#include "parser.h"
-#include "codegen.h"
-#include "semantic_pass.h"
+#include "compiler.h"
 
-internal string
-LoadFile(const char *fileName)
-{
-	string result = {};
-	
-	FILE *file = fopen(fileName, "rb");
-	if (file)
-	{
-		fseek(file, 0, SEEK_END);
-		usize fileSize = ftell(file);
-
-		char *fileData = (char *)malloc(fileSize + 1);
-		if (fileData)
-		{
-			fseek(file, 0, SEEK_SET);
-			if (fread(fileData, 1, fileSize, file) == fileSize)
-			{
-				fileData[fileSize] = 0;
-				result = {fileData, fileSize};
-			}
-		}
-		
-		fclose(file);
-	}
-
-	return result;
-}
-
+#if 0
 internal void
 PrintTree(AstNode *node,
 		  const char *prefix,
@@ -174,6 +142,7 @@ PrintTree(AstNode *node,
 		case NodeType_Param: {} break;
 	}
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -183,89 +152,48 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	const char *fileName = argv[1];
+	char outputFilePath[1024];
+	strcpy_s(outputFilePath, argv[1]);
 
-	_chdir("test");
-	
-	string text = LoadFile(fileName);
-	if (text.count == 0)
 	{
-		fprintf(stderr, "Couldn't load file '%s'\n", fileName);
-		return 1;
-	}
+		size_t i;
 
-	Lexer lexer = {};
-	lexer.line = 1;
-	lexer.current = text.data;
+		bool found = false;
 
-#if 0
-	Token token = GetToken(&lexer);
-	while (token.type != TokenType_EOF)
-	{
-		printf("token: " STR_FMT "\t\ttype: %s\t\tline: %d\n",
-			   STR_ARG(token.str),
-			   GetTokenTypeName(token.type),
-			   token.line);
-		token = GetToken(&lexer);
-	}
-#endif
-
-	Arena arena = {};
-	arena.capacity = Megabytes(10);
-	arena.data = (u8 *)malloc(arena.capacity);
-
-	Parser parser = {};
-	parser.current = GetToken(&lexer);
-
-	AstNode *program = ParseProgram(&parser, &lexer, &arena);
-
-	if (!program || parser.hadError)
-	{
-		fprintf(stderr, "parser failed\n");
-		return 1;
-	}
-
-	SemanticContext semanticContext = {};
-	SemanticPass(program, &semanticContext, &arena);
-
-	if (!semanticContext.hadError)
-	{
-		PrintTree(program, "", false);
-
-		CodegenContext codegenContext = {};
-
-		FILE *out = fopen("test.asm", "wb");
-		Generate_x86_64(program, out, &codegenContext);
-		fclose(out);
-
-		if (system("%USERPROFILE%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 test.asm -o test.obj") == 0)
+		for (i = strlen(outputFilePath);
+			 i--;)
 		{
-			if (system("\"\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe\" "
-			   "/nologo test.obj msvcrt.lib legacy_stdio_definitions.lib "
-			   "/LIBPATH:\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x64\" "
-			   "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\" "
-			   "/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"\"") == 0)
+			if (outputFilePath[i] == '.')
 			{
-				int code = system("test.exe");
-				printf("return code: %d\n", code);
+				found = true;
+				break;
 			}
-			else
+			else if (outputFilePath[i] == '/'
+					 || outputFilePath[i] == '\\')
 			{
-				fprintf(stderr, "link failed\n");
-				return 1;
+				fprintf(stderr, "filename is invalid\n");
+				exit(1);
 			}
 		}
-		else
+
+		if (!found)
 		{
-			fprintf(stderr, "nasm failed\n");
-			return 1;
+			fprintf(stderr, "filename is invalid\n");
+			exit(1);
 		}
-	}
-	else
-	{
-		fprintf(stderr, "semantic error\n");
-		return 1;
+
+		/*outputFilePath[i++] = '.';
+		outputFilePath[i++] = 'a';
+		outputFilePath[i++] = 's';
+		outputFilePath[i++] = 'm';*/
+		outputFilePath[i++] = 0;
 	}
 
-	printf("Arena usage: %.2f%%\n", 100.0f*(arena.pos/(float)arena.capacity));
+	CompileOptions options = {};
+	options.inputFilePath = argv[1];
+	options.outputFilePath = outputFilePath;
+
+	CompileResult result = Compile(options);
+
+	return result;
 }
