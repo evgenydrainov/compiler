@@ -1,17 +1,26 @@
 #include "common.h"
+
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
+
 #include <direct.h>
+#include <process.h>
 
 internal void
 TestReturnCode(const char *testName, int expectedCode)
 {
-	{
-		char command[1024];
-		sprintf_s(command, "..\\build\\Debug\\compiler.exe %s.c", testName);
+	//clock_t start = clock();
 
-		int compilationResult = system(command);
-		if (compilationResult != 0)
+	{
+		char inputPath[1024];
+		sprintf_s(inputPath, "%s.c", testName);
+
+		if (_spawnl(_P_WAIT,
+					"..\\build\\Debug\\compiler.exe",
+					"compiler",
+					inputPath,
+					nullptr) != 0)
 		{
 			fprintf(stderr, "Test %s failed: compilation error\n", testName);
 			exit(1);
@@ -19,10 +28,10 @@ TestReturnCode(const char *testName, int expectedCode)
 	}
 
 	{
-		char command[1024];
-		sprintf_s(command, "%s.exe", testName);
+		char exePath[1024];
+		sprintf_s(exePath, "%s.exe", testName);
 
-		int code = system(command);
+		int code = (int)_spawnl(_P_WAIT, exePath, testName, nullptr);
 		if (code != expectedCode)
 		{
 			fprintf(stderr, "Test %s failed: result is %d, but expected %d\n", testName, code, expectedCode);
@@ -31,6 +40,10 @@ TestReturnCode(const char *testName, int expectedCode)
 
 		printf("Test %s passed (result=%d)\n", testName, code);
 	}
+
+	//clock_t end = clock();
+	//double elapsed_ms = ((double)(end - start) / CLOCKS_PER_SEC) * 1000.0;
+	//printf("Elapsed time: %.0f ms\n", elapsed_ms);
 }
 
 int main()

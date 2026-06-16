@@ -7,6 +7,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <time.h>
+
+#include <io.h>
+#include <process.h>
 
 internal string
 LoadFile(const char *fileName)
@@ -35,6 +40,48 @@ LoadFile(const char *fileName)
 	}
 
 	return result;
+}
+
+struct FindLinkerResult
+{
+	const char *linkExePath;
+	const char *libraryPath;
+};
+
+internal FindLinkerResult
+FindLinkerPath()
+{
+	const char *versionsToTry[] =
+	{
+		"14.44.35207",
+		"14.42.34433",
+	};
+
+	for (const char *version : versionsToTry)
+	{
+		char linkExePath[1024];
+		sprintf_s(linkExePath,
+				  "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\%s\\bin\\Hostx64\\x64\\link.exe",
+				  version);
+
+		char libraryPath[1024];
+		sprintf_s(libraryPath,
+				  "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\%s\\lib\\x64",
+				  version);
+
+		if (_access(linkExePath, 0) == 0)
+		{
+			FindLinkerResult result = {};
+
+			result.linkExePath = _strdup(linkExePath);
+			result.libraryPath = _strdup(libraryPath);
+
+			return result;
+		}
+	}
+
+	fprintf(stderr, "could not find link.exe");
+	exit(1);
 }
 
 CompileResult
@@ -99,28 +146,44 @@ Compile(CompileOptions options)
 	}
 
 	{
-		char nasmCall[1024];
-		sprintf_s(nasmCall, "%%USERPROFILE%%\\AppData\\Local\\bin\\NASM\\nasm.exe -f win64 %s.asm -o %s.obj", options.outputFilePath, options.outputFilePath);
+		char outputPath[1024];
+		sprintf_s(outputPath, "%s.obj", options.outputFilePath);
 
-		if (system(nasmCall) != 0)
+		char inputPath[1024];
+		sprintf_s(inputPath, "%s.asm", options.outputFilePath);
+
+		if (_spawnl(_P_WAIT,
+					"C:\\Users\\Username\\AppData\\Local\\bin\\NASM\\nasm.exe",
+					"nasm",
+					"-f", "win64",
+					"-o", outputPath,
+					inputPath,
+					nullptr) != 0)
 		{
 			return CompileResult_NasmError;
 		}
 	}
 
 	{
-		char linkerCall[1024];
-		sprintf_s(linkerCall,
-				  "\""
-				  "\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe\""
-				  " /nologo %s.obj msvcrt.lib legacy_stdio_definitions.lib"
-				  " /LIBPATH:\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x64\""
-				  " /LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\""
-				  " /LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\""
-				  "\"",
-				  options.outputFilePath);
+		FindLinkerResult findResult = FindLinkerPath();
 
-		if (system(linkerCall) != 0)
+		char inputPath[1024];
+		sprintf_s(inputPath, "%s.obj", options.outputFilePath);
+
+		char libraryArg[1024];
+		sprintf_s(libraryArg, "/LIBPATH:\"%s\"", findResult.libraryPath);
+
+		if (_spawnl(_P_WAIT,
+					findResult.linkExePath,
+					"link",
+					"/nologo",
+					inputPath,
+					"msvcrt.lib",
+					"legacy_stdio_definitions.lib",
+					libraryArg,
+					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\"",
+					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"",
+					nullptr) != 0)
 		{
 			return CompileResult_LinkerError;
 		}
