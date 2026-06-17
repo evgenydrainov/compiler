@@ -87,12 +87,12 @@ AnalyzeExpression(AstNode *node,
 	{
 		case NodeType_Number:
 		{
-			node->inferredType = Type_Int64;
+			node->inferredType.kind = TypeKind_Int64;
 		} break;
 
 		case NodeType_Bool:
 		{
-			node->inferredType = Type_Bool;
+			node->inferredType.kind = TypeKind_Bool;
 		} break;
 
 		case NodeType_Add:
@@ -103,9 +103,9 @@ AnalyzeExpression(AstNode *node,
 			AnalyzeExpression(node->binary.lhs, context);
 			AnalyzeExpression(node->binary.rhs, context);
 
-			if (node->binary.lhs->inferredType == node->binary.rhs->inferredType)
+			if (TypesEqual(node->binary.lhs->inferredType, node->binary.rhs->inferredType))
 			{
-				if (node->binary.lhs->inferredType == Type_Int64)
+				if (node->binary.lhs->inferredType.kind == TypeKind_Int64)
 				{
 					node->inferredType = node->binary.lhs->inferredType;
 				}
@@ -113,16 +113,16 @@ AnalyzeExpression(AstNode *node,
 				{
 					Error(context, node, "cannot %s '%s' and '%s': types are not numeric",
 						  GetNodeTypePrettyName(node->type),
-						  GetTypePrettyName(node->binary.lhs->inferredType),
-						  GetTypePrettyName(node->binary.rhs->inferredType));
+						  GetTypeKindPrettyName(node->binary.lhs->inferredType.kind),
+						  GetTypeKindPrettyName(node->binary.rhs->inferredType.kind));
 				}
 			}
 			else
 			{
 				Error(context, node, "cannot %s '%s' and '%s': types are different",
 					  GetNodeTypePrettyName(node->type),
-					  GetTypePrettyName(node->binary.lhs->inferredType),
-					  GetTypePrettyName(node->binary.rhs->inferredType));
+					  GetTypeKindPrettyName(node->binary.lhs->inferredType.kind),
+					  GetTypeKindPrettyName(node->binary.rhs->inferredType.kind));
 			}
 		} break;
 
@@ -134,24 +134,24 @@ AnalyzeExpression(AstNode *node,
 			AnalyzeExpression(node->binary.lhs, context);
 			AnalyzeExpression(node->binary.rhs, context);
 
-			if (node->binary.lhs->inferredType == node->binary.rhs->inferredType)
+			if (TypesEqual(node->binary.lhs->inferredType, node->binary.rhs->inferredType))
 			{
-				if (node->binary.lhs->inferredType == Type_Int64)
+				if (node->binary.lhs->inferredType.kind == TypeKind_Int64)
 				{
-					node->inferredType = Type_Bool;
+					node->inferredType.kind = TypeKind_Bool;
 				}
 				else
 				{
 					Error(context, node, "cannot compare '%s' and '%s': types are not numeric",
-						  GetTypePrettyName(node->binary.lhs->inferredType),
-						  GetTypePrettyName(node->binary.rhs->inferredType));
+						  GetTypeKindPrettyName(node->binary.lhs->inferredType.kind),
+						  GetTypeKindPrettyName(node->binary.rhs->inferredType.kind));
 				}
 			}
 			else
 			{
 				Error(context, node, "cannot compare '%s' and '%s': types are different",
-					  GetTypePrettyName(node->binary.lhs->inferredType),
-					  GetTypePrettyName(node->binary.rhs->inferredType));
+					  GetTypeKindPrettyName(node->binary.lhs->inferredType.kind),
+					  GetTypeKindPrettyName(node->binary.rhs->inferredType.kind));
 			}
 		} break;
 
@@ -161,15 +161,15 @@ AnalyzeExpression(AstNode *node,
 			AnalyzeExpression(node->binary.lhs, context);
 			AnalyzeExpression(node->binary.rhs, context);
 
-			if (node->binary.lhs->inferredType == node->binary.rhs->inferredType)
+			if (TypesEqual(node->binary.lhs->inferredType, node->binary.rhs->inferredType))
 			{
-				node->inferredType = Type_Bool;
+				node->inferredType.kind = TypeKind_Bool;
 			}
 			else
 			{
 				Error(context, node, "cannot compare '%s' and '%s': types are different",
-					  GetTypePrettyName(node->binary.lhs->inferredType),
-					  GetTypePrettyName(node->binary.rhs->inferredType));
+					  GetTypeKindPrettyName(node->binary.lhs->inferredType.kind),
+					  GetTypeKindPrettyName(node->binary.rhs->inferredType.kind));
 			}
 		} break;
 
@@ -202,11 +202,11 @@ AnalyzeExpression(AstNode *node,
 
 						AnalyzeExpression(expr, context);
 
-						if (expr->inferredType != function->params[i].type)
+						if (!TypesEqual(expr->inferredType, function->params[i].type))
 						{
 							Error(context, expr, "cannot pass argument of type '%s': function expects '%s'",
-								  GetTypePrettyName(expr->inferredType),
-								  GetTypePrettyName(function->params[i].type));
+								  GetTypeKindPrettyName(expr->inferredType.kind),
+								  GetTypeKindPrettyName(function->params[i].type.kind));
 						}
 					}
 
@@ -257,11 +257,11 @@ AnalyzeStatement(AstNode *node,
 
 				if (node->varDecl.expr)
 				{
-					if (node->varDecl.expr->inferredType != symbol->type)
+					if (!TypesEqual(node->varDecl.expr->inferredType, symbol->type))
 					{
 						Error(context, node->varDecl.expr, "cannot assign '%s' to '%s'",
-							  GetTypePrettyName(node->varDecl.expr->inferredType),
-							  GetTypePrettyName(symbol->type));
+							  GetTypeKindPrettyName(node->varDecl.expr->inferredType.kind),
+							  GetTypeKindPrettyName(symbol->type.kind));
 					}
 				}
 			}
@@ -280,11 +280,11 @@ AnalyzeStatement(AstNode *node,
 			{
 				node->assign.stackOffset = symbol->stackOffset;
 
-				if (node->assign.expr->inferredType != symbol->type)
+				if (!TypesEqual(node->assign.expr->inferredType, symbol->type))
 				{
 					Error(context, node->assign.expr, "cannot assign '%s' to '%s'",
-						  GetTypePrettyName(node->assign.expr->inferredType),
-						  GetTypePrettyName(symbol->type));
+						  GetTypeKindPrettyName(node->assign.expr->inferredType.kind),
+						  GetTypeKindPrettyName(symbol->type.kind));
 				}
 			}
 			else
@@ -307,7 +307,7 @@ AnalyzeStatement(AstNode *node,
 				AnalyzeBlock(node->_if.thenBlock, context);
 			}
 
-			if (node->_if.condition->inferredType != Type_Bool)
+			if (node->_if.condition->inferredType.kind != TypeKind_Bool)
 			{
 				Error(context, node->_if.condition, "'if' condition must be bool");
 			}
@@ -318,7 +318,7 @@ AnalyzeStatement(AstNode *node,
 			AnalyzeExpression(node->_while.condition, context);
 			AnalyzeBlock(node->_while.body, context);
 
-			if (node->_while.condition->inferredType != Type_Bool)
+			if (node->_while.condition->inferredType.kind != TypeKind_Bool)
 			{
 				Error(context, node->_while.condition, "'while' condition must be bool");
 			}
@@ -336,7 +336,8 @@ AnalyzeStatement(AstNode *node,
 
 		case NodeType_Return:
 		{
-			Type returnExpressionType = Type_Void;
+			Type returnExpressionType = {};
+			returnExpressionType.kind = TypeKind_Void;
 
 			if (node->ret.expr)
 			{
@@ -345,11 +346,11 @@ AnalyzeStatement(AstNode *node,
 				returnExpressionType = node->ret.expr->inferredType;
 			}
 
-			if (returnExpressionType != context->currentFunction->func.returnType)
+			if (!TypesEqual(returnExpressionType, context->currentFunction->func.returnType))
 			{
 				Error(context, node, "cannot return '%s': function return type is '%s'",
-					  GetTypePrettyName(returnExpressionType),
-					  GetTypePrettyName(context->currentFunction->func.returnType));
+					  GetTypeKindPrettyName(returnExpressionType.kind),
+					  GetTypeKindPrettyName(context->currentFunction->func.returnType.kind));
 			}
 		} break;
 

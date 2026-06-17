@@ -375,11 +375,11 @@ ParseType(Parser *parser,
 
 	if (parser->current.str == "i64")
 	{
-		type = Type_Int64;
+		type.kind = TypeKind_Int64;
 	}
 	else if (parser->current.str == "bool")
 	{
-		type = Type_Bool;
+		type.kind = TypeKind_Bool;
 	}
 	else
 	{
@@ -670,7 +670,7 @@ ParseFunctionDefinition(Parser *parser,
 
 	AdvanceToken(parser, lexer); // eat the ')'
 
-	node->func.returnType = Type_Void;
+	node->func.returnType.kind = TypeKind_Void;
 
 	if (parser->current.type == TokenType_Arrow)
 	{

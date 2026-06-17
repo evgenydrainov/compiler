@@ -101,7 +101,7 @@ Compile(CompileOptions options)
 	lexer.current = sourceCode.data;
 
 	Arena arena = {};
-	arena.capacity = Megabytes(10);
+	arena.capacity = Megabytes(1);
 	arena.data = (u8 *)malloc(arena.capacity);
 
 	defer { free(arena.data); };
