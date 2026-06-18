@@ -4,38 +4,38 @@
 #include "lexer.h"
 #include "type.h"
 
-#define NODE_TYPE_LIST(X)    \
-	X(NodeType_Add,              0,      "add"          )  \
-	X(NodeType_Subtract,         1,      "subtract"     )  \
-	X(NodeType_Multiply,         2,      "multiply"     )  \
-	X(NodeType_Divide,           3,      "divide"       )  \
-	X(NodeType_Less,             4,      ""             )  \
-	X(NodeType_Greater,          5,      ""             )  \
-	X(NodeType_EqualEqual,       6,      ""             )  \
-	X(NodeType_LessEqual,        7,      ""             )  \
-	X(NodeType_GreaterEqual,     8,      ""             )  \
-	X(NodeType_NotEqual,         9,      ""             )  \
-	X(NodeType_Number,           10,     ""             ) \
-	X(NodeType_Var,              11,     ""             ) \
-	X(NodeType_Assign,           12,     ""             ) \
-	X(NodeType_VarDecl,          13,     ""             ) \
-	X(NodeType_Block,            14,     ""             ) \
-	X(NodeType_If,               15,     ""             ) \
-	X(NodeType_While,            16,     ""             ) \
-	X(NodeType_Print,            17,     ""             ) \
-	X(NodeType_Func,             18,     ""             ) \
-	X(NodeType_Call,             19,     ""             ) \
-	X(NodeType_Return,           20,     ""             ) \
-	X(NodeType_Param,            21,     ""             ) \
-	X(NodeType_Bool,             22,     ""             ) \
-	X(NodeType_AddressOf,        23,     ""             ) \
-	X(NodeType_Deref,            24,     ""             )
+#define NODE_KIND_LIST(X)    \
+	X(NodeKind_Add,              0,      "add"          )  \
+	X(NodeKind_Subtract,         1,      "subtract"     )  \
+	X(NodeKind_Multiply,         2,      "multiply"     )  \
+	X(NodeKind_Divide,           3,      "divide"       )  \
+	X(NodeKind_Less,             4,      ""             )  \
+	X(NodeKind_Greater,          5,      ""             )  \
+	X(NodeKind_EqualEqual,       6,      ""             )  \
+	X(NodeKind_LessEqual,        7,      ""             )  \
+	X(NodeKind_GreaterEqual,     8,      ""             )  \
+	X(NodeKind_NotEqual,         9,      ""             )  \
+	X(NodeKind_Number,           10,     ""             ) \
+	X(NodeKind_Var,              11,     ""             ) \
+	X(NodeKind_Assign,           12,     ""             ) \
+	X(NodeKind_VarDecl,          13,     ""             ) \
+	X(NodeKind_Block,            14,     ""             ) \
+	X(NodeKind_If,               15,     ""             ) \
+	X(NodeKind_While,            16,     ""             ) \
+	X(NodeKind_Print,            17,     ""             ) \
+	X(NodeKind_Func,             18,     ""             ) \
+	X(NodeKind_Call,             19,     ""             ) \
+	X(NodeKind_Return,           20,     ""             ) \
+	X(NodeKind_Param,            21,     ""             ) \
+	X(NodeKind_Bool,             22,     ""             ) \
+	X(NodeKind_AddressOf,        23,     ""             ) \
+	X(NodeKind_Deref,            24,     ""             )
 
-DEFINE_ENUM_WITH_VALUES(NodeType, u32, NODE_TYPE_LIST);
+DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
 struct AstNode
 {
-	NodeType type;
+	NodeKind kind;
 	int line;
 
 	Type inferredType;

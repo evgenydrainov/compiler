@@ -12,7 +12,7 @@ GenerateBlock(AstNode *node,
 			  FILE *out,
 			  CodegenContext *context)
 {
-	Assert(node->type == NodeType_Block);
+	Assert(node->kind == NodeKind_Block);
 
 	for (int i = 0;
 		 i < node->block.numStatements;
@@ -85,26 +85,26 @@ GenerateExpression(AstNode *node,
 				   FILE *out,
 				   CodegenContext *context)
 {
-	switch (node->type)
+	switch (node->kind)
 	{
-		case NodeType_Number:
+		case NodeKind_Number:
 		{
 			fprintf(out, "    mov rax, %d\t\t; load integer literal\n", node->number.value);
 			WritePush(out, context, "    push rax\n");
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_Bool:
+		case NodeKind_Bool:
 		{
 			fprintf(out, "    mov rax, %d\t\t; load boolean literal\n", (int)node->_bool.value);
 			WritePush(out, context, "    push rax\n");
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_Add:
-		case NodeType_Subtract:
-		case NodeType_Multiply:
-		case NodeType_Divide:
+		case NodeKind_Add:
+		case NodeKind_Subtract:
+		case NodeKind_Multiply:
+		case NodeKind_Divide:
 		{
 			GenerateExpression(node->binary.lhs, out, context);
 			GenerateExpression(node->binary.rhs, out, context);
@@ -112,24 +112,24 @@ GenerateExpression(AstNode *node,
 			WritePop(out, context, "    pop rcx\n");
 			WritePop(out, context, "    pop rax\n");
 
-			switch (node->type)
+			switch (node->kind)
 			{
-				case NodeType_Add:
+				case NodeKind_Add:
 				{
 					fprintf(out, "    add rax, rcx\t; perform addition\n");
 				} break;
 
-				case NodeType_Subtract:
+				case NodeKind_Subtract:
 				{
 					fprintf(out, "    sub rax, rcx\t; perform subtraction\n");
 				} break;
 
-				case NodeType_Multiply:
+				case NodeKind_Multiply:
 				{
 					fprintf(out, "    imul rax, rcx\t; perform multiplication\n");
 				} break;
 
-				case NodeType_Divide:
+				case NodeKind_Divide:
 				{
 					fprintf(out, "    cqo     \t\t;\n");
 					fprintf(out, "    idiv rcx\t\t; perform division\n");
@@ -145,38 +145,38 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_Greater:
-		case NodeType_Less:
-		case NodeType_EqualEqual:
-		case NodeType_GreaterEqual:
-		case NodeType_LessEqual:
-		case NodeType_NotEqual:
+		case NodeKind_Greater:
+		case NodeKind_Less:
+		case NodeKind_EqualEqual:
+		case NodeKind_GreaterEqual:
+		case NodeKind_LessEqual:
+		case NodeKind_NotEqual:
 		{
 			GenerateExpression(node->binary.lhs, out, context);
 			GenerateExpression(node->binary.rhs, out, context);
 
 			const char *setccInstruction = "";
-			if (node->type == NodeType_Greater)
+			if (node->kind == NodeKind_Greater)
 			{
 				setccInstruction = "setg";
 			}
-			else if (node->type == NodeType_Less)
+			else if (node->kind == NodeKind_Less)
 			{
 				setccInstruction = "setl";
 			}
-			else if (node->type == NodeType_EqualEqual)
+			else if (node->kind == NodeKind_EqualEqual)
 			{
 				setccInstruction = "sete";
 			}
-			else if (node->type == NodeType_GreaterEqual)
+			else if (node->kind == NodeKind_GreaterEqual)
 			{
 				setccInstruction = "setge";
 			}
-			else if (node->type == NodeType_LessEqual)
+			else if (node->kind == NodeKind_LessEqual)
 			{
 				setccInstruction = "setle";
 			}
-			else if (node->type == NodeType_NotEqual)
+			else if (node->kind == NodeKind_NotEqual)
 			{
 				setccInstruction = "setne";
 			}
@@ -194,7 +194,7 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_Var:
+		case NodeKind_Var:
 		{
 			fprintf(out, "    mov rax, [rbp - %d]\t; load variable " STR_FMT_QUOTED "\n",
 					node->var.stackOffset,
@@ -203,7 +203,7 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_Call:
+		case NodeKind_Call:
 		{
 			const char *paramRegs[] =
 			{
@@ -238,9 +238,9 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_AddressOf:
+		case NodeKind_AddressOf:
 		{
-			Assert(node->addressOf.what->type == NodeType_Var);
+			Assert(node->addressOf.what->kind == NodeKind_Var);
 			fprintf(out, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED "\n",
 					node->addressOf.what->var.stackOffset,
 					STR_ARG(node->addressOf.what->var.name));
@@ -248,10 +248,10 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_Deref:
+		case NodeKind_Deref:
 		{
 			AstNode *what = node->addressOf.what;
-			Assert(what->type == NodeType_Var);
+			Assert(what->kind == NodeKind_Var);
 			
 			fprintf(out, "    mov rax, [rbp - %d]\t; load pointer variable " STR_FMT_QUOTED "\n",
 					what->var.stackOffset,
@@ -275,9 +275,9 @@ GenerateStatement(AstNode *node,
 				  FILE *out,
 				  CodegenContext *context)
 {
-	switch (node->type)
+	switch (node->kind)
 	{
-		case NodeType_VarDecl:
+		case NodeKind_VarDecl:
 		{
 			if (node->varDecl.expr)
 			{
@@ -289,7 +289,7 @@ GenerateStatement(AstNode *node,
 			}
 		} break;
 
-		case NodeType_Assign:
+		case NodeKind_Assign:
 		{
 			GenerateExpression(node->assign.expr, out, context);
 
@@ -298,7 +298,7 @@ GenerateStatement(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_If:
+		case NodeKind_If:
 		{
 			int uniqueId = context->uniqueLabelId++;
 
@@ -337,7 +337,7 @@ GenerateStatement(AstNode *node,
 			}
 		} break;
 
-		case NodeType_While:
+		case NodeKind_While:
 		{
 			int uniqueId = context->uniqueLabelId++;
 
@@ -357,7 +357,7 @@ GenerateStatement(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_Print:
+		case NodeKind_Print:
 		{
 			GenerateExpression(node->print.expr, out, context);
 
@@ -372,12 +372,12 @@ GenerateStatement(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeType_Block:
+		case NodeKind_Block:
 		{
 			GenerateBlock(node, out, context);
 		} break;
 
-		case NodeType_Return:
+		case NodeKind_Return:
 		{
 			if (node->ret.expr)
 			{
@@ -405,9 +405,9 @@ GenerateTopLevelStatement(AstNode *node,
 						  FILE *out,
 						  CodegenContext *context)
 {
-	switch (node->type)
+	switch (node->kind)
 	{
-		case NodeType_Func:
+		case NodeKind_Func:
 		{
 			AstNode *functionBody = node->func.body;
 
@@ -465,12 +465,12 @@ Generate_x86_64(AstNode *program,
 	fprintf(out, "default rel\n");
 	fprintf(out, "\n");
 
-	Assert(program->type == NodeType_Block);
+	Assert(program->kind == NodeKind_Block);
 	for (int i = 0;
 		 i < program->block.numStatements;
 		 i++)
 	{
-		Assert(program->block.statements[i]->type == NodeType_Func);
+		Assert(program->block.statements[i]->kind == NodeKind_Func);
 		fprintf(out, "global " STR_FMT "\n", STR_ARG(program->block.statements[i]->func.name));
 	}
 	fprintf(out, "\n");
@@ -484,7 +484,7 @@ Generate_x86_64(AstNode *program,
 
 	fprintf(out, "section .text\n");
 
-	Assert(program->type == NodeType_Block);
+	Assert(program->kind == NodeKind_Block);
 	for (int i = 0;
 		 i < program->block.numStatements;
 		 i++)

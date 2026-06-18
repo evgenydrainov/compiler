@@ -19,27 +19,27 @@ PrintTree(AstNode *node,
 
 	printf(" (line=%d)", node->line);
 
-	if (node->type == NodeType_Number)
+	if (node->type == NodeKind_Number)
 	{
 		printf(" (%d)", node->number.value);
 	}
-	else if (node->type == NodeType_Assign)
+	else if (node->type == NodeKind_Assign)
 	{
 		printf(" (" STR_FMT ")", STR_ARG(node->assign.name));
 	}
-	else if (node->type == NodeType_VarDecl)
+	else if (node->type == NodeKind_VarDecl)
 	{
 		printf(" (" STR_FMT ")", STR_ARG(node->varDecl.name));
 	}
-	else if (node->type == NodeType_Var)
+	else if (node->type == NodeKind_Var)
 	{
 		printf(" (" STR_FMT ")", STR_ARG(node->var.name));
 	}
-	else if (node->type == NodeType_Func)
+	else if (node->type == NodeKind_Func)
 	{
 		printf(" (" STR_FMT ")", STR_ARG(node->func.name));
 	}
-	else if (node->type == NodeType_Call)
+	else if (node->type == NodeKind_Call)
 	{
 		printf(" (" STR_FMT ")", STR_ARG(node->call.name));
 	}
@@ -51,7 +51,7 @@ PrintTree(AstNode *node,
 
 	switch (node->type)
 	{
-		case NodeType_Block:
+		case NodeKind_Block:
 		{
 			for (int i = 0;
 				 i < node->block.numStatements;
@@ -63,7 +63,7 @@ PrintTree(AstNode *node,
 			}
 		} break;
 
-		case NodeType_If:
+		case NodeKind_If:
 		{
 			if (node->_if.elseBlock)
 			{
@@ -78,22 +78,22 @@ PrintTree(AstNode *node,
 			}
 		} break;
 
-		case NodeType_While:
+		case NodeKind_While:
 		{
 			PrintTree(node->_while.condition, childPrefix, true);
 			PrintTree(node->_while.body, childPrefix, false);
 		} break;
 
-		case NodeType_Add:
-		case NodeType_Subtract:
-		case NodeType_Multiply:
-		case NodeType_Divide:
-		case NodeType_Less:
-		case NodeType_Greater:
-		case NodeType_EqualEqual:
-		case NodeType_LessEqual:
-		case NodeType_GreaterEqual:
-		case NodeType_NotEqual:
+		case NodeKind_Add:
+		case NodeKind_Subtract:
+		case NodeKind_Multiply:
+		case NodeKind_Divide:
+		case NodeKind_Less:
+		case NodeKind_Greater:
+		case NodeKind_EqualEqual:
+		case NodeKind_LessEqual:
+		case NodeKind_GreaterEqual:
+		case NodeKind_NotEqual:
 		{
 			if (node->binary.lhs && node->binary.rhs)
 			{
@@ -110,36 +110,36 @@ PrintTree(AstNode *node,
 			}
 		} break;
 
-		case NodeType_Print:
+		case NodeKind_Print:
 		{
 			PrintTree(node->print.expr, childPrefix, false);
 		} break;
 
-		case NodeType_VarDecl:
+		case NodeKind_VarDecl:
 		{
 			PrintTree(node->varDecl.expr, childPrefix, false);
 		} break;
 
-		case NodeType_Assign:
+		case NodeKind_Assign:
 		{
 			PrintTree(node->assign.expr, childPrefix, false);
 		} break;
 
-		case NodeType_Func:
+		case NodeKind_Func:
 		{
 			PrintTree(node->func.body, childPrefix, false);
 		} break;
 
-		case NodeType_Return:
+		case NodeKind_Return:
 		{
 			PrintTree(node->ret.expr, childPrefix, false);
 		} break;
 
-		case NodeType_Var:
-		case NodeType_Number:
-		case NodeType_Call:
-		case NodeType_Bool:
-		case NodeType_Param: {} break;
+		case NodeKind_Var:
+		case NodeKind_Number:
+		case NodeKind_Call:
+		case NodeKind_Bool:
+		case NodeKind_Param: {} break;
 	}
 }
 #endif

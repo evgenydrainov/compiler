@@ -62,7 +62,7 @@ AnalyzeBlock(AstNode *node,
 {
 	SymbolTable *symTable = context->symTable;
 
-	Assert(node->type == NodeType_Block);
+	Assert(node->kind == NodeKind_Block);
 
 	Scope scope = EnterScope(symTable);
 
@@ -83,22 +83,22 @@ AnalyzeExpression(AstNode *node,
 	SymbolTable *symTable = context->symTable;
 	FunctionTable *funcTable = context->funcTable;
 
-	switch (node->type)
+	switch (node->kind)
 	{
-		case NodeType_Number:
+		case NodeKind_Number:
 		{
 			node->inferredType.kind = TypeKind_Int64;
 		} break;
 
-		case NodeType_Bool:
+		case NodeKind_Bool:
 		{
 			node->inferredType.kind = TypeKind_Bool;
 		} break;
 
-		case NodeType_Add:
-		case NodeType_Subtract:
-		case NodeType_Multiply:
-		case NodeType_Divide:
+		case NodeKind_Add:
+		case NodeKind_Subtract:
+		case NodeKind_Multiply:
+		case NodeKind_Divide:
 		{
 			AnalyzeExpression(node->binary.lhs, context);
 			AnalyzeExpression(node->binary.rhs, context);
@@ -112,7 +112,7 @@ AnalyzeExpression(AstNode *node,
 				else
 				{
 					Error(context, node, "cannot %s '%s' and '%s': types are not numeric",
-						  GetNodeTypePrettyName(node->type),
+						  GetNodeKindPrettyName(node->kind),
 						  GetTypeKindPrettyName(node->binary.lhs->inferredType.kind),
 						  GetTypeKindPrettyName(node->binary.rhs->inferredType.kind));
 				}
@@ -120,16 +120,16 @@ AnalyzeExpression(AstNode *node,
 			else
 			{
 				Error(context, node, "cannot %s '%s' and '%s': types are different",
-					  GetNodeTypePrettyName(node->type),
+					  GetNodeKindPrettyName(node->kind),
 					  GetTypeKindPrettyName(node->binary.lhs->inferredType.kind),
 					  GetTypeKindPrettyName(node->binary.rhs->inferredType.kind));
 			}
 		} break;
 
-		case NodeType_Less:
-		case NodeType_Greater:
-		case NodeType_LessEqual:
-		case NodeType_GreaterEqual:
+		case NodeKind_Less:
+		case NodeKind_Greater:
+		case NodeKind_LessEqual:
+		case NodeKind_GreaterEqual:
 		{
 			AnalyzeExpression(node->binary.lhs, context);
 			AnalyzeExpression(node->binary.rhs, context);
@@ -155,8 +155,8 @@ AnalyzeExpression(AstNode *node,
 			}
 		} break;
 
-		case NodeType_EqualEqual:
-		case NodeType_NotEqual:
+		case NodeKind_EqualEqual:
+		case NodeKind_NotEqual:
 		{
 			AnalyzeExpression(node->binary.lhs, context);
 			AnalyzeExpression(node->binary.rhs, context);
@@ -173,7 +173,7 @@ AnalyzeExpression(AstNode *node,
 			}
 		} break;
 
-		case NodeType_Var:
+		case NodeKind_Var:
 		{
 			Symbol *symbol = LookupSymbol(symTable, node->var.name, 0);
 			if (symbol)
@@ -187,7 +187,7 @@ AnalyzeExpression(AstNode *node,
 			}
 		} break;
 
-		case NodeType_Call:
+		case NodeKind_Call:
 		{
 			Function *function = LookupFunction(funcTable, node->call.name);
 			if (function)
@@ -226,7 +226,7 @@ AnalyzeExpression(AstNode *node,
 			}
 		} break;
 
-		case NodeType_AddressOf:
+		case NodeKind_AddressOf:
 		{
 			AnalyzeExpression(node->addressOf.what, context);
 
@@ -234,7 +234,7 @@ AnalyzeExpression(AstNode *node,
 			node->inferredType.pointerTo = &node->addressOf.what->inferredType;
 		} break;
 
-		case NodeType_Deref:
+		case NodeKind_Deref:
 		{
 			AnalyzeExpression(node->deref.what, context);
 
@@ -255,9 +255,9 @@ AnalyzeStatement(AstNode *node,
 {
 	SymbolTable *symTable = context->symTable;
 
-	switch (node->type)
+	switch (node->kind)
 	{
-		case NodeType_VarDecl:
+		case NodeKind_VarDecl:
 		{
 			if (node->varDecl.expr)
 			{
@@ -287,7 +287,7 @@ AnalyzeStatement(AstNode *node,
 			}
 		} break;
 
-		case NodeType_Assign:
+		case NodeKind_Assign:
 		{
 			AnalyzeExpression(node->assign.expr, context);
 
@@ -309,7 +309,7 @@ AnalyzeStatement(AstNode *node,
 			}
 		} break;
 
-		case NodeType_If:
+		case NodeKind_If:
 		{
 			if (node->_if.elseBlock)
 			{
@@ -329,7 +329,7 @@ AnalyzeStatement(AstNode *node,
 			}
 		} break;
 
-		case NodeType_While:
+		case NodeKind_While:
 		{
 			AnalyzeExpression(node->_while.condition, context);
 			AnalyzeBlock(node->_while.body, context);
@@ -340,17 +340,17 @@ AnalyzeStatement(AstNode *node,
 			}
 		} break;
 
-		case NodeType_Print:
+		case NodeKind_Print:
 		{
 			AnalyzeExpression(node->print.expr, context);
 		} break;
 
-		case NodeType_Block:
+		case NodeKind_Block:
 		{
 			AnalyzeBlock(node, context);
 		} break;
 
-		case NodeType_Return:
+		case NodeKind_Return:
 		{
 			Type returnExpressionType = {};
 			returnExpressionType.kind = TypeKind_Void;
@@ -383,9 +383,9 @@ AnalyzeTopLevelStatement(AstNode *node,
 {
 	SymbolTable *symTable = context->symTable;
 
-	switch (node->type)
+	switch (node->kind)
 	{
-		case NodeType_Func:
+		case NodeKind_Func:
 		{
 			Scope scope = EnterScope(symTable);
 
@@ -430,7 +430,7 @@ SemanticPass(AstNode *program,
 			 SemanticContext *context,
 			 Arena *arena)
 {
-	Assert(program->type == NodeType_Block);
+	Assert(program->kind == NodeKind_Block);
 
 	FunctionTable *funcTable = PushStruct(arena, FunctionTable);
 	memset(funcTable, 0, sizeof(*funcTable));
@@ -444,7 +444,7 @@ SemanticPass(AstNode *program,
 		 i < program->block.numStatements;
 		 i++)
 	{
-		Assert(program->block.statements[i]->type == NodeType_Func);
+		Assert(program->block.statements[i]->kind == NodeKind_Func);
 
 		AstNode *functionDef = program->block.statements[i];
 
@@ -478,7 +478,7 @@ SemanticPass(AstNode *program,
 		 i < program->block.numStatements;
 		 i++)
 	{
-		Assert(program->block.statements[i]->type == NodeType_Func);
+		Assert(program->block.statements[i]->kind == NodeKind_Func);
 
 		AstNode *functionDef = program->block.statements[i];
 		AstNode *functionBody = functionDef->func.body;
