@@ -110,7 +110,7 @@ GenerateExpression(Node *baseNode,
 		case NodeKind_Multiply:
 		case NodeKind_Divide:
 		{
-			BinaryNode *node = As<BinaryNode>(node);
+			BinaryNode *node = As<BinaryNode>(baseNode);
 
 			GenerateExpression(node->lhs, out, context);
 			GenerateExpression(node->rhs, out, context);

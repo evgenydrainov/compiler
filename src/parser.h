@@ -33,6 +33,20 @@
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
+//enum BinaryOp : u32
+//{
+//	BinaryOp_Add,
+//	BinaryOp_Subtract,
+//	BinaryOp_Multiply,
+//	BinaryOp_Divide,
+//	BinaryOp_Less,
+//	BinaryOp_Greater,
+//	BinaryOp_EqualEqual,
+//	BinaryOp_LessEqual,
+//	BinaryOp_GreaterEqual,
+//	BinaryOp_NotEqual,
+//};
+
 struct Node
 {
 	NodeKind kind;
@@ -43,12 +57,16 @@ struct Node
 
 struct BinaryNode : public Node
 {
+	// static constexpr NodeKind KIND = NodeKind_Binary;
+
 	Node *lhs;
 	Node *rhs;
 };
 
 struct AssignNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Assign;
+
 	string name;
 	int stackOffset;
 	Node *expr;
@@ -56,6 +74,8 @@ struct AssignNode : public Node
 
 struct VarDeclNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_VarDecl;
+
 	string name;
 	int stackOffset;
 	Node *expr;
@@ -64,17 +84,23 @@ struct VarDeclNode : public Node
 
 struct VarNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Var;
+
 	string name;
 	int stackOffset;
 };
 
 struct NumberNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Number;
+
 	i64 int64Value;
 };
 
 struct BlockNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Block;
+
 	Node **statements;
 	int numStatements;
 	int stackSize;
@@ -82,6 +108,8 @@ struct BlockNode : public Node
 
 struct IfNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_If;
+
 	Node *condition;
 	Node *thenBlock;
 	Node *elseBlock;
@@ -89,17 +117,23 @@ struct IfNode : public Node
 
 struct WhileNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_While;
+
 	Node *condition;
 	Node *body;
 };
 
 struct PrintNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Print;
+
 	Node *expr;
 };
 
 struct FuncNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Func;
+
 	string name;
 	Node *body;
 	Type returnType;
@@ -110,6 +144,8 @@ struct FuncNode : public Node
 
 struct CallNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Call;
+
 	string name;
 
 	Node **expressions;
@@ -118,11 +154,15 @@ struct CallNode : public Node
 
 struct ReturnNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Return;
+
 	Node *expr;
 };
 
 struct ParamNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Param;
+
 	string name;
 	int stackOffset;
 	Type type;
@@ -130,16 +170,22 @@ struct ParamNode : public Node
 
 struct BoolNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Bool;
+
 	bool boolValue;
 };
 
 struct AddressOfNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_AddressOf;
+
 	Node *what;
 };
 
 struct DerefNode : public Node
 {
+	static constexpr NodeKind KIND = NodeKind_Deref;
+
 	Node *what;
 };
 
@@ -147,7 +193,33 @@ template <typename T>
 inline T *
 As(Node *node)
 {
-	return static_cast<T *>(node);
+	T *result = nullptr;
+
+	if constexpr (IsSameType<T, BinaryNode>::value)
+	{
+		if (node->kind == NodeKind_Add
+			|| node->kind == NodeKind_Subtract
+			|| node->kind == NodeKind_Multiply
+			|| node->kind == NodeKind_Divide
+			|| node->kind == NodeKind_Less
+			|| node->kind == NodeKind_Greater
+			|| node->kind == NodeKind_EqualEqual
+			|| node->kind == NodeKind_LessEqual
+			|| node->kind == NodeKind_GreaterEqual
+			|| node->kind == NodeKind_NotEqual)
+		{
+			result = static_cast<T *>(node);
+		}
+	}
+	else
+	{
+		if (node->kind == T::KIND)
+		{
+			result = static_cast<T *>(node);
+		}
+	}
+
+	return result;
 }
 
 struct Parser
@@ -157,5 +229,5 @@ struct Parser
 };
 
 Node *ParseProgram(Parser *parser,
-					  Lexer *lexer,
-					  Arena *arena);
+				   Lexer *lexer,
+				   Arena *arena);

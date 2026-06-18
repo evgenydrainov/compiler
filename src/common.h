@@ -140,9 +140,21 @@ PushSize(Arena *arena,
 	return result;
 }
 
-#define PushStruct(arena, T) (T*)PushSize(arena, sizeof(T))
+template <typename T>
+inline T *
+PushStruct(Arena *arena)
+{
+	T *result = (T *)PushSize(arena, sizeof(T));
+	return result;
+}
 
-#define PushArray(arena, count, T) (T*)PushSize(arena, (count)*sizeof(T))
+template <typename T>
+inline T *
+PushArray(Arena *arena, usize count)
+{
+	T *result = (T *)PushSize(arena, count*sizeof(T));
+	return result;
+}
 
 inline Arena
 PushArena(Arena *arena, usize capacity)
@@ -175,3 +187,14 @@ struct ExitScopeHelp
 
 #define CONCATENATE2(a, b) a##b
 #define CONCATENATE(a, b) CONCATENATE2(a, b)
+
+template <typename T, typename U>
+struct IsSameType
+{
+	static constexpr bool value = false;
+};
+template <typename T>
+struct IsSameType<T, T>
+{
+	static constexpr bool value = true;
+};
