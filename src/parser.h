@@ -27,7 +27,9 @@
 	X(NodeType_Call,             19,     ""             ) \
 	X(NodeType_Return,           20,     ""             ) \
 	X(NodeType_Param,            21,     ""             ) \
-	X(NodeType_Bool,             22,     ""             )
+	X(NodeType_Bool,             22,     ""             ) \
+	X(NodeType_AddressOf,        23,     ""             ) \
+	X(NodeType_Deref,            24,     ""             )
 
 DEFINE_ENUM_WITH_VALUES(NodeType, u32, NODE_TYPE_LIST);
 
@@ -131,6 +133,16 @@ struct AstNode
 		{
 			bool value;
 		} _bool;
+
+		struct
+		{
+			AstNode *what;
+		} addressOf;
+
+		struct
+		{
+			AstNode *what;
+		} deref;
 	};
 };
 

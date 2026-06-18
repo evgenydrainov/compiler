@@ -233,6 +233,22 @@ ParseAtom(Parser *parser,
 			AdvanceToken(parser, lexer);
 		} break;
 
+		case TokenType_Ampersand:
+		{
+			node = MakeNode(NodeType_AddressOf, parser->current.line, arena);
+			AdvanceToken(parser, lexer);
+
+			node->addressOf.what = ParseAtom(parser, lexer, arena);
+		} break;
+
+		case TokenType_Asterisk:
+		{
+			node = MakeNode(NodeType_Deref, parser->current.line, arena);
+			AdvanceToken(parser, lexer);
+
+			node->deref.what = ParseAtom(parser, lexer, arena);
+		} break;
+
 		default:
 		{
 			UnexpectedCurrentToken(parser);
@@ -373,20 +389,30 @@ ParseType(Parser *parser,
 {
 	Type type = {};
 
-	if (parser->current.str == "i64")
+	if (parser->current.type == TokenType_Asterisk)
+	{
+		type.kind = TypeKind_Pointer;
+		AdvanceToken(parser, lexer); // eat the '*'
+
+		Type pointerTo = ParseType(parser, lexer, arena);
+
+		type.pointerTo = PushStruct(arena, Type);
+		*type.pointerTo = pointerTo;
+	}
+	else if (parser->current.str == "i64")
 	{
 		type.kind = TypeKind_Int64;
+		AdvanceToken(parser, lexer);
 	}
 	else if (parser->current.str == "bool")
 	{
 		type.kind = TypeKind_Bool;
+		AdvanceToken(parser, lexer);
 	}
 	else
 	{
 		ErrorAtCurrent(parser, STR_FMT_QUOTED ": unknown type", STR_ARG(parser->current.str));
 	}
-
-	ExpectToken(parser, lexer, TokenType_Identifier);
 
 	return type;
 }

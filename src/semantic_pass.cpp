@@ -226,6 +226,22 @@ AnalyzeExpression(AstNode *node,
 			}
 		} break;
 
+		case NodeType_AddressOf:
+		{
+			AnalyzeExpression(node->addressOf.what, context);
+
+			node->inferredType.kind = TypeKind_Pointer;
+			node->inferredType.pointerTo = &node->addressOf.what->inferredType;
+		} break;
+
+		case NodeType_Deref:
+		{
+			AnalyzeExpression(node->deref.what, context);
+
+			Assert(node->deref.what->inferredType.kind == TypeKind_Pointer);
+			node->inferredType = *node->deref.what->inferredType.pointerTo;
+		} break;
+
 		default:
 		{
 			Assert(false);

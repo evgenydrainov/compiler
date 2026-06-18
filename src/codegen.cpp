@@ -238,6 +238,31 @@ GenerateExpression(AstNode *node,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeType_AddressOf:
+		{
+			Assert(node->addressOf.what->type == NodeType_Var);
+			fprintf(out, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED "\n",
+					node->addressOf.what->var.stackOffset,
+					STR_ARG(node->addressOf.what->var.name));
+			WritePush(out, context, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
+		case NodeType_Deref:
+		{
+			AstNode *what = node->addressOf.what;
+			Assert(what->type == NodeType_Var);
+			
+			fprintf(out, "    mov rax, [rbp - %d]\t; load pointer variable " STR_FMT_QUOTED "\n",
+					what->var.stackOffset,
+					STR_ARG(what->var.name));
+
+			fprintf(out, "    mov rax, [rax]\t\t; dereference\n");
+
+			WritePush(out, context, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
 		default:
 		{
 			Assert(false);

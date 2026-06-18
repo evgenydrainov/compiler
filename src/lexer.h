@@ -23,6 +23,7 @@
 	X(TokenType_OpenBracket,      '[',       "["              ) \
 	X(TokenType_CloseBracket,     ']',       "]"              ) \
 	X(TokenType_Colon,            ':',       ":"              ) \
+	X(TokenType_Ampersand,        '&',       "&"              ) \
 	X(TokenType_Identifier,       256,       "identifier"     ) \
 	X(TokenType_String,           257,       "string"         ) \
 	X(TokenType_Number,           258,       "number"         ) \
