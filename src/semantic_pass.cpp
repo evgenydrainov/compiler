@@ -7,7 +7,7 @@
 
 internal void
 Error(SemanticContext *context,
-	  AstNode *node,
+	  Node *node,
 	  const char *format,
 	  ...)
 {
@@ -53,11 +53,11 @@ LeaveScope(SymbolTable *symTable, Scope scope)
 }
 
 internal void
-AnalyzeStatement(AstNode *node,
+AnalyzeStatement(Node *node,
 				 SemanticContext *context);
 
 internal void
-AnalyzeBlock(AstNode *node,
+AnalyzeBlock(Node *node,
 			 SemanticContext *context)
 {
 	SymbolTable *symTable = context->symTable;
@@ -77,7 +77,7 @@ AnalyzeBlock(AstNode *node,
 }
 
 internal void
-AnalyzeExpression(AstNode *node,
+AnalyzeExpression(Node *node,
 				  SemanticContext *context)
 {
 	SymbolTable *symTable = context->symTable;
@@ -198,7 +198,7 @@ AnalyzeExpression(AstNode *node,
 						 i < node->call.numExpressions;
 						 i++)
 					{
-						AstNode *expr = node->call.expressions[i];
+						Node *expr = node->call.expressions[i];
 
 						AnalyzeExpression(expr, context);
 
@@ -250,7 +250,7 @@ AnalyzeExpression(AstNode *node,
 }
 
 internal void
-AnalyzeStatement(AstNode *node,
+AnalyzeStatement(Node *node,
 				 SemanticContext *context)
 {
 	SymbolTable *symTable = context->symTable;
@@ -378,7 +378,7 @@ AnalyzeStatement(AstNode *node,
 }
 
 internal void
-AnalyzeTopLevelStatement(AstNode *node,
+AnalyzeTopLevelStatement(Node *node,
 						 SemanticContext *context)
 {
 	SymbolTable *symTable = context->symTable;
@@ -393,7 +393,7 @@ AnalyzeTopLevelStatement(AstNode *node,
 				 i < node->func.numParams;
 				 i++)
 			{
-				AstNode *param = node->func.params[i];
+				Node *param = node->func.params[i];
 
 				if (LookupSymbol(symTable, param->param.name, 0))
 				{
@@ -408,7 +408,7 @@ AnalyzeTopLevelStatement(AstNode *node,
 				}
 			}
 
-			AstNode *saveCurrentFunction = context->currentFunction;
+			Node *saveCurrentFunction = context->currentFunction;
 			context->currentFunction = node;
 
 			AnalyzeBlock(node->func.body, context);
@@ -426,7 +426,7 @@ AnalyzeTopLevelStatement(AstNode *node,
 }
 
 void
-SemanticPass(AstNode *program,
+SemanticPass(Node *program,
 			 SemanticContext *context,
 			 Arena *arena)
 {
@@ -446,7 +446,7 @@ SemanticPass(AstNode *program,
 	{
 		Assert(program->block.statements[i]->kind == NodeKind_Func);
 
-		AstNode *functionDef = program->block.statements[i];
+		Node *functionDef = program->block.statements[i];
 
 		if (!LookupFunction(funcTable, functionDef->func.name))
 		{
@@ -458,7 +458,7 @@ SemanticPass(AstNode *program,
 				 paramIndex < functionDef->func.numParams;
 				 paramIndex++)
 			{
-				AstNode *paramNode = functionDef->func.params[paramIndex];
+				Node *paramNode = functionDef->func.params[paramIndex];
 
 				func->params[paramIndex].type = paramNode->param.type;
 			}
@@ -480,8 +480,8 @@ SemanticPass(AstNode *program,
 	{
 		Assert(program->block.statements[i]->kind == NodeKind_Func);
 
-		AstNode *functionDef = program->block.statements[i];
-		AstNode *functionBody = functionDef->func.body;
+		Node *functionDef = program->block.statements[i];
+		Node *functionBody = functionDef->func.body;
 
 		// clear the symbol table for every function
 		memset(symTable, 0, sizeof(*symTable));

@@ -33,118 +33,122 @@
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
-struct AstNode
+struct Node
 {
 	NodeKind kind;
 	int line;
 
 	Type inferredType;
-
-	union
-	{
-		struct
-		{
-			AstNode *lhs;
-			AstNode *rhs;
-		} binary;
-
-		struct
-		{
-			string name;
-			int stackOffset;
-			AstNode *expr;
-		} assign;
-
-		struct
-		{
-			string name;
-			int stackOffset;
-			AstNode *expr;
-			Type type;
-		} varDecl;
-
-		struct
-		{
-			string name;
-			int stackOffset;
-		} var;
-
-		struct
-		{
-			int value;
-		} number;
-
-		struct
-		{
-			AstNode **statements;
-			int numStatements;
-			int stackSize;
-		} block;
-
-		struct
-		{
-			AstNode *condition;
-			AstNode *thenBlock;
-			AstNode *elseBlock;
-		} _if;
-
-		struct
-		{
-			AstNode *condition;
-			AstNode *body;
-		} _while;
-
-		struct
-		{
-			AstNode *expr;
-		} print;
-
-		struct
-		{
-			string name;
-			AstNode *body;
-			Type returnType;
-
-			AstNode **params;
-			int numParams;
-		} func;
-
-		struct
-		{
-			string name;
-
-			AstNode **expressions;
-			int numExpressions;
-		} call;
-
-		struct
-		{
-			AstNode *expr;
-		} ret;
-
-		struct
-		{
-			string name;
-			int stackOffset;
-			Type type;
-		} param;
-
-		struct
-		{
-			bool value;
-		} _bool;
-
-		struct
-		{
-			AstNode *what;
-		} addressOf;
-
-		struct
-		{
-			AstNode *what;
-		} deref;
-	};
 };
+
+struct BinaryNode : public Node
+{
+	Node *lhs;
+	Node *rhs;
+};
+
+struct AssignNode : public Node
+{
+	string name;
+	int stackOffset;
+	Node *expr;
+};
+
+struct VarDeclNode : public Node
+{
+	string name;
+	int stackOffset;
+	Node *expr;
+	Type type;
+};
+
+struct VarNode : public Node
+{
+	string name;
+	int stackOffset;
+};
+
+struct NumberNode : public Node
+{
+	i64 int64Value;
+};
+
+struct BlockNode : public Node
+{
+	Node **statements;
+	int numStatements;
+	int stackSize;
+};
+
+struct IfNode : public Node
+{
+	Node *condition;
+	Node *thenBlock;
+	Node *elseBlock;
+};
+
+struct WhileNode : public Node
+{
+	Node *condition;
+	Node *body;
+};
+
+struct PrintNode : public Node
+{
+	Node *expr;
+};
+
+struct FuncNode : public Node
+{
+	string name;
+	Node *body;
+	Type returnType;
+
+	Node **params;
+	int numParams;
+};
+
+struct CallNode : public Node
+{
+	string name;
+
+	Node **expressions;
+	int numExpressions;
+};
+
+struct ReturnNode : public Node
+{
+	Node *expr;
+};
+
+struct ParamNode : public Node
+{
+	string name;
+	int stackOffset;
+	Type type;
+};
+
+struct BoolNode : public Node
+{
+	bool boolValue;
+};
+
+struct AddressOfNode : public Node
+{
+	Node *what;
+};
+
+struct DerefNode : public Node
+{
+	Node *what;
+};
+
+template <typename T>
+inline T *
+As(Node *node)
+{
+	return static_cast<T *>(node);
+}
 
 struct Parser
 {
@@ -152,6 +156,6 @@ struct Parser
 	bool hadError;
 };
 
-AstNode *ParseProgram(Parser *parser,
+Node *ParseProgram(Parser *parser,
 					  Lexer *lexer,
 					  Arena *arena);

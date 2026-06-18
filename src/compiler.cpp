@@ -109,7 +109,7 @@ Compile(CompileOptions options)
 	Parser parser = {};
 	parser.current = GetToken(&lexer);
 
-	AstNode *program = ParseProgram(&parser, &lexer, &arena);
+	Node *program = ParseProgram(&parser, &lexer, &arena);
 
 	if (!program
 		|| parser.hadError)

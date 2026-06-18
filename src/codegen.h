@@ -10,6 +10,6 @@ struct CodegenContext
 	int stackDepth;
 };
 
-void Generate_x86_64(AstNode *root,
+void Generate_x86_64(Node *_program,
 					 FILE *out,
 					 CodegenContext *context);

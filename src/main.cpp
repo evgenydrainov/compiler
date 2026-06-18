@@ -6,7 +6,7 @@
 
 #if 0
 internal void
-PrintTree(AstNode *node,
+PrintTree(Node *node,
 		  const char *prefix,
 		  bool isLeft)
 {
@@ -57,7 +57,7 @@ PrintTree(AstNode *node,
 				 i < node->block.numStatements;
 				 i++)
 			{
-				AstNode *statement = node->block.statements[i];
+				Node *statement = node->block.statements[i];
 
 				PrintTree(statement, childPrefix, i != node->block.numStatements-1);
 			}

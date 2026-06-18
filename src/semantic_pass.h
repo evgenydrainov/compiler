@@ -12,9 +12,9 @@ struct SemanticContext
 	SymbolTable *symTable;
 	FunctionTable *funcTable;
 
-	AstNode *currentFunction;
+	Node *currentFunction;
 };
 
-void SemanticPass(AstNode *program,
+void SemanticPass(Node *program,
 				  SemanticContext *context,
 				  Arena *arena);
