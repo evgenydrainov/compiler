@@ -3,24 +3,24 @@
 #include <stdarg.h>
 
 internal int
-LeftBindingPower(TokenType type)
+LeftBindingPower(TokenKind type)
 {
 	switch (type)
 	{
-		case TokenType_Greater:
-		case TokenType_Less:
-		case TokenType_BangEqual:
-		case TokenType_EqualEqual:
-		case TokenType_GreaterEqual:
-		case TokenType_LessEqual:
+		case TokenKind_Greater:
+		case TokenKind_Less:
+		case TokenKind_BangEqual:
+		case TokenKind_EqualEqual:
+		case TokenKind_GreaterEqual:
+		case TokenKind_LessEqual:
 			return 1;
 
-		case TokenType_Plus:
-		case TokenType_Minus:
+		case TokenKind_Plus:
+		case TokenKind_Minus:
 			return 2;
 
-		case TokenType_Asterisk:
-		case TokenType_Slash:
+		case TokenKind_Asterisk:
+		case TokenKind_Slash:
 			return 3;
 
 		default:
@@ -111,11 +111,11 @@ AdvanceToken(Parser *parser, Lexer *lexer)
 internal bool
 ExpectToken(Parser *parser,
 			Lexer *lexer,
-			TokenType type)
+			TokenKind kind)
 {
 	bool result = false;
 
-	if (parser->current.type == type)
+	if (parser->current.kind == kind)
 	{
 		AdvanceToken(parser, lexer);
 		result = true;
@@ -124,8 +124,8 @@ ExpectToken(Parser *parser,
 	{
 		ErrorAtCurrent(parser,
 					   "expected '%s', but got '%s'",
-					   GetTokenTypePrettyName(type),
-					   GetTokenTypePrettyName(parser->current.type));
+					   GetTokenKindPrettyName(kind),
+					   GetTokenKindPrettyName(parser->current.kind));
 	}
 
 	return result;
@@ -134,7 +134,7 @@ ExpectToken(Parser *parser,
 internal void
 UnexpectedCurrentToken(Parser *parser)
 {
-	ErrorAtCurrent(parser, "unexpected token '%s'", GetTokenTypePrettyName(parser->current.type));
+	ErrorAtCurrent(parser, "unexpected token '%s'", GetTokenKindPrettyName(parser->current.kind));
 }
 
 internal AstNode *
@@ -150,22 +150,22 @@ ParseAtom(Parser *parser,
 {
 	AstNode *node = nullptr;
 
-	switch (parser->current.type)
+	switch (parser->current.kind)
 	{
-		case TokenType_Number:
+		case TokenKind_Number:
 		{
 			node = MakeNumberNode(parser->current.line, parser->current.numberValue, arena);
 			AdvanceToken(parser, lexer);
 		} break;
 
-		case TokenType_OpenParen:
+		case TokenKind_OpenParen:
 		{
 			AdvanceToken(parser, lexer);
 			node = ParseExpression(parser, lexer, 0, arena);
-			ExpectToken(parser, lexer, TokenType_CloseParen);
+			ExpectToken(parser, lexer, TokenKind_CloseParen);
 		} break;
 
-		case TokenType_Minus:
+		case TokenKind_Minus:
 		{
 			// unary minus
 
@@ -175,9 +175,9 @@ ParseAtom(Parser *parser,
 			node->binary.rhs = ParseAtom(parser, lexer, arena);
 		} break;
 
-		case TokenType_Identifier:
+		case TokenKind_Identifier:
 		{
-			if (PeekToken(lexer).type == TokenType_OpenParen)
+			if (PeekToken(lexer).kind == TokenKind_OpenParen)
 			{
 				// function call
 				// foo(a, b, c)
@@ -193,11 +193,11 @@ ParseAtom(Parser *parser,
 				AdvanceToken(parser, lexer); // eat the '('
 
 				while (!parser->hadError
-					   && parser->current.type != TokenType_CloseParen)
+					   && parser->current.kind != TokenKind_CloseParen)
 				{
 					if (node->call.numExpressions != 0)
 					{
-						ExpectToken(parser, lexer, TokenType_Comma);
+						ExpectToken(parser, lexer, TokenKind_Comma);
 					}
 
 					Assert(node->call.numExpressions < MAX_ARGUMENTS);
@@ -206,7 +206,7 @@ ParseAtom(Parser *parser,
 					node->call.numExpressions++;
 				}
 
-				ExpectToken(parser, lexer, TokenType_CloseParen);
+				ExpectToken(parser, lexer, TokenKind_CloseParen);
 			}
 			else
 			{
@@ -219,21 +219,21 @@ ParseAtom(Parser *parser,
 			}
 		} break;
 
-		case TokenType_True:
+		case TokenKind_True:
 		{
 			node = MakeNode(NodeType_Bool, parser->current.line, arena);
 			node->_bool.value = true;
 			AdvanceToken(parser, lexer);
 		} break;
 
-		case TokenType_False:
+		case TokenKind_False:
 		{
 			node = MakeNode(NodeType_Bool, parser->current.line, arena);
 			node->_bool.value = false;
 			AdvanceToken(parser, lexer);
 		} break;
 
-		case TokenType_Ampersand:
+		case TokenKind_Ampersand:
 		{
 			node = MakeNode(NodeType_AddressOf, parser->current.line, arena);
 			AdvanceToken(parser, lexer);
@@ -241,7 +241,7 @@ ParseAtom(Parser *parser,
 			node->addressOf.what = ParseAtom(parser, lexer, arena);
 		} break;
 
-		case TokenType_Asterisk:
+		case TokenKind_Asterisk:
 		{
 			node = MakeNode(NodeType_Deref, parser->current.line, arena);
 			AdvanceToken(parser, lexer);
@@ -267,13 +267,13 @@ ParseExpression(Parser *parser,
 	AstNode *lhs = ParseAtom(parser, lexer, arena);
 	for (;;)
 	{
-		int bindingPower = LeftBindingPower(parser->current.type);
+		int bindingPower = LeftBindingPower(parser->current.kind);
 		if (bindingPower <= minBindingPower)
 		{
 			break;
 		}
 
-		TokenType type = parser->current.type;
+		TokenKind type = parser->current.kind;
 		int line = parser->current.line;
 
 		AdvanceToken(parser, lexer);
@@ -281,52 +281,52 @@ ParseExpression(Parser *parser,
 		AstNode *rhs = ParseExpression(parser, lexer, bindingPower, arena);
 		switch (type)
 		{
-			case TokenType_Plus:
+			case TokenKind_Plus:
 			{
 				lhs = MakeBinaryNode(NodeType_Add, line, lhs, rhs, arena);
 			} break;
 
-			case TokenType_Minus:
+			case TokenKind_Minus:
 			{
 				lhs = MakeBinaryNode(NodeType_Subtract, line, lhs, rhs, arena);
 			} break;
 
-			case TokenType_Asterisk:
+			case TokenKind_Asterisk:
 			{
 				lhs = MakeBinaryNode(NodeType_Multiply, line, lhs, rhs, arena);
 			} break;
 
-			case TokenType_Slash:
+			case TokenKind_Slash:
 			{
 				lhs = MakeBinaryNode(NodeType_Divide, line, lhs, rhs, arena);
 			} break;
 
-			case TokenType_Less:
+			case TokenKind_Less:
 			{
 				lhs = MakeBinaryNode(NodeType_Less, line, lhs, rhs, arena);
 			} break;
 
-			case TokenType_Greater:
+			case TokenKind_Greater:
 			{
 				lhs = MakeBinaryNode(NodeType_Greater, line, lhs, rhs, arena);
 			} break;
 
-			case TokenType_EqualEqual:
+			case TokenKind_EqualEqual:
 			{
 				lhs = MakeBinaryNode(NodeType_EqualEqual, line, lhs, rhs, arena);
 			} break;
 
-			case TokenType_LessEqual:
+			case TokenKind_LessEqual:
 			{
 				lhs = MakeBinaryNode(NodeType_LessEqual, line, lhs, rhs, arena);
 			} break;
 
-			case TokenType_GreaterEqual:
+			case TokenKind_GreaterEqual:
 			{
 				lhs = MakeBinaryNode(NodeType_GreaterEqual, line, lhs, rhs, arena);
 			} break;
 
-			case TokenType_BangEqual:
+			case TokenKind_BangEqual:
 			{
 				lhs = MakeBinaryNode(NodeType_NotEqual, line, lhs, rhs, arena);
 			} break;
@@ -352,7 +352,7 @@ ParseBlock(Parser *parser,
 
 	int openBraceTokenLine = parser->current.line;
 
-	if (!ExpectToken(parser, lexer, TokenType_OpenBrace))
+	if (!ExpectToken(parser, lexer, TokenKind_OpenBrace))
 	{
 		return nullptr;
 	}
@@ -361,7 +361,7 @@ ParseBlock(Parser *parser,
 	block->block.statements = PushArray(arena, MAX_STATEMENTS, AstNode *);
 	block->block.numStatements = 0;
 
-	while (parser->current.type != TokenType_CloseBrace
+	while (parser->current.kind != TokenKind_CloseBrace
 		   && !parser->hadError)
 	{
 		AstNode *statement = ParseStatement(parser, lexer, arena);
@@ -374,7 +374,7 @@ ParseBlock(Parser *parser,
 		block->block.statements[block->block.numStatements++] = statement;
 	}
 
-	if (!ExpectToken(parser, lexer, TokenType_CloseBrace))
+	if (!ExpectToken(parser, lexer, TokenKind_CloseBrace))
 	{
 		return nullptr;
 	}
@@ -389,7 +389,7 @@ ParseType(Parser *parser,
 {
 	Type type = {};
 
-	if (parser->current.type == TokenType_Asterisk)
+	if (parser->current.kind == TokenKind_Asterisk)
 	{
 		type.kind = TypeKind_Pointer;
 		AdvanceToken(parser, lexer); // eat the '*'
@@ -427,7 +427,7 @@ ParseReturnStatement(Parser *parser,
 	// eat the 'return'
 	AdvanceToken(parser, lexer);
 
-	if (parser->current.type == TokenType_Semicolon)
+	if (parser->current.kind == TokenKind_Semicolon)
 	{
 		// bare return;
 	}
@@ -438,7 +438,7 @@ ParseReturnStatement(Parser *parser,
 		node->ret.expr = ParseExpression(parser, lexer, 0, arena);	
 	}
 
-	ExpectToken(parser, lexer, TokenType_Semicolon);
+	ExpectToken(parser, lexer, TokenKind_Semicolon);
 
 	return node;
 }
@@ -459,7 +459,7 @@ ParseIfStatement(Parser *parser,
 
 	node->_if.thenBlock = ParseBlock(parser, lexer, arena);
 
-	if (parser->current.type == TokenType_Else)
+	if (parser->current.kind == TokenKind_Else)
 	{
 		// eat the 'else'
 		AdvanceToken(parser, lexer);
@@ -503,7 +503,7 @@ ParsePrintStatement(Parser *parser,
 
 	node->print.expr = ParseExpression(parser, lexer, 0, arena);	
 
-	ExpectToken(parser, lexer, TokenType_Semicolon);
+	ExpectToken(parser, lexer, TokenKind_Semicolon);
 
 	return node;
 }
@@ -521,11 +521,11 @@ ParseVariableDeclaration(Parser *parser,
 	// eat the variable name
 	AdvanceToken(parser, lexer);
 
-	ExpectToken(parser, lexer, TokenType_Colon);
+	ExpectToken(parser, lexer, TokenKind_Colon);
 
 	node->varDecl.type = ParseType(parser, lexer, arena);
 
-	if (parser->current.type == TokenType_Equal)
+	if (parser->current.kind == TokenKind_Equal)
 	{
 		// name : type = expr;
 
@@ -534,9 +534,9 @@ ParseVariableDeclaration(Parser *parser,
 
 		node->varDecl.expr = ParseExpression(parser, lexer, 0, arena);
 
-		ExpectToken(parser, lexer, TokenType_Semicolon);
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
 	}
-	else if (parser->current.type == TokenType_Semicolon)
+	else if (parser->current.kind == TokenKind_Semicolon)
 	{
 		// name : type;
 
@@ -568,11 +568,11 @@ ParseAssignmentStatement(Parser *parser,
 	// eat the variable name
 	AdvanceToken(parser, lexer);
 
-	ExpectToken(parser, lexer, TokenType_Equal);
+	ExpectToken(parser, lexer, TokenKind_Equal);
 
 	node->assign.expr = ParseExpression(parser, lexer, 0, arena);
 
-	ExpectToken(parser, lexer, TokenType_Semicolon);
+	ExpectToken(parser, lexer, TokenKind_Semicolon);
 
 	return node;
 }
@@ -584,44 +584,44 @@ ParseStatement(Parser *parser,
 {
 	AstNode *node = nullptr;
 
-	switch (parser->current.type)
+	switch (parser->current.kind)
 	{
-		case TokenType_If:
+		case TokenKind_If:
 		{
 			node = ParseIfStatement(parser, lexer, arena);
 		} break;
 
-		case TokenType_While:
+		case TokenKind_While:
 		{
 			node = ParseWhileStatement(parser, lexer, arena);
 		} break;
 
-		case TokenType_Print:
+		case TokenKind_Print:
 		{
 			node = ParsePrintStatement(parser, lexer, arena);
 		} break;
 
-		case TokenType_OpenBrace:
+		case TokenKind_OpenBrace:
 		{
 			// empty scope
 			// { statements; }
 			node = ParseBlock(parser, lexer, arena);
 		} break;
 
-		case TokenType_Return:
+		case TokenKind_Return:
 		{
 			node = ParseReturnStatement(parser, lexer, arena);
 		} break;
 
-		case TokenType_Identifier:
+		case TokenKind_Identifier:
 		{
 			Token peekToken = PeekToken(lexer);
 
-			if (peekToken.type == TokenType_Colon)
+			if (peekToken.kind == TokenKind_Colon)
 			{
 				node = ParseVariableDeclaration(parser, lexer, arena);
 			}
-			else if (peekToken.type == TokenType_Equal)
+			else if (peekToken.kind == TokenKind_Equal)
 			{
 				node = ParseAssignmentStatement(parser, lexer, arena);
 			}
@@ -630,7 +630,7 @@ ParseStatement(Parser *parser,
 				// bare expression
 				// expr;
 				node = ParseExpression(parser, lexer, 0, arena);
-				ExpectToken(parser, lexer, TokenType_Semicolon);
+				ExpectToken(parser, lexer, TokenKind_Semicolon);
 			}
 		} break;
 
@@ -639,7 +639,7 @@ ParseStatement(Parser *parser,
 			// bare expression
 			// expr;
 			node = ParseExpression(parser, lexer, 0, arena);
-			ExpectToken(parser, lexer, TokenType_Semicolon);
+			ExpectToken(parser, lexer, TokenKind_Semicolon);
 		} break;
 	}
 
@@ -664,27 +664,27 @@ ParseFunctionDefinition(Parser *parser,
 	// eat the function name
 	AdvanceToken(parser, lexer);
 
-	ExpectToken(parser, lexer, TokenType_Colon);
-	ExpectToken(parser, lexer, TokenType_Colon);
+	ExpectToken(parser, lexer, TokenKind_Colon);
+	ExpectToken(parser, lexer, TokenKind_Colon);
 
-	ExpectToken(parser, lexer, TokenType_Proc);
+	ExpectToken(parser, lexer, TokenKind_Proc);
 
-	ExpectToken(parser, lexer, TokenType_OpenParen);
+	ExpectToken(parser, lexer, TokenKind_OpenParen);
 
 	while (!parser->hadError
-			&& parser->current.type != TokenType_CloseParen)
+			&& parser->current.kind != TokenKind_CloseParen)
 	{
 		if (node->func.numParams != 0)
 		{
-			ExpectToken(parser, lexer, TokenType_Comma);
+			ExpectToken(parser, lexer, TokenKind_Comma);
 		}
 
 		AstNode *param = MakeNode(NodeType_Param, parser->current.line, arena);
 		param->param.name = parser->current.str;
 
-		ExpectToken(parser, lexer, TokenType_Identifier); // eat the param name
+		ExpectToken(parser, lexer, TokenKind_Identifier); // eat the param name
 
-		ExpectToken(parser, lexer, TokenType_Colon);
+		ExpectToken(parser, lexer, TokenKind_Colon);
 
 		param->param.type = ParseType(parser, lexer, arena);
 
@@ -698,7 +698,7 @@ ParseFunctionDefinition(Parser *parser,
 
 	node->func.returnType.kind = TypeKind_Void;
 
-	if (parser->current.type == TokenType_Arrow)
+	if (parser->current.kind == TokenKind_Arrow)
 	{
 		AdvanceToken(parser, lexer); // eat the '->'
 
@@ -717,9 +717,9 @@ ParseTopLevelStatement(Parser *parser,
 {
 	AstNode *node = nullptr;
 
-	switch (parser->current.type)
+	switch (parser->current.kind)
 	{
-		case TokenType_Identifier:
+		case TokenKind_Identifier:
 		{
 			node = ParseFunctionDefinition(parser, lexer, arena);
 		} break;
@@ -745,7 +745,7 @@ ParseProgram(Parser *parser,
 	block->block.numStatements = 0;
 
 	while (!parser->hadError
-		   && parser->current.type != TokenType_EOF)
+		   && parser->current.kind != TokenKind_EOF)
 	{
 		AstNode *statement = ParseTopLevelStatement(parser, lexer, arena);
 		if (parser->hadError)

@@ -48,10 +48,10 @@ AdvanceChar(Lexer *lexer, int count = 1)
 }
 
 internal Token
-MakeToken(Lexer *lexer, TokenType type, string str)
+MakeToken(Lexer *lexer, TokenKind kind, string str)
 {
 	Token result = {};
-	result.type = type;
+	result.kind = kind;
 	result.str = str;
 	result.line = lexer->line;
 
@@ -62,52 +62,52 @@ internal Token
 ErrorToken(Lexer *lexer, string message)
 {
 	Token result = {};
-	result.type = TokenType_Error;
+	result.kind = TokenKind_Error;
 	result.str = message;
 	result.line = lexer->line;
 
 	return result;
 }
 
-internal TokenType
+internal TokenKind
 IdentifierType(string str)
 {
-	TokenType result = TokenType_Identifier;
+	TokenKind result = TokenKind_Identifier;
 	if (str == "if")
 	{
-		result = TokenType_If;
+		result = TokenKind_If;
 	}
 	else if (str == "else")
 	{
-		result = TokenType_Else;
+		result = TokenKind_Else;
 	}
 	else if (str == "while")
 	{
-		result = TokenType_While;
+		result = TokenKind_While;
 	}
 	else if (str == "do")
 	{
-		result = TokenType_Do;
+		result = TokenKind_Do;
 	}
 	else if (str == "print")
 	{
-		result = TokenType_Print;
+		result = TokenKind_Print;
 	}
 	else if (str == "proc")
 	{
-		result = TokenType_Proc;
+		result = TokenKind_Proc;
 	}
 	else if (str == "return")
 	{
-		result = TokenType_Return;
+		result = TokenKind_Return;
 	}
 	else if (str == "true")
 	{
-		result = TokenType_True;
+		result = TokenKind_True;
 	}
 	else if (str == "false")
 	{
-		result = TokenType_False;
+		result = TokenKind_False;
 	}
 
 	return result;
@@ -125,7 +125,7 @@ ParseIdentifier(Lexer *lexer)
 		str.count++;
 	}
 
-	TokenType type = IdentifierType(str);
+	TokenKind type = IdentifierType(str);
 	Token result = MakeToken(lexer, type, str);
 	return result;
 }
@@ -159,7 +159,7 @@ ParseString(Lexer *lexer)
 	AdvanceChar(lexer);
 	str.count++;
 
-	return MakeToken(lexer, TokenType_String, str);
+	return MakeToken(lexer, TokenKind_String, str);
 }
 
 internal Token
@@ -191,7 +191,7 @@ ParseNumber(Lexer *lexer)
 		}
 	}
 
-	Token result = MakeToken(lexer, TokenType_Number, str);
+	Token result = MakeToken(lexer, TokenKind_Number, str);
 	result.numberValue = value;
 	return result;
 }
@@ -242,7 +242,7 @@ GetToken(Lexer *lexer)
 
 	if (IsAtEnd(lexer))
 	{
-		return MakeToken(lexer, TokenType_EOF, {});
+		return MakeToken(lexer, TokenKind_EOF, {});
 	}
 
 	char c = PeekChar(lexer);
@@ -262,16 +262,16 @@ GetToken(Lexer *lexer)
 		struct TokenInfo
 		{
 			string str;
-			TokenType type;
+			TokenKind type;
 		};
 
 		TokenInfo tokenInfos[] =
 		{
-			{"!=", TokenType_BangEqual},
-			{"==", TokenType_EqualEqual},
-			{">=", TokenType_GreaterEqual},
-			{"<=", TokenType_LessEqual},
-			{"->", TokenType_Arrow},
+			{"!=", TokenKind_BangEqual},
+			{"==", TokenKind_EqualEqual},
+			{">=", TokenKind_GreaterEqual},
+			{"<=", TokenKind_LessEqual},
+			{"->", TokenKind_Arrow},
 		};
 
 		for (auto &tokenInfo : tokenInfos)
@@ -280,7 +280,7 @@ GetToken(Lexer *lexer)
 				&& PeekNextChar(lexer) == tokenInfo.str[1])
 			{
 				string str = {lexer->current, 2};
-				TokenType type = tokenInfo.type;
+				TokenKind type = tokenInfo.type;
 				AdvanceChar(lexer, 2);
 
 				return MakeToken(lexer, type, str);
@@ -311,7 +311,7 @@ GetToken(Lexer *lexer)
 	{
 		string str = {lexer->current, 1};
 		AdvanceChar(lexer);
-		return MakeToken(lexer, (TokenType)c, str);
+		return MakeToken(lexer, (TokenKind)c, str);
 	}
 
 	if (c == '"')
