@@ -83,6 +83,43 @@ PopShadowSpace(FILE *out,
 internal void
 GenerateExpression(Node *baseNode,
 				   FILE *out,
+				   CodegenContext *context);
+
+internal void
+GenerateLValueAddress(Node *baseNode,
+					  FILE *out,
+					  CodegenContext *context)
+{
+	switch (baseNode->kind)
+	{
+		case NodeKind_Var:
+		{
+			VarNode *node = As<VarNode>(baseNode);
+
+			fprintf(out, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED "\n",
+					node->stackOffset,
+					STR_ARG(node->name));
+			WritePush(out, context, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
+		case NodeKind_Deref:
+		{
+			DerefNode *node = As<DerefNode>(baseNode);
+
+			GenerateExpression(node->what, out, context);
+		} break;
+
+		default:
+		{
+			Assert(false);
+		} break;
+	}
+}
+
+internal void
+GenerateExpression(Node *baseNode,
+				   FILE *out,
 				   CodegenContext *context)
 {
 	switch (baseNode->kind)
@@ -203,12 +240,11 @@ GenerateExpression(Node *baseNode,
 		} break;
 
 		case NodeKind_Var:
+		case NodeKind_Deref:
 		{
-			VarNode *node = As<VarNode>(baseNode);
-
-			fprintf(out, "    mov rax, [rbp - %d]\t; load variable " STR_FMT_QUOTED "\n",
-					node->stackOffset,
-					STR_ARG(node->name));
+			GenerateLValueAddress(baseNode, out, context);
+			WritePop(out, context, "    pop rax\n");
+			fprintf(out, "    mov rax, [rax]\n");
 			WritePush(out, context, "    push rax\n");
 			fprintf(out, "\n");
 		} break;
@@ -254,27 +290,7 @@ GenerateExpression(Node *baseNode,
 		{
 			AddressOfNode *node = As<AddressOfNode>(baseNode);
 
-			VarNode *what = As<VarNode>(node->what);
-
-			fprintf(out, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED "\n",
-					what->stackOffset,
-					STR_ARG(what->name));
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
-		} break;
-
-		case NodeKind_Deref:
-		{
-			DerefNode *node = As<DerefNode>(baseNode);
-
-			VarNode *what = As<VarNode>(node->what);
-
-			fprintf(out, "    mov rax, [rbp - %d]\t; load pointer variable " STR_FMT_QUOTED "\n",
-					what->stackOffset,
-					STR_ARG(what->name));
-			fprintf(out, "    mov rax, [rax]\t\t; dereference\n");
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			GenerateLValueAddress(node->what, out, context);
 		} break;
 
 		default:
@@ -313,10 +329,12 @@ GenerateStatement(Node *baseNode,
 		{
 			AssignNode *node = As<AssignNode>(baseNode);
 
-			GenerateExpression(node->expr, out, context);
+			GenerateExpression(node->rhs, out, context);
+			GenerateLValueAddress(node->lhs, out, context);
 
-			WritePop(out, context, "    pop rax\t\t\t; store into " STR_FMT_QUOTED "\n", STR_ARG(node->name));
-			fprintf(out, "    mov [rbp - %d], rax\n", node->stackOffset);
+			WritePop(out, context, "    pop rcx\n");
+			WritePop(out, context, "    pop rax\n");
+			fprintf(out, "    mov [rcx], rax\n");
 			fprintf(out, "\n");
 		} break;
 

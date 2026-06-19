@@ -67,9 +67,8 @@ struct AssignNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_Assign;
 
-	string name;
-	int stackOffset;
-	Node *expr;
+	Node *lhs;
+	Node *rhs;
 };
 
 struct VarDeclNode : public Node

@@ -76,6 +76,20 @@ AnalyzeBlock(Node *baseNode,
 	LeaveScope(symTable, scope);
 }
 
+internal bool
+IsLValue(Node *node)
+{
+	switch (node->kind)
+	{
+		case NodeKind_Var:
+		case NodeKind_Deref:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
 internal void
 AnalyzeExpression(Node *baseNode,
 				  SemanticContext *context)
@@ -242,8 +256,15 @@ AnalyzeExpression(Node *baseNode,
 
 			AnalyzeExpression(node->what, context);
 
-			node->inferredType.kind = TypeKind_Pointer;
-			node->inferredType.pointerTo = &node->what->inferredType;
+			if (IsLValue(node->what))
+			{
+				node->inferredType.kind = TypeKind_Pointer;
+				node->inferredType.pointerTo = &node->what->inferredType;
+			}
+			else
+			{
+				Error(context, node->what, "cannot take address of non-lvalue");
+			}
 		} break;
 
 		case NodeKind_Deref:
@@ -252,8 +273,14 @@ AnalyzeExpression(Node *baseNode,
 
 			AnalyzeExpression(node->what, context);
 
-			Assert(node->what->inferredType.kind == TypeKind_Pointer);
-			node->inferredType = *node->what->inferredType.pointerTo;
+			if (node->what->inferredType.kind == TypeKind_Pointer)
+			{
+				node->inferredType = *node->what->inferredType.pointerTo;
+			}
+			else
+			{
+				Error(context, node->what, "cannot dereference non-pointer");
+			}
 		} break;
 
 		default:
@@ -307,23 +334,21 @@ AnalyzeStatement(Node *baseNode,
 		{
 			AssignNode *node = As<AssignNode>(baseNode);
 
-			AnalyzeExpression(node->expr, context);
+			AnalyzeExpression(node->lhs, context);
+			AnalyzeExpression(node->rhs, context);
 
-			Symbol *symbol = LookupSymbol(symTable, node->name, 0);
-			if (symbol)
+			if (IsLValue(node->lhs))
 			{
-				node->stackOffset = symbol->stackOffset;
-
-				if (!TypesEqual(node->expr->inferredType, symbol->type))
+				if (!TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
 				{
-					Error(context, node->expr, "cannot assign '%s' to '%s'",
-						  GetTypeKindPrettyName(node->expr->inferredType.kind),
-						  GetTypeKindPrettyName(symbol->type.kind));
+					Error(context, node->rhs, "cannot assign '%s' to '%s'",
+						  GetTypeKindPrettyName(node->rhs->inferredType.kind),
+						  GetTypeKindPrettyName(node->lhs->inferredType.kind));
 				}
 			}
 			else
 			{
-				Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
+				Error(context, node->lhs, "cannot assign to non-lvalue");
 			}
 		} break;
 

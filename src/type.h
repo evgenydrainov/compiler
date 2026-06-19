@@ -21,9 +21,11 @@ struct Type
 inline bool
 TypesEqual(Type a, Type b)
 {
+	if (a.kind == TypeKind_Pointer
+		&& b.kind == TypeKind_Pointer)
+	{
+		return TypesEqual(*a.pointerTo, *b.pointerTo);
+	}
+
 	return a.kind == b.kind;
 }
-
-//inline Type g_typeVoid = { TypeKind_Void };
-//inline Type g_typeInt64 = { TypeKind_Int64 };
-//inline Type g_typeBool = { TypeKind_Bool };

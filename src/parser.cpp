@@ -579,18 +579,14 @@ ParseAssignmentStatement(Parser *parser,
 						 Arena *arena)
 {
 	// assignment
-	// name = expr;
+	// lhs = rhs;
 
 	AssignNode *node = MakeNode<AssignNode>(NodeKind_Assign, parser->current.line, arena);
-	node->name = parser->current.str;
 
-	// eat the variable name
-	AdvanceToken(parser, lexer);
-
+	node->lhs = ParseExpression(parser, lexer, 0, arena);
 	ExpectToken(parser, lexer, TokenKind_Equal);
 
-	node->expr = ParseExpression(parser, lexer, 0, arena);
-
+	node->rhs = ParseExpression(parser, lexer, 0, arena);
 	ExpectToken(parser, lexer, TokenKind_Semicolon);
 
 	return node;
