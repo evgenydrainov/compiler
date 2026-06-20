@@ -574,91 +574,68 @@ ParseVariableDeclaration(Parser *parser,
 }
 
 internal Node *
-ParseAssignmentStatement(Parser *parser,
-						 Lexer *lexer,
-						 Arena *arena)
-{
-	// assignment
-	// lhs = rhs;
-
-	AssignNode *node = MakeNode<AssignNode>(NodeKind_Assign, parser->current.line, arena);
-
-	node->lhs = ParseExpression(parser, lexer, 0, arena);
-	ExpectToken(parser, lexer, TokenKind_Equal);
-
-	node->rhs = ParseExpression(parser, lexer, 0, arena);
-	ExpectToken(parser, lexer, TokenKind_Semicolon);
-
-	return node;
-}
-
-internal Node *
 ParseStatement(Parser *parser,
 			   Lexer *lexer,
 			   Arena *arena)
 {
-	Node *node = nullptr;
-
-	switch (parser->current.kind)
+	if (parser->current.kind == TokenKind_If)
 	{
-		case TokenKind_If:
-		{
-			node = ParseIfStatement(parser, lexer, arena);
-		} break;
-
-		case TokenKind_While:
-		{
-			node = ParseWhileStatement(parser, lexer, arena);
-		} break;
-
-		case TokenKind_Print:
-		{
-			node = ParsePrintStatement(parser, lexer, arena);
-		} break;
-
-		case TokenKind_OpenBrace:
-		{
-			// empty scope
-			// { statements; }
-			node = ParseBlock(parser, lexer, arena);
-		} break;
-
-		case TokenKind_Return:
-		{
-			node = ParseReturnStatement(parser, lexer, arena);
-		} break;
-
-		case TokenKind_Identifier:
-		{
-			Token peekToken = PeekToken(lexer);
-
-			if (peekToken.kind == TokenKind_Colon)
-			{
-				node = ParseVariableDeclaration(parser, lexer, arena);
-			}
-			else if (peekToken.kind == TokenKind_Equal)
-			{
-				node = ParseAssignmentStatement(parser, lexer, arena);
-			}
-			else
-			{
-				// bare expression
-				// expr;
-				node = ParseExpression(parser, lexer, 0, arena);
-				ExpectToken(parser, lexer, TokenKind_Semicolon);
-			}
-		} break;
-
-		default:
-		{
-			// bare expression
-			// expr;
-			node = ParseExpression(parser, lexer, 0, arena);
-			ExpectToken(parser, lexer, TokenKind_Semicolon);
-		} break;
+		return ParseIfStatement(parser, lexer, arena);
 	}
 
-	return node;
+	if (parser->current.kind == TokenKind_While)
+	{
+		return ParseWhileStatement(parser, lexer, arena);
+	}
+
+	if (parser->current.kind == TokenKind_Print)
+	{
+		return ParsePrintStatement(parser, lexer, arena);
+	}
+
+	if (parser->current.kind == TokenKind_OpenBrace)
+	{
+		// empty scope
+		// { statements; }
+		return ParseBlock(parser, lexer, arena);
+	}
+
+	if (parser->current.kind == TokenKind_Return)
+	{
+		return ParseReturnStatement(parser, lexer, arena);
+	}
+
+	if (parser->current.kind == TokenKind_Identifier)
+	{
+		Token peekToken = PeekToken(lexer);
+		if (peekToken.kind == TokenKind_Colon)
+		{
+			return ParseVariableDeclaration(parser, lexer, arena);
+		}
+	}
+
+	Node *expr = ParseExpression(parser, lexer, 0, arena);
+	if (parser->current.kind == TokenKind_Equal)
+	{
+		// assignment
+		// lhs = rhs;
+
+		AssignNode *node = MakeNode<AssignNode>(NodeKind_Assign, parser->current.line, arena);
+		node->lhs = expr;
+
+		AdvanceToken(parser, lexer); // eat the '='
+
+		node->rhs = ParseExpression(parser, lexer, 0, arena);
+
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+		return node;
+	}
+
+	// bare expression
+	// expr;
+	ExpectToken(parser, lexer, TokenKind_Semicolon);
+	return expr;
 }
 
 internal Node *
