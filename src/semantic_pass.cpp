@@ -494,6 +494,11 @@ AnalyzeTopLevelStatement(Node *baseNode,
 		{
 			FuncNode *node = As<FuncNode>(baseNode);
 
+			if (node->returnType.kind == TypeKind_Struct)
+			{
+				Error(context, node, "cannot return struct by value");
+			}
+
 			Scope scope = EnterScope(symTable);
 
 			for (int i = 0;
@@ -501,6 +506,11 @@ AnalyzeTopLevelStatement(Node *baseNode,
 				 i++)
 			{
 				ParamNode *param = As<ParamNode>(node->params[i]);
+
+				if (param->type.kind == TypeKind_Struct)
+				{
+					Error(context, param, "cannot pass struct by value");
+				}
 
 				ResolveType(&param->type, context, param);
 
@@ -586,19 +596,24 @@ SemanticPass(Node *_program,
 
 				type->structInfo = PushStruct<StructInfo>(arena);
 				type->structInfo->name = node->name;
-				type->structInfo->numFields = (int)node->fields.count;
 
-				int fieldIndex = 0;
 				int offset = 0;
 				for (StructFieldDeclNode *field : node->fields)
 				{
-					type->structInfo->fields[fieldIndex].name = field->name;
-					type->structInfo->fields[fieldIndex].type = field->type;
+					if (!FindField(type->structInfo, field->name))
+					{
+						type->structInfo->fields[type->structInfo->numFields].name = field->name;
+						type->structInfo->fields[type->structInfo->numFields].type = field->type;
 
-					type->structInfo->fields[fieldIndex].offset = offset;
-					offset += SizeOfType(field->type);
+						type->structInfo->fields[type->structInfo->numFields].offset = offset;
+						offset += SizeOfType(field->type);
 
-					fieldIndex++;
+						type->structInfo->numFields++;
+					}
+					else
+					{
+						Error(context, field, STR_FMT_QUOTED ": redefinition", STR_ARG(field->name));
+					}
 				}
 
 				type->structInfo->size = offset;

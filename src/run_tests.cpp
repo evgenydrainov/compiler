@@ -69,4 +69,5 @@ int main()
 	//TestReturnCode("13_pointers",                20);
 	//TestReturnCode("14_pointer_write",           40);
 	TestReturnCode("15_struct",                  0);
+	TestReturnCode("16_struct_stack_allocation", 7);
 }
