@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h> // for memset
 
 #define internal static
 #define local_persist static
@@ -48,11 +49,13 @@ struct string
 
 	char &operator[](usize index)
 	{
+		Assert(index >= 0 && index < count);
 		return data[index];
 	}
 
 	const char &operator[](usize index) const
 	{
+		Assert(index >= 0 && index < count);
 		return data[index];
 	}
 
@@ -73,6 +76,9 @@ struct string
 
 		return true;
 	}
+
+	char *begin() { return &data[0]; }
+	char *end()   { return &data[count]; }
 };
 
 #define STR_FMT "%.*s"
@@ -137,6 +143,8 @@ PushSize(Arena *arena,
 	void *result = arena->data + alignedPos;
 	arena->pos = alignedPos + size;
 
+	memset(result, 0, size);
+
 	return result;
 }
 
@@ -198,3 +206,47 @@ struct IsSameType<T, T>
 {
 	static constexpr bool value = true;
 };
+
+template <typename T>
+struct BumpArray
+{
+	T *data;
+	usize count;
+	usize capacity;
+
+	T &operator[](usize index)
+	{
+		Assert(index >= 0 && index < count);
+		return data[index];
+	}
+
+	const T &operator[](usize index) const
+	{
+		Assert(index >= 0 && index < count);
+		return data[index];
+	}
+
+	T *begin() { return &data[0]; }
+	T *end()   { return &data[count]; }
+};
+
+template <typename T>
+inline void
+ArrayAdd(BumpArray<T> *array, const T &value)
+{
+	Assert(array->count < array->capacity);
+
+	array->data[array->count] = value;
+	array->count++;
+}
+
+template <typename T>
+inline BumpArray<T>
+PushBumpArray(Arena *arena, usize capacity)
+{
+	BumpArray<T> result = {};
+	result.data = PushArray<T>(arena, capacity);
+	result.capacity = capacity;
+
+	return result;
+}

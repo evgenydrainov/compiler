@@ -109,6 +109,10 @@ IdentifierType(string str)
 	{
 		result = TokenKind_False;
 	}
+	else if (str == "struct")
+	{
+		result = TokenKind_Struct;
+	}
 
 	return result;
 }

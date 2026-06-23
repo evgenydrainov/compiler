@@ -40,7 +40,8 @@
 	X(TokenKind_Proc,             269,       "proc"           ) \
 	X(TokenKind_Return,           270,       "return"         ) \
 	X(TokenKind_True,             271,       "true"           ) \
-	X(TokenKind_False,            272,       "false"          )
+	X(TokenKind_False,            272,       "false"          ) \
+	X(TokenKind_Struct,           273,       "struct"         )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 
@@ -61,11 +62,14 @@ struct Lexer
 Token GetToken(Lexer *lexer);
 
 inline Token
-PeekToken(Lexer *lexer)
+PeekToken(Lexer *lexer, int count = 1)
 {
 	Lexer copyLexer = *lexer;
-
-	Token result = GetToken(&copyLexer);
+	Token result = {};
+	while (count--)
+	{
+		result = GetToken(&copyLexer);
+	}
 
 	return result;
 }

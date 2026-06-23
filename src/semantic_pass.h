@@ -5,12 +5,15 @@
 
 struct SymbolTable;
 struct FunctionTable;
+struct TypeTable;
 
 struct SemanticContext
 {
 	bool hadError;
+
 	SymbolTable *symTable;
 	FunctionTable *funcTable;
+	TypeTable *typeTable;
 
 	FuncNode *currentFunction;
 };

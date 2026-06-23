@@ -42,9 +42,11 @@ LookupSymbol(SymbolTable *table,
 }
 
 inline Symbol *
-DeclareSymbol(SymbolTable *table, string name)
+DeclareSymbol(SymbolTable *table,
+			  string name,
+			  Type type)
 {
-	table->stackSize += 8;
+	table->stackSize += SizeOfType(type);
 
 	table->maxStackSize = Max(table->maxStackSize, table->stackSize);
 
@@ -54,6 +56,7 @@ DeclareSymbol(SymbolTable *table, string name)
 	*symbol = {};
 	symbol->name = name;
 	symbol->stackOffset = table->stackSize;
+	symbol->type = type;
 
 	return symbol;
 }

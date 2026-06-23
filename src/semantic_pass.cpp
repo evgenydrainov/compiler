@@ -1,6 +1,9 @@
 #include "semantic_pass.h"
+
 #include "symbol_table.h"
 #include "function_table.h"
+#include "type_table.h"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -83,10 +86,32 @@ IsLValue(Node *node)
 	{
 		case NodeKind_Var:
 		case NodeKind_Deref:
+		case NodeKind_FieldAccess:
 			return true;
 
 		default:
 			return false;
+	}
+}
+
+internal void
+ResolveType(Type *type,
+			SemanticContext *context,
+			Node *nodeForError)
+{
+	if (type->kind == TypeKind_Struct)
+	{
+		Assert(!type->structInfo);
+
+		Type *typeInfo = LookupType(context->typeTable, type->name);
+		if (typeInfo)
+		{
+			type->structInfo = typeInfo->structInfo;
+		}
+		else
+		{
+			Error(context, nodeForError, STR_FMT_QUOTED ": unknown type", STR_ARG(type->name));
+		}
 	}
 }
 
@@ -99,6 +124,11 @@ AnalyzeExpression(Node *baseNode,
 
 	switch (baseNode->kind)
 	{
+		default:
+		{
+			Assert(false);
+		} break;
+
 		case NodeKind_Number:
 		{
 			baseNode->inferredType.kind = TypeKind_Int64;
@@ -276,6 +306,8 @@ AnalyzeExpression(Node *baseNode,
 			if (node->what->inferredType.kind == TypeKind_Pointer)
 			{
 				node->inferredType = *node->what->inferredType.pointerTo;
+
+				ResolveType(&node->inferredType, context, node);
 			}
 			else
 			{
@@ -283,9 +315,30 @@ AnalyzeExpression(Node *baseNode,
 			}
 		} break;
 
-		default:
+		case NodeKind_FieldAccess:
 		{
-			Assert(false);
+			FieldAccessNode *node = As<FieldAccessNode>(baseNode);
+
+			AnalyzeExpression(node->expr, context);
+
+			if (node->expr->inferredType.kind == TypeKind_Struct)
+			{
+				StructField *field = FindField(node->expr->inferredType.structInfo, node->fieldName);
+				if (field)
+				{
+					node->inferredType = field->type;
+					node->fieldOffset = field->offset;
+				}
+				else
+				{
+					Error(context, node, "struct has no field " STR_FMT_QUOTED,
+						  STR_ARG(node->fieldName));
+				}
+			}
+			else
+			{
+				Error(context, node->expr, "cannot access field of non-struct");
+			}
 		} break;
 	}
 }
@@ -307,10 +360,11 @@ AnalyzeStatement(Node *baseNode,
 				AnalyzeExpression(node->expr, context);
 			}
 
+			ResolveType(&node->type, context, node);
+
 			if (!LookupSymbol(symTable, node->name, symTable->scopeStart))
 			{
-				Symbol *symbol = DeclareSymbol(symTable, node->name);
-				symbol->type = node->type;
+				Symbol *symbol = DeclareSymbol(symTable, node->name, node->type);
 
 				node->stackOffset = symbol->stackOffset;
 
@@ -448,14 +502,15 @@ AnalyzeTopLevelStatement(Node *baseNode,
 			{
 				ParamNode *param = As<ParamNode>(node->params[i]);
 
+				ResolveType(&param->type, context, param);
+
 				if (LookupSymbol(symTable, param->name, 0))
 				{
 					Error(context, param, STR_FMT_QUOTED ": redefinition", STR_ARG(param->name));
 				}
 				else
 				{
-					Symbol *symbol = DeclareSymbol(symTable, param->name);
-					symbol->type = param->type;
+					Symbol *symbol = DeclareSymbol(symTable, param->name, param->type);
 
 					param->stackOffset = symbol->stackOffset;
 				}
@@ -484,12 +539,12 @@ SemanticPass(Node *_program,
 			 Arena *arena)
 {
 	FunctionTable *funcTable = PushStruct<FunctionTable>(arena);
-	memset(funcTable, 0, sizeof(*funcTable));
-
 	SymbolTable *symTable = PushStruct<SymbolTable>(arena);
-	memset(symTable, 0, sizeof(*symTable));
+	TypeTable *typeTable = PushStruct<TypeTable>(arena);
 
 	context->funcTable = funcTable;
+	context->symTable = symTable;
+	context->typeTable = typeTable;
 
 	BlockNode *program = As<BlockNode>(_program);
 
@@ -497,28 +552,61 @@ SemanticPass(Node *_program,
 		 i < program->numStatements;
 		 i++)
 	{
-		Assert(program->statements[i]->kind == NodeKind_Func);
-
-		FuncNode *functionDef = As<FuncNode>(program->statements[i]);
-
-		if (!LookupFunction(funcTable, functionDef->name))
+		if (program->statements[i]->kind == NodeKind_Func)
 		{
-			Function *func = DeclareFunction(funcTable, functionDef->name);
-			func->numParams = functionDef->numParams;
-			func->returnType = functionDef->returnType;
+			FuncNode *functionDef = As<FuncNode>(program->statements[i]);
 
-			for (int paramIndex = 0;
-				 paramIndex < functionDef->numParams;
-				 paramIndex++)
+			if (!LookupFunction(funcTable, functionDef->name))
 			{
-				ParamNode *paramNode = As<ParamNode>(functionDef->params[paramIndex]);
+				Function *func = DeclareFunction(funcTable, functionDef->name);
+				func->numParams = functionDef->numParams;
+				func->returnType = functionDef->returnType;
 
-				func->params[paramIndex].type = paramNode->type;
+				for (int paramIndex = 0;
+					 paramIndex < functionDef->numParams;
+					 paramIndex++)
+				{
+					ParamNode *paramNode = As<ParamNode>(functionDef->params[paramIndex]);
+
+					func->params[paramIndex].type = paramNode->type;
+				}
+			}
+			else
+			{
+				Error(context, functionDef, "function " STR_FMT_QUOTED " was already defined", STR_ARG(functionDef->name));
 			}
 		}
-		else
+		else if (program->statements[i]->kind == NodeKind_StructDecl)
 		{
-			Error(context, functionDef, "function " STR_FMT_QUOTED " was already defined", STR_ARG(functionDef->name));
+			StructDeclNode *node = As<StructDeclNode>(program->statements[i]);
+
+			if (!LookupType(typeTable, node->name))
+			{
+				Type *type = DeclareType(typeTable, node->name);
+
+				type->structInfo = PushStruct<StructInfo>(arena);
+				type->structInfo->name = node->name;
+				type->structInfo->numFields = (int)node->fields.count;
+
+				int fieldIndex = 0;
+				int offset = 0;
+				for (StructFieldDeclNode *field : node->fields)
+				{
+					type->structInfo->fields[fieldIndex].name = field->name;
+					type->structInfo->fields[fieldIndex].type = field->type;
+
+					type->structInfo->fields[fieldIndex].offset = offset;
+					offset += SizeOfType(field->type);
+
+					fieldIndex++;
+				}
+
+				type->structInfo->size = offset;
+			}
+			else
+			{
+				Error(context, node, "struct " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
+			}
 		}
 	}
 
@@ -531,16 +619,18 @@ SemanticPass(Node *_program,
 		 i < program->numStatements;
 		 i++)
 	{
-		FuncNode *functionDef = As<FuncNode>(program->statements[i]);
-		BlockNode *functionBody = As<BlockNode>(functionDef->body);
+		if (program->statements[i]->kind == NodeKind_Func)
+		{
+			FuncNode *functionDef = As<FuncNode>(program->statements[i]);
+			BlockNode *functionBody = As<BlockNode>(functionDef->body);
 
-		// clear the symbol table for every function
-		memset(symTable, 0, sizeof(*symTable));
-		context->symTable = symTable;
+			// clear the symbol table for every function
+			memset(symTable, 0, sizeof(*symTable));
 
-		AnalyzeTopLevelStatement(functionDef, context);
+			AnalyzeTopLevelStatement(functionDef, context);
 
-		int stackSize = (symTable->maxStackSize + 15) & ~15;
-		functionBody->stackSize = stackSize;
+			int stackSize = (symTable->maxStackSize + 15) & ~15;
+			functionBody->stackSize = stackSize;
+		}
 	}
 }

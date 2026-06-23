@@ -29,7 +29,10 @@
 	X(NodeKind_Param,            21,     ""             ) \
 	X(NodeKind_Bool,             22,     ""             ) \
 	X(NodeKind_AddressOf,        23,     ""             ) \
-	X(NodeKind_Deref,            24,     ""             )
+	X(NodeKind_Deref,            24,     ""             ) \
+	X(NodeKind_StructDecl,       25,     ""             ) \
+	X(NodeKind_StructFieldDecl,  26,     ""             ) \
+	X(NodeKind_FieldAccess,      27,     ""             )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -188,37 +191,53 @@ struct DerefNode : public Node
 	Node *what;
 };
 
+struct StructFieldDeclNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_StructFieldDecl;
+
+	string name;
+	Type type;
+};
+
+struct StructDeclNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_StructDecl;
+
+	string name;
+	BumpArray<StructFieldDeclNode *> fields;
+};
+
+struct FieldAccessNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_FieldAccess;
+
+	Node *expr;
+	string fieldName;
+	int fieldOffset;
+};
+
 template <typename T>
 inline T *
 As(Node *node)
 {
-	T *result = nullptr;
-
 	if constexpr (IsSameType<T, BinaryNode>::value)
 	{
-		if (node->kind == NodeKind_Add
-			|| node->kind == NodeKind_Subtract
-			|| node->kind == NodeKind_Multiply
-			|| node->kind == NodeKind_Divide
-			|| node->kind == NodeKind_Less
-			|| node->kind == NodeKind_Greater
-			|| node->kind == NodeKind_EqualEqual
-			|| node->kind == NodeKind_LessEqual
-			|| node->kind == NodeKind_GreaterEqual
-			|| node->kind == NodeKind_NotEqual)
-		{
-			result = static_cast<T *>(node);
-		}
+		Assert(node->kind == NodeKind_Add
+			   || node->kind == NodeKind_Subtract
+			   || node->kind == NodeKind_Multiply
+			   || node->kind == NodeKind_Divide
+			   || node->kind == NodeKind_Less
+			   || node->kind == NodeKind_Greater
+			   || node->kind == NodeKind_EqualEqual
+			   || node->kind == NodeKind_LessEqual
+			   || node->kind == NodeKind_GreaterEqual
+			   || node->kind == NodeKind_NotEqual);
 	}
 	else
 	{
-		if (node->kind == T::KIND)
-		{
-			result = static_cast<T *>(node);
-		}
+		Assert(node->kind == T::KIND);
 	}
-
-	return result;
+	return static_cast<T *>(node);
 }
 
 struct Parser

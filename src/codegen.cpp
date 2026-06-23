@@ -110,6 +110,16 @@ GenerateLValueAddress(Node *baseNode,
 			GenerateExpression(node->what, out, context);
 		} break;
 
+		case NodeKind_FieldAccess:
+		{
+			FieldAccessNode *node = As<FieldAccessNode>(baseNode);
+
+			GenerateLValueAddress(node->expr, out, context);
+			WritePop(out, context, "    pop rax\n");
+			fprintf(out, "    add rax, %d\n", node->fieldOffset);
+			WritePush(out, context, "    push rax\n");
+		} break;
+
 		default:
 		{
 			Assert(false);
@@ -124,6 +134,11 @@ GenerateExpression(Node *baseNode,
 {
 	switch (baseNode->kind)
 	{
+		default:
+		{
+			Assert(false);
+		} break;
+
 		case NodeKind_Number:
 		{
 			NumberNode *node = As<NumberNode>(baseNode);
@@ -241,6 +256,7 @@ GenerateExpression(Node *baseNode,
 
 		case NodeKind_Var:
 		case NodeKind_Deref:
+		case NodeKind_FieldAccess:
 		{
 			GenerateLValueAddress(baseNode, out, context);
 			WritePop(out, context, "    pop rax\n");
@@ -291,11 +307,6 @@ GenerateExpression(Node *baseNode,
 			AddressOfNode *node = As<AddressOfNode>(baseNode);
 
 			GenerateLValueAddress(node->what, out, context);
-		} break;
-
-		default:
-		{
-			Assert(false);
 		} break;
 	}
 }
@@ -506,6 +517,11 @@ GenerateTopLevelStatement(Node *baseNode,
 			Assert(context->stackDepth == 0);
 		} break;
 
+		case NodeKind_StructDecl:
+		{
+			// do nothing
+		} break;
+
 		default:
 		{
 			Assert(false);
@@ -527,8 +543,11 @@ Generate_x86_64(Node *_program,
 		 i < program->numStatements;
 		 i++)
 	{
-		FuncNode *node = As<FuncNode>(program->statements[i]);
-		fprintf(out, "global " STR_FMT "\n", STR_ARG(node->name));
+		if (program->statements[i]->kind == NodeKind_Func)
+		{
+			FuncNode *node = As<FuncNode>(program->statements[i]);
+			fprintf(out, "global " STR_FMT "\n", STR_ARG(node->name));
+		}
 	}
 	fprintf(out, "\n");
 

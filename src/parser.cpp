@@ -35,7 +35,6 @@ MakeNode(NodeKind kind,
 		 Arena *arena)
 {
 	T *node = PushStruct<T>(arena);
-	*node = {};
 	node->kind = kind;
 	node->line = line;
 
@@ -273,6 +272,20 @@ ParseAtom(Parser *parser,
 			UnexpectedCurrentToken(parser);
 		} break;
 	}
+
+	if (parser->current.kind == TokenKind_Dot)
+	{
+		FieldAccessNode *node = MakeNode<FieldAccessNode>(NodeKind_FieldAccess, parser->current.line, arena);
+		node->expr = result;
+
+		AdvanceToken(parser, lexer); // eat the '.'
+
+		node->fieldName = parser->current.str;
+
+		ExpectToken(parser, lexer, TokenKind_Identifier);
+
+		result = node;
+	}
 	
 	return result;
 }
@@ -389,8 +402,15 @@ ParseBlock(Parser *parser,
 			break;
 		}
 
-		Assert(block->numStatements < MAX_STATEMENTS);
-		block->statements[block->numStatements++] = statement;
+		if (statement)
+		{
+			Assert(block->numStatements < MAX_STATEMENTS);
+			block->statements[block->numStatements++] = statement;
+		}
+		else
+		{
+			// it's an empty statement - ignore it
+		}
 	}
 
 	if (!ExpectToken(parser, lexer, TokenKind_CloseBrace))
@@ -411,26 +431,34 @@ ParseType(Parser *parser,
 	if (parser->current.kind == TokenKind_Asterisk)
 	{
 		type.kind = TypeKind_Pointer;
+
 		AdvanceToken(parser, lexer); // eat the '*'
 
-		Type pointerTo = ParseType(parser, lexer, arena);
-
 		type.pointerTo = PushStruct<Type>(arena);
-		*type.pointerTo = pointerTo;
+		*type.pointerTo = ParseType(parser, lexer, arena);
 	}
 	else if (parser->current.str == "i64")
 	{
 		type.kind = TypeKind_Int64;
+
 		AdvanceToken(parser, lexer);
 	}
 	else if (parser->current.str == "bool")
 	{
 		type.kind = TypeKind_Bool;
+
+		AdvanceToken(parser, lexer);
+	}
+	else if (parser->current.kind == TokenKind_Identifier)
+	{
+		type.kind = TypeKind_Struct;
+		type.name = parser->current.str;
+
 		AdvanceToken(parser, lexer);
 	}
 	else
 	{
-		ErrorAtCurrent(parser, STR_FMT_QUOTED ": unknown type", STR_ARG(parser->current.str));
+		UnexpectedCurrentToken(parser);
 	}
 
 	return type;
@@ -614,6 +642,13 @@ ParseStatement(Parser *parser,
 		}
 	}
 
+	if (parser->current.kind == TokenKind_Semicolon)
+	{
+		// bare semicolon - empty statement
+		AdvanceToken(parser, lexer);
+		return nullptr;
+	}
+
 	Node *expr = ParseExpression(parser, lexer, 0, arena);
 	if (parser->current.kind == TokenKind_Equal)
 	{
@@ -703,26 +738,76 @@ ParseFunctionDefinition(Parser *parser,
 }
 
 internal Node *
+ParseStructDefinition(Parser *parser,
+					  Lexer *lexer,
+					  Arena *arena)
+{
+	const int MAX_STRUCT_FIELDS = 32;
+
+	StructDeclNode *node = MakeNode<StructDeclNode>(NodeKind_StructDecl, parser->current.line, arena);
+	node->name = parser->current.str;
+	node->fields = PushBumpArray<StructFieldDeclNode *>(arena, MAX_STRUCT_FIELDS);
+
+	AdvanceToken(parser, lexer); // eat the struct name
+
+	ExpectToken(parser, lexer, TokenKind_Colon);
+	ExpectToken(parser, lexer, TokenKind_Colon);
+
+	ExpectToken(parser, lexer, TokenKind_Struct);
+
+	ExpectToken(parser, lexer, TokenKind_OpenBrace);
+
+	while (!parser->hadError
+		   && parser->current.kind != TokenKind_CloseBrace)
+	{
+		StructFieldDeclNode *field = MakeNode<StructFieldDeclNode>(NodeKind_StructFieldDecl, parser->current.line, arena);
+		field->name = parser->current.str;
+
+		ExpectToken(parser, lexer, TokenKind_Identifier);
+
+		ExpectToken(parser, lexer, TokenKind_Colon);
+
+		field->type = ParseType(parser, lexer, arena);
+
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+		ArrayAdd(&node->fields, field);
+	}
+
+	ExpectToken(parser, lexer, TokenKind_CloseBrace);
+
+	return node;
+}
+
+internal Node *
 ParseTopLevelStatement(Parser *parser,
 					   Lexer *lexer,
 					   Arena *arena)
 {
-	Node *node = nullptr;
-
-	switch (parser->current.kind)
+	if (parser->current.kind == TokenKind_Identifier)
 	{
-		case TokenKind_Identifier:
-		{
-			node = ParseFunctionDefinition(parser, lexer, arena);
-		} break;
+		Token peekToken0 = PeekToken(lexer, 1);
+		Token peekToken1 = PeekToken(lexer, 2);
+		Token peekToken2 = PeekToken(lexer, 3);
 
-		default:
+		if (peekToken0.kind == TokenKind_Colon
+			&& peekToken1.kind == TokenKind_Colon
+			&& peekToken2.kind == TokenKind_Proc)
 		{
-			UnexpectedCurrentToken(parser);
-		} break;
+			return ParseFunctionDefinition(parser, lexer, arena);
+		}
+
+		if (peekToken0.kind == TokenKind_Colon
+			&& peekToken1.kind == TokenKind_Colon
+			&& peekToken2.kind == TokenKind_Struct)
+		{
+			return ParseStructDefinition(parser, lexer, arena);
+		}
 	}
 
-	return node;
+	UnexpectedCurrentToken(parser);
+
+	return nullptr;
 }
 
 Node *

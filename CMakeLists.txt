@@ -22,8 +22,10 @@ add_executable(
     src/parser.h
     src/semantic_pass.cpp
     src/semantic_pass.h
+    src/stuff.natvis
     src/symbol_table.h
     src/type.h
+    src/type_table.h
 )
 
 add_executable(

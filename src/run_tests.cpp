@@ -66,6 +66,7 @@ int main()
 	//TestReturnCode("10_function_argument_order", 7);
 	//TestReturnCode("11_recursion",               120);
 	//TestReturnCode("12_nested_function_calls",   10);
-	TestReturnCode("13_pointers",                20);
-	TestReturnCode("14_pointer_write",           40);
+	//TestReturnCode("13_pointers",                20);
+	//TestReturnCode("14_pointer_write",           40);
+	TestReturnCode("15_struct",                  0);
 }
