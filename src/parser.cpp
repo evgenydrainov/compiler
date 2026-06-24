@@ -21,6 +21,7 @@ LeftBindingPower(TokenKind type)
 
 		case TokenKind_Asterisk:
 		case TokenKind_Slash:
+		case TokenKind_Percent:
 			return 3;
 
 		default:
@@ -331,6 +332,11 @@ ParseExpression(Parser *parser,
 			case TokenKind_Slash:
 			{
 				lhs = MakeBinaryNode(NodeKind_Divide, line, lhs, rhs, arena);
+			} break;
+
+			case TokenKind_Percent:
+			{
+				lhs = MakeBinaryNode(NodeKind_Modulo, line, lhs, rhs, arena);
 			} break;
 
 			case TokenKind_Less:

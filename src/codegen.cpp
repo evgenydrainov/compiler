@@ -161,6 +161,7 @@ GenerateExpression(Node *baseNode,
 		case NodeKind_Subtract:
 		case NodeKind_Multiply:
 		case NodeKind_Divide:
+		case NodeKind_Modulo:
 		{
 			BinaryNode *node = As<BinaryNode>(baseNode);
 
@@ -191,6 +192,13 @@ GenerateExpression(Node *baseNode,
 				{
 					fprintf(out, "    cqo     \t\t;\n");
 					fprintf(out, "    idiv rcx\t\t; perform division\n");
+				} break;
+
+				case NodeKind_Modulo:
+				{
+					fprintf(out, "    cqo\n");
+					fprintf(out, "    idiv rcx\n");
+					fprintf(out, "    mov rax, rdx\n");
 				} break;
 
 				default:

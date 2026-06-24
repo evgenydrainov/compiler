@@ -24,6 +24,7 @@
 	X(TokenKind_CloseBracket,     ']',       "]"              ) \
 	X(TokenKind_Colon,            ':',       ":"              ) \
 	X(TokenKind_Ampersand,        '&',       "&"              ) \
+	X(TokenKind_Percent,          '%',       "%"              ) \
 	X(TokenKind_Identifier,       256,       "identifier"     ) \
 	X(TokenKind_String,           257,       "string"         ) \
 	X(TokenKind_Number,           258,       "number"         ) \

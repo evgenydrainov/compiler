@@ -143,6 +143,7 @@ AnalyzeExpression(Node *baseNode,
 		case NodeKind_Subtract:
 		case NodeKind_Multiply:
 		case NodeKind_Divide:
+		case NodeKind_Modulo:
 		{
 			BinaryNode *node = As<BinaryNode>(baseNode);
 

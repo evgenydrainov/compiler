@@ -311,7 +311,8 @@ GetToken(Lexer *lexer)
 		|| c == '>'
 		|| c == '<'
 		|| c == ':'
-		|| c == '&')
+		|| c == '&'
+		|| c == '%')
 	{
 		string str = {lexer->current, 1};
 		AdvanceChar(lexer);

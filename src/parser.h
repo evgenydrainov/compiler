@@ -9,30 +9,31 @@
 	X(NodeKind_Subtract,         1,      "subtract"     )  \
 	X(NodeKind_Multiply,         2,      "multiply"     )  \
 	X(NodeKind_Divide,           3,      "divide"       )  \
-	X(NodeKind_Less,             4,      ""             )  \
-	X(NodeKind_Greater,          5,      ""             )  \
-	X(NodeKind_EqualEqual,       6,      ""             )  \
-	X(NodeKind_LessEqual,        7,      ""             )  \
-	X(NodeKind_GreaterEqual,     8,      ""             )  \
-	X(NodeKind_NotEqual,         9,      ""             )  \
-	X(NodeKind_Number,           10,     ""             ) \
-	X(NodeKind_Var,              11,     ""             ) \
-	X(NodeKind_Assign,           12,     ""             ) \
-	X(NodeKind_VarDecl,          13,     ""             ) \
-	X(NodeKind_Block,            14,     ""             ) \
-	X(NodeKind_If,               15,     ""             ) \
-	X(NodeKind_While,            16,     ""             ) \
-	X(NodeKind_Print,            17,     ""             ) \
-	X(NodeKind_Func,             18,     ""             ) \
-	X(NodeKind_Call,             19,     ""             ) \
-	X(NodeKind_Return,           20,     ""             ) \
-	X(NodeKind_Param,            21,     ""             ) \
-	X(NodeKind_Bool,             22,     ""             ) \
-	X(NodeKind_AddressOf,        23,     ""             ) \
-	X(NodeKind_Deref,            24,     ""             ) \
-	X(NodeKind_StructDecl,       25,     ""             ) \
-	X(NodeKind_StructFieldDecl,  26,     ""             ) \
-	X(NodeKind_FieldAccess,      27,     ""             )
+	X(NodeKind_Modulo,           4,      "modulo"       )  \
+	X(NodeKind_Less,             5,      ""             )  \
+	X(NodeKind_Greater,          6,      ""             )  \
+	X(NodeKind_EqualEqual,       7,      ""             )  \
+	X(NodeKind_LessEqual,        8,      ""             )  \
+	X(NodeKind_GreaterEqual,     9,      ""             )  \
+	X(NodeKind_NotEqual,         10,     ""             )  \
+	X(NodeKind_Number,           11,     ""             ) \
+	X(NodeKind_Var,              12,     ""             ) \
+	X(NodeKind_Assign,           13,     ""             ) \
+	X(NodeKind_VarDecl,          14,     ""             ) \
+	X(NodeKind_Block,            15,     ""             ) \
+	X(NodeKind_If,               16,     ""             ) \
+	X(NodeKind_While,            17,     ""             ) \
+	X(NodeKind_Print,            18,     ""             ) \
+	X(NodeKind_Func,             19,     ""             ) \
+	X(NodeKind_Call,             20,     ""             ) \
+	X(NodeKind_Return,           21,     ""             ) \
+	X(NodeKind_Param,            22,     ""             ) \
+	X(NodeKind_Bool,             23,     ""             ) \
+	X(NodeKind_AddressOf,        24,     ""             ) \
+	X(NodeKind_Deref,            25,     ""             ) \
+	X(NodeKind_StructDecl,       26,     ""             ) \
+	X(NodeKind_StructFieldDecl,  27,     ""             ) \
+	X(NodeKind_FieldAccess,      28,     ""             )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -226,6 +227,7 @@ As(Node *node)
 			   || node->kind == NodeKind_Subtract
 			   || node->kind == NodeKind_Multiply
 			   || node->kind == NodeKind_Divide
+			   || node->kind == NodeKind_Modulo
 			   || node->kind == NodeKind_Less
 			   || node->kind == NodeKind_Greater
 			   || node->kind == NodeKind_EqualEqual

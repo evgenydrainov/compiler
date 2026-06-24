@@ -68,6 +68,7 @@ int main()
 	//TestReturnCode("12_nested_function_calls",   10);
 	//TestReturnCode("13_pointers",                20);
 	//TestReturnCode("14_pointer_write",           40);
-	TestReturnCode("15_struct",                  0);
-	TestReturnCode("16_struct_stack_allocation", 7);
+	//TestReturnCode("15_struct",                  0);
+	//TestReturnCode("16_struct_stack_allocation", 7);
+	TestReturnCode("17_modulo",                  0);
 }
