@@ -463,6 +463,19 @@ ParseReturnStatement(Parser *parser,
 }
 
 internal Node *
+ParseBlockOrSingleStatement(Parser *parser,
+							Lexer *lexer,
+							Arena *arena)
+{
+	if (parser->current.kind == TokenKind_OpenBrace)
+	{
+		return ParseBlock(parser, lexer, arena);
+	}
+
+	return ParseStatement(parser, lexer, arena);
+}
+
+internal Node *
 ParseIfStatement(Parser *parser,
 				 Lexer *lexer,
 				 Arena *arena)
@@ -476,14 +489,14 @@ ParseIfStatement(Parser *parser,
 
 	node->condition = ParseExpression(parser, lexer, 0, arena);	
 
-	node->thenBlock = ParseBlock(parser, lexer, arena);
+	node->thenBlock = ParseBlockOrSingleStatement(parser, lexer, arena);
 
 	if (parser->current.kind == TokenKind_Else)
 	{
 		// eat the 'else'
 		AdvanceToken(parser, lexer);
 
-		node->elseBlock = ParseBlock(parser, lexer, arena);
+		node->elseBlock = ParseBlockOrSingleStatement(parser, lexer, arena);
 	}
 
 	return node;

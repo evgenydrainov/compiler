@@ -469,13 +469,13 @@ AnalyzeStatement(Node *baseNode,
 			if (node->elseBlock)
 			{
 				AnalyzeExpression(node->condition, context);
-				AnalyzeBlock(node->thenBlock, context);
-				AnalyzeBlock(node->elseBlock, context);
+				AnalyzeStatement(node->thenBlock, context);
+				AnalyzeStatement(node->elseBlock, context);
 			}
 			else
 			{
 				AnalyzeExpression(node->condition, context);
-				AnalyzeBlock(node->thenBlock, context);
+				AnalyzeStatement(node->thenBlock, context);
 			}
 
 			if (node->condition->inferredType.kind != TypeKind_Bool)

@@ -433,12 +433,12 @@ GenerateStatement(Node *baseNode,
 				fprintf(out, "    je .else_%d\n", uniqueId);
 				fprintf(out, "\n");
 
-				GenerateBlock(node->thenBlock, out, context);
+				GenerateStatement(node->thenBlock, out, context);
 
 				fprintf(out, "    jmp .end_%d\n", uniqueId);
 				fprintf(out, ".else_%d:\n", uniqueId);
 
-				GenerateBlock(node->elseBlock, out, context);
+				GenerateStatement(node->elseBlock, out, context);
 
 				fprintf(out, ".end_%d:\n", uniqueId);
 				fprintf(out, "\n");
@@ -452,7 +452,7 @@ GenerateStatement(Node *baseNode,
 				fprintf(out, "    je .end_%d\n", uniqueId);
 				fprintf(out, "\n");
 
-				GenerateBlock(node->thenBlock, out, context);
+				GenerateStatement(node->thenBlock, out, context);
 
 				fprintf(out, ".end_%d:\n", uniqueId);
 				fprintf(out, "\n");
