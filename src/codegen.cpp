@@ -14,11 +14,9 @@ GenerateBlock(Node *baseNode,
 {
 	BlockNode *node = As<BlockNode>(baseNode);
 
-	for (int i = 0;
-		 i < node->numStatements;
-		 i++)
+	for (Node *it : node->statements)
 	{
-		GenerateStatement(node->statements[i], out, context);
+		GenerateStatement(it, out, context);
 	}
 }
 
@@ -547,13 +545,11 @@ Generate_x86_64(Node *_program,
 
 	BlockNode *program = As<BlockNode>(_program);
 
-	for (int i = 0;
-		 i < program->numStatements;
-		 i++)
+	for (Node *it : program->statements)
 	{
-		if (program->statements[i]->kind == NodeKind_Func)
+		if (it->kind == NodeKind_Func)
 		{
-			FuncNode *node = As<FuncNode>(program->statements[i]);
+			FuncNode *node = As<FuncNode>(it);
 			fprintf(out, "global " STR_FMT "\n", STR_ARG(node->name));
 		}
 	}
@@ -568,11 +564,9 @@ Generate_x86_64(Node *_program,
 
 	fprintf(out, "section .text\n");
 
-	for (int i = 0;
-		 i < program->numStatements;
-		 i++)
+	for (Node *it : program->statements)
 	{
-		GenerateTopLevelStatement(program->statements[i], out, context);
+		GenerateTopLevelStatement(it, out, context);
 	}
 
 	Assert(context->stackDepth == 0);

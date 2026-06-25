@@ -31,25 +31,26 @@ LeftBindingPower(TokenKind type)
 
 template <typename T>
 internal T *
-MakeNode(NodeKind kind,
-		 int line,
+MakeNode(int line,
 		 Arena *arena)
 {
 	T *node = PushStruct<T>(arena);
-	node->kind = kind;
+	node->kind = T::KIND;
 	node->line = line;
 
 	return node;
 }
 
 internal BinaryNode *
-MakeBinaryNode(NodeKind type,
+MakeBinaryNode(NodeKind kind,
 			   int line,
 			   Node *lhs,
 			   Node *rhs,
 			   Arena *arena)
 {
-	BinaryNode *node = MakeNode<BinaryNode>(type, line, arena);
+	BinaryNode *node = PushStruct<BinaryNode>(arena);
+	node->kind = kind;
+	node->line = line;
 	node->lhs = lhs;
 	node->rhs = rhs;
 
@@ -61,7 +62,7 @@ MakeNumberNode(int line,
 			   int numberValue,
 			   Arena *arena)
 {
-	NumberNode *node = MakeNode<NumberNode>(NodeKind_Number, line, arena);
+	NumberNode *node = MakeNode<NumberNode>(line, arena);
 	node->int64Value = numberValue;
 
 	return node;
@@ -174,7 +175,7 @@ ParseAtom(Parser *parser,
 		{
 			// unary minus
 
-			BinaryNode *node = MakeNode<BinaryNode>(NodeKind_Subtract, parser->current.line, arena);
+			BinaryNode *node = MakeBinaryNode(NodeKind_Subtract, parser->current.line, nullptr, nullptr, arena);
 			node->lhs = MakeNumberNode(parser->current.line, 0, arena);
 			AdvanceToken(parser, lexer);
 			node->rhs = ParseAtom(parser, lexer, arena);
@@ -191,7 +192,7 @@ ParseAtom(Parser *parser,
 
 				const int MAX_ARGUMENTS = 32;
 
-				CallNode *node = MakeNode<CallNode>(NodeKind_Call, parser->current.line, arena);
+				CallNode *node = MakeNode<CallNode>(parser->current.line, arena);
 				node->name = parser->current.str;
 				node->expressions = PushArray<Node *>(arena, MAX_ARGUMENTS);
 				node->numExpressions = 0;
@@ -221,7 +222,7 @@ ParseAtom(Parser *parser,
 			{
 				// variable access
 
-				VarNode *node = MakeNode<VarNode>(NodeKind_Var, parser->current.line, arena);
+				VarNode *node = MakeNode<VarNode>(parser->current.line, arena);
 				node->name = parser->current.str;
 
 				AdvanceToken(parser, lexer);
@@ -232,7 +233,7 @@ ParseAtom(Parser *parser,
 
 		case TokenKind_True:
 		{
-			BoolNode *node = MakeNode<BoolNode>(NodeKind_Bool, parser->current.line, arena);
+			BoolNode *node = MakeNode<BoolNode>(parser->current.line, arena);
 			node->boolValue = true;
 			AdvanceToken(parser, lexer);
 
@@ -241,7 +242,7 @@ ParseAtom(Parser *parser,
 
 		case TokenKind_False:
 		{
-			BoolNode *node = MakeNode<BoolNode>(NodeKind_Bool, parser->current.line, arena);
+			BoolNode *node = MakeNode<BoolNode>(parser->current.line, arena);
 			node->boolValue = false;
 			AdvanceToken(parser, lexer);
 
@@ -250,7 +251,7 @@ ParseAtom(Parser *parser,
 
 		case TokenKind_Ampersand:
 		{
-			AddressOfNode *node = MakeNode<AddressOfNode>(NodeKind_AddressOf, parser->current.line, arena);
+			AddressOfNode *node = MakeNode<AddressOfNode>(parser->current.line, arena);
 			AdvanceToken(parser, lexer);
 
 			node->what = ParseAtom(parser, lexer, arena);
@@ -260,7 +261,7 @@ ParseAtom(Parser *parser,
 
 		case TokenKind_Asterisk:
 		{
-			DerefNode *node = MakeNode<DerefNode>(NodeKind_Deref, parser->current.line, arena);
+			DerefNode *node = MakeNode<DerefNode>(parser->current.line, arena);
 			AdvanceToken(parser, lexer);
 
 			node->what = ParseAtom(parser, lexer, arena);
@@ -276,7 +277,7 @@ ParseAtom(Parser *parser,
 
 	if (parser->current.kind == TokenKind_Dot)
 	{
-		FieldAccessNode *node = MakeNode<FieldAccessNode>(NodeKind_FieldAccess, parser->current.line, arena);
+		FieldAccessNode *node = MakeNode<FieldAccessNode>(parser->current.line, arena);
 		node->expr = result;
 
 		AdvanceToken(parser, lexer); // eat the '.'
@@ -395,9 +396,8 @@ ParseBlock(Parser *parser,
 		return nullptr;
 	}
 
-	BlockNode *block = MakeNode<BlockNode>(NodeKind_Block, openBraceTokenLine, arena);
-	block->statements = PushArray<Node *>(arena, MAX_STATEMENTS);
-	block->numStatements = 0;
+	BlockNode *block = MakeNode<BlockNode>(openBraceTokenLine, arena);
+	block->statements = PushBumpArray<Node *>(arena, MAX_STATEMENTS);
 
 	while (parser->current.kind != TokenKind_CloseBrace
 		   && !parser->hadError)
@@ -410,8 +410,7 @@ ParseBlock(Parser *parser,
 
 		if (statement)
 		{
-			Assert(block->numStatements < MAX_STATEMENTS);
-			block->statements[block->numStatements++] = statement;
+			ArrayAdd(&block->statements, statement);
 		}
 		else
 		{
@@ -475,7 +474,7 @@ ParseReturnStatement(Parser *parser,
 					 Lexer *lexer,
 					 Arena *arena)
 {
-	ReturnNode *node = MakeNode<ReturnNode>(NodeKind_Return, parser->current.line, arena);
+	ReturnNode *node = MakeNode<ReturnNode>(parser->current.line, arena);
 
 	// eat the 'return'
 	AdvanceToken(parser, lexer);
@@ -503,7 +502,7 @@ ParseIfStatement(Parser *parser,
 {
 	// if expr { statements; }
 
-	IfNode *node = MakeNode<IfNode>(NodeKind_If, parser->current.line, arena);
+	IfNode *node = MakeNode<IfNode>(parser->current.line, arena);
 
 	// eat the 'if'
 	AdvanceToken(parser, lexer);
@@ -530,7 +529,7 @@ ParseWhileStatement(Parser *parser,
 {
 	// while expr { statements; }
 
-	WhileNode *node = MakeNode<WhileNode>(NodeKind_While, parser->current.line, arena);
+	WhileNode *node = MakeNode<WhileNode>(parser->current.line, arena);
 
 	// eat the 'while'
 	AdvanceToken(parser, lexer);
@@ -543,13 +542,61 @@ ParseWhileStatement(Parser *parser,
 }
 
 internal Node *
+ParseForStatement(Parser *parser,
+				  Lexer *lexer,
+				  Arena *arena)
+{
+	// for init; cond; incr { statements; }
+
+	BlockNode *block = MakeNode<BlockNode>(parser->current.line, arena);
+	block->statements = PushBumpArray<Node *>(arena, 2);
+
+	// eat the 'for'
+	AdvanceToken(parser, lexer);
+
+	{
+		Node *init = ParseStatement(parser, lexer, arena);
+		ArrayAdd(&block->statements, init);
+	}
+
+	WhileNode *whileNode = MakeNode<WhileNode>(parser->current.line, arena);
+
+	{
+		Node *cond = ParseExpression(parser, lexer, 0, arena);
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+		whileNode->condition = cond;
+	}
+
+	Node *incr = ParseStatement(parser, lexer, arena);
+
+	{
+		BlockNode *loopBodyBlock = MakeNode<BlockNode>(parser->current.line, arena);
+		loopBodyBlock->statements = PushBumpArray<Node *>(arena, 2);
+
+		{
+			Node *loopBody = ParseBlock(parser, lexer, arena);
+			ArrayAdd(&loopBodyBlock->statements, loopBody);
+		}
+
+		ArrayAdd(&loopBodyBlock->statements, incr);
+
+		whileNode->body = loopBodyBlock;
+	}
+
+	ArrayAdd(&block->statements, (Node *)whileNode);
+
+	return block;
+}
+
+internal Node *
 ParsePrintStatement(Parser *parser,
 					Lexer *lexer,
 					Arena *arena)
 {
 	// print expr;
 
-	PrintNode *node = MakeNode<PrintNode>(NodeKind_Print, parser->current.line, arena);
+	PrintNode *node = MakeNode<PrintNode>(parser->current.line, arena);
 
 	// eat the 'print'
 	AdvanceToken(parser, lexer);
@@ -568,7 +615,7 @@ ParseVariableDeclaration(Parser *parser,
 {
 	// variable declaration
 
-	VarDeclNode *node = MakeNode<VarDeclNode>(NodeKind_VarDecl, parser->current.line, arena);
+	VarDeclNode *node = MakeNode<VarDeclNode>(parser->current.line, arena);
 	node->name = parser->current.str;
 
 	// eat the variable name
@@ -622,6 +669,11 @@ ParseStatement(Parser *parser,
 		return ParseWhileStatement(parser, lexer, arena);
 	}
 
+	if (parser->current.kind == TokenKind_For)
+	{
+		return ParseForStatement(parser, lexer, arena);
+	}
+
 	if (parser->current.kind == TokenKind_Print)
 	{
 		return ParsePrintStatement(parser, lexer, arena);
@@ -661,7 +713,7 @@ ParseStatement(Parser *parser,
 		// assignment
 		// lhs = rhs;
 
-		AssignNode *node = MakeNode<AssignNode>(NodeKind_Assign, parser->current.line, arena);
+		AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
 		node->lhs = expr;
 
 		AdvanceToken(parser, lexer); // eat the '='
@@ -689,7 +741,7 @@ ParseFunctionDefinition(Parser *parser,
 
 	const int MAX_ARGUMENTS = 32;
 
-	FuncNode *node = MakeNode<FuncNode>(NodeKind_Func, parser->current.line, arena);
+	FuncNode *node = MakeNode<FuncNode>(parser->current.line, arena);
 	node->name = parser->current.str;
 	node->params = PushArray<Node *>(arena, MAX_ARGUMENTS);
 	node->numParams = 0;
@@ -712,7 +764,7 @@ ParseFunctionDefinition(Parser *parser,
 			ExpectToken(parser, lexer, TokenKind_Comma);
 		}
 
-		ParamNode *param = MakeNode<ParamNode>(NodeKind_Param, parser->current.line, arena);
+		ParamNode *param = MakeNode<ParamNode>(parser->current.line, arena);
 		param->name = parser->current.str;
 
 		ExpectToken(parser, lexer, TokenKind_Identifier); // eat the param name
@@ -750,7 +802,7 @@ ParseStructDefinition(Parser *parser,
 {
 	const int MAX_STRUCT_FIELDS = 32;
 
-	StructDeclNode *node = MakeNode<StructDeclNode>(NodeKind_StructDecl, parser->current.line, arena);
+	StructDeclNode *node = MakeNode<StructDeclNode>(parser->current.line, arena);
 	node->name = parser->current.str;
 	node->fields = PushBumpArray<StructFieldDeclNode *>(arena, MAX_STRUCT_FIELDS);
 
@@ -766,7 +818,7 @@ ParseStructDefinition(Parser *parser,
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseBrace)
 	{
-		StructFieldDeclNode *field = MakeNode<StructFieldDeclNode>(NodeKind_StructFieldDecl, parser->current.line, arena);
+		StructFieldDeclNode *field = MakeNode<StructFieldDeclNode>(parser->current.line, arena);
 		field->name = parser->current.str;
 
 		ExpectToken(parser, lexer, TokenKind_Identifier);
@@ -823,9 +875,8 @@ ParseProgram(Parser *parser,
 {
 	const int MAX_STATEMENTS = 1024;
 
-	BlockNode *block = MakeNode<BlockNode>(NodeKind_Block, 1, arena);
-	block->statements = PushArray<Node *>(arena, MAX_STATEMENTS);
-	block->numStatements = 0;
+	BlockNode *block = MakeNode<BlockNode>(1, arena);
+	block->statements = PushBumpArray<Node *>(arena, MAX_STATEMENTS);
 
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_EOF)
@@ -836,8 +887,7 @@ ParseProgram(Parser *parser,
 			break;
 		}
 
-		Assert(block->numStatements < MAX_STATEMENTS);
-		block->statements[block->numStatements++] = statement;
+		ArrayAdd(&block->statements, statement);
 	}
 
 	return block;

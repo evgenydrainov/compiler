@@ -71,4 +71,5 @@ int main()
 	//TestReturnCode("15_struct",                  0);
 	//TestReturnCode("16_struct_stack_allocation", 7);
 	TestReturnCode("17_modulo",                  0);
+	TestReturnCode("18_for_loop",                10);
 }

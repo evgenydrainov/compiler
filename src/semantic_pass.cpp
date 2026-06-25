@@ -69,11 +69,9 @@ AnalyzeBlock(Node *baseNode,
 
 	Scope scope = EnterScope(symTable);
 
-	for (int i = 0;
-		 i < node->numStatements;
-		 i++)
+	for (Node *it : node->statements)
 	{
-		AnalyzeStatement(node->statements[i], context);
+		AnalyzeStatement(it, context);
 	}
 
 	LeaveScope(symTable, scope);
@@ -559,13 +557,11 @@ SemanticPass(Node *_program,
 
 	BlockNode *program = As<BlockNode>(_program);
 
-	for (int i = 0;
-		 i < program->numStatements;
-		 i++)
+	for (Node *it : program->statements)
 	{
-		if (program->statements[i]->kind == NodeKind_Func)
+		if (it->kind == NodeKind_Func)
 		{
-			FuncNode *functionDef = As<FuncNode>(program->statements[i]);
+			FuncNode *functionDef = As<FuncNode>(it);
 
 			if (!LookupFunction(funcTable, functionDef->name))
 			{
@@ -587,9 +583,9 @@ SemanticPass(Node *_program,
 				Error(context, functionDef, "function " STR_FMT_QUOTED " was already defined", STR_ARG(functionDef->name));
 			}
 		}
-		else if (program->statements[i]->kind == NodeKind_StructDecl)
+		else if (it->kind == NodeKind_StructDecl)
 		{
-			StructDeclNode *node = As<StructDeclNode>(program->statements[i]);
+			StructDeclNode *node = As<StructDeclNode>(it);
 
 			if (!LookupType(typeTable, node->name))
 			{
@@ -631,13 +627,11 @@ SemanticPass(Node *_program,
 		return;
 	}
 
-	for (int i = 0;
-		 i < program->numStatements;
-		 i++)
+	for (Node *it : program->statements)
 	{
-		if (program->statements[i]->kind == NodeKind_Func)
+		if (it->kind == NodeKind_Func)
 		{
-			FuncNode *functionDef = As<FuncNode>(program->statements[i]);
+			FuncNode *functionDef = As<FuncNode>(it);
 			BlockNode *functionBody = As<BlockNode>(functionDef->body);
 
 			// clear the symbol table for every function

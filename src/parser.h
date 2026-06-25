@@ -104,8 +104,7 @@ struct BlockNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_Block;
 
-	Node **statements;
-	int numStatements;
+	BumpArray<Node *> statements;
 	int stackSize;
 };
 

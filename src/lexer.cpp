@@ -73,45 +73,90 @@ internal TokenKind
 IdentifierType(string str)
 {
 	TokenKind result = TokenKind_Identifier;
-	if (str == "if")
+	
+	Assert(str.count >= 1);
+
+	switch (str[0])
 	{
-		result = TokenKind_If;
-	}
-	else if (str == "else")
-	{
-		result = TokenKind_Else;
-	}
-	else if (str == "while")
-	{
-		result = TokenKind_While;
-	}
-	else if (str == "do")
-	{
-		result = TokenKind_Do;
-	}
-	else if (str == "print")
-	{
-		result = TokenKind_Print;
-	}
-	else if (str == "proc")
-	{
-		result = TokenKind_Proc;
-	}
-	else if (str == "return")
-	{
-		result = TokenKind_Return;
-	}
-	else if (str == "true")
-	{
-		result = TokenKind_True;
-	}
-	else if (str == "false")
-	{
-		result = TokenKind_False;
-	}
-	else if (str == "struct")
-	{
-		result = TokenKind_Struct;
+		case 'i':
+		{
+			if (str == "if")
+			{
+				result = TokenKind_If;
+			}
+		} break;
+
+		case 'e':
+		{
+			if (str == "else")
+			{
+				result = TokenKind_Else;
+			}
+		} break;
+
+		case 'w':
+		{
+			if (str == "while")
+			{
+				result = TokenKind_While;
+			}
+		} break;
+
+		case 'd':
+		{
+			if (str == "do")
+			{
+				result = TokenKind_Do;
+			}
+		} break;
+
+		case 'p':
+		{
+			if (str == "print")
+			{
+				result = TokenKind_Print;
+			}
+			else if (str == "proc")
+			{
+				result = TokenKind_Proc;
+			}
+		} break;
+
+		case 'r':
+		{
+			if (str == "return")
+			{
+				result = TokenKind_Return;
+			}
+		} break;
+
+		case 't':
+		{
+			if (str == "true")
+			{
+				result = TokenKind_True;
+			}
+		} break;
+
+		case 'f':
+		{
+			if (str == "false")
+			{
+				result = TokenKind_False;
+			}
+			else if (str == "for")
+			{
+				result = TokenKind_For;
+			}
+		} break;
+
+		case 's':
+		{
+			if (str == "struct")
+			{
+				result = TokenKind_Struct;
+			}
+		} break;
 	}
 
 	return result;

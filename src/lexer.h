@@ -42,7 +42,8 @@
 	X(TokenKind_Return,           270,       "return"         ) \
 	X(TokenKind_True,             271,       "true"           ) \
 	X(TokenKind_False,            272,       "false"          ) \
-	X(TokenKind_Struct,           273,       "struct"         )
+	X(TokenKind_Struct,           273,       "struct"         ) \
+	X(TokenKind_For,              274,       "for"            )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 
