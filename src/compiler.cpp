@@ -323,11 +323,14 @@ Compile(CompileOptions options)
 					"link",
 					"/nologo",
 					inputPath,
+					"raylib.lib",
 					"msvcrt.lib",
 					"legacy_stdio_definitions.lib",
+					"user32.lib", "gdi32.lib", "shell32.lib", "winmm.lib",
 					libraryArg,
 					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\"",
 					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"",
+					"/LIBPATH:\"C:\\Users\\Username\\source\\repos\\compiler\\modules\\raylib\"",
 					nullptr) != 0)
 		{
 			return CompileResult_LinkerError;

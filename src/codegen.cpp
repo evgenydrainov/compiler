@@ -544,6 +544,10 @@ GenerateTopLevelStatement(Node *baseNode,
 		case NodeKind_Func:
 		{
 			FuncNode *node = As<FuncNode>(baseNode);
+			if (node->isForeign)
+			{
+				break;
+			}
 
 			BlockNode *functionBody = As<BlockNode>(node->body);
 
@@ -613,7 +617,14 @@ Generate_x86_64(Node *_program,
 		if (it->kind == NodeKind_Func)
 		{
 			FuncNode *node = As<FuncNode>(it);
-			fprintf(out, "global " STR_FMT "\n", STR_ARG(node->name));
+			if (node->isForeign)
+			{
+				fprintf(out, "extern " STR_FMT "\n", STR_ARG(node->name));
+			}
+			else
+			{
+				fprintf(out, "global " STR_FMT "\n", STR_ARG(node->name));
+			}
 		}
 	}
 	fprintf(out, "\n");

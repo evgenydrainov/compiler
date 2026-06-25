@@ -64,7 +64,7 @@ MakeBinaryNode(BinaryOp op,
 
 internal NumberNode *
 MakeNumberNode(int line,
-			   int numberValue,
+			   i64 numberValue,
 			   Arena *arena)
 {
 	NumberNode *node = MakeNode<NumberNode>(line, arena);
@@ -720,6 +720,7 @@ ParseFunctionDefinition(Parser *parser,
 {
 	// function definition
 	// main :: proc(foo: int) -> i64 { statements; }
+	// main :: proc(foo: int) -> i64 #foreign;
 
 	const int MAX_ARGUMENTS = 32;
 
@@ -772,7 +773,24 @@ ParseFunctionDefinition(Parser *parser,
 		node->returnType = ParseType(parser, lexer, arena);
 	}
 
-	node->body = ParseBlock(parser, lexer, arena);
+	if (parser->current.kind == TokenKind_Hash)
+	{
+		AdvanceToken(parser, lexer); // eat the '#'
+
+		if (parser->current.str != "foreign")
+		{
+			UnexpectedCurrentToken(parser);
+		}
+		ExpectToken(parser, lexer, TokenKind_Identifier);
+
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+		node->isForeign = true;
+	}
+	else
+	{
+		node->body = ParseBlock(parser, lexer, arena);
+	}
 
 	return node;
 }

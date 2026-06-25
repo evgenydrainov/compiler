@@ -77,6 +77,11 @@ struct string
 		return true;
 	}
 
+	bool operator!=(const string &other) const
+	{
+		return !(*this == other);
+	}
+
 	char *begin() { return &data[0]; }
 	char *end()   { return &data[count]; }
 };

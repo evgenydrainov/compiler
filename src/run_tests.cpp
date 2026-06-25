@@ -74,5 +74,7 @@ int main()
 	//TestReturnCode("18_for_loop",                10);
 	//TestReturnCode("19_logical_and",             0);
 	//TestReturnCode("20_logical_or",              0);
-	TestReturnCode("21_if_else",                 0);
+	//TestReturnCode("21_if_else",                 0);
+	//TestReturnCode("22_foreign_function",        0);
+	TestReturnCode("23_raylib",                  0);
 }

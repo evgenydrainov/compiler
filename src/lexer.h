@@ -25,6 +25,7 @@
 	X(TokenKind_Colon,            ':',       ":"              ) \
 	X(TokenKind_Ampersand,        '&',       "&"              ) \
 	X(TokenKind_Percent,          '%',       "%"              ) \
+	X(TokenKind_Hash,             '#',       "#"              ) \
 	X(TokenKind_Identifier,       256,       "identifier"     ) \
 	X(TokenKind_String,           257,       "string"         ) \
 	X(TokenKind_Number,           258,       "number"         ) \
@@ -54,7 +55,7 @@ struct Token
 	TokenKind kind;
 	string str;
 	int line;
-	int numberValue;
+	i64 numberValue;
 };
 
 struct Lexer

@@ -136,6 +136,8 @@ struct FuncNode : public Node
 
 	Node **params;
 	int numParams;
+
+	bool isForeign;
 };
 
 struct CallNode : public Node

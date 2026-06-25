@@ -10,6 +10,15 @@ IsAlpha(char c)
 }
 
 internal bool
+IsHexadecimal(char c)
+{
+	bool result = ((c >= '0' && c <= '9')
+				   || (c >= 'a' && c <= 'f')
+				   || (c >= 'A' && c <= 'F'));
+	return result;
+}
+
+internal bool
 IsDigit(char c)
 {
 	bool result = (c >= '0' && c <= '9');
@@ -212,28 +221,28 @@ ParseString(Lexer *lexer)
 }
 
 internal Token
-ParseNumber(Lexer *lexer)
+ParseDecimalNumber(Lexer *lexer)
 {
 	string str = {lexer->current, 0};
-	int value = 0;
+	i64 value = 0;
 
-	while (IsDigit(PeekChar(lexer)))
+	while (IsDigit(*lexer->current))
 	{
-		value = 10*value + (PeekChar(lexer) - '0');
+		value = 10*value + (*lexer->current - '0');
 
 		AdvanceChar(lexer);
 		str.count++;
 	}
 
 	// look for a fractional part
-	if (PeekChar(lexer) == '.'
+	if (*lexer->current == '.'
 		&& IsDigit(PeekNextChar(lexer)))
 	{
 		// consume the dot
 		AdvanceChar(lexer);
 		str.count++;
 
-		while (IsDigit(PeekChar(lexer)))
+		while (IsDigit(*lexer->current))
 		{
 			AdvanceChar(lexer);
 			str.count++;
@@ -243,6 +252,50 @@ ParseNumber(Lexer *lexer)
 	Token result = MakeToken(lexer, TokenKind_Number, str);
 	result.numberValue = value;
 	return result;
+}
+
+internal Token
+ParseHexadecimalNumber(Lexer *lexer)
+{
+	string str = {lexer->current, 0};
+	i64 value = 0;
+
+	AdvanceChar(lexer, 2); // skip '0x'
+
+	while (IsHexadecimal(*lexer->current))
+	{
+		if (*lexer->current >= '0' && *lexer->current <= '9')
+		{
+			value = 16*value + (*lexer->current - '0');
+		}
+		else if (*lexer->current >= 'a' && *lexer->current <= 'f')
+		{
+			value = 16*value + (*lexer->current - 'a' + 10);
+		}
+		else if (*lexer->current >= 'A' && *lexer->current <= 'F')
+		{
+			value = 16*value + (*lexer->current - 'A' + 10);
+		}
+
+		AdvanceChar(lexer);
+		str.count++;
+	}
+
+	Token result = MakeToken(lexer, TokenKind_Number, str);
+	result.numberValue = value;
+	return result;
+}
+
+internal Token
+ParseNumber(Lexer *lexer)
+{
+	if (PeekChar(lexer) == '0'
+		&& PeekNextChar(lexer) == 'x')
+	{
+		return ParseHexadecimalNumber(lexer);
+	}
+
+	return ParseDecimalNumber(lexer);
 }
 
 internal void
@@ -359,7 +412,8 @@ GetToken(Lexer *lexer)
 		|| c == '<'
 		|| c == ':'
 		|| c == '&'
-		|| c == '%')
+		|| c == '%'
+		|| c == '#')
 	{
 		string str = {lexer->current, 1};
 		AdvanceChar(lexer);

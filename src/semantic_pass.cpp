@@ -689,15 +689,18 @@ SemanticPass(Node *_program,
 		if (it->kind == NodeKind_Func)
 		{
 			FuncNode *functionDef = As<FuncNode>(it);
-			BlockNode *functionBody = As<BlockNode>(functionDef->body);
+			if (!functionDef->isForeign)
+			{
+				BlockNode *functionBody = As<BlockNode>(functionDef->body);
 
-			// clear the symbol table for every function
-			memset(symTable, 0, sizeof(*symTable));
+				// clear the symbol table for every function
+				memset(symTable, 0, sizeof(*symTable));
 
-			AnalyzeTopLevelStatement(functionDef, context);
+				AnalyzeTopLevelStatement(functionDef, context);
 
-			int stackSize = (symTable->maxStackSize + 15) & ~15;
-			functionBody->stackSize = stackSize;
+				int stackSize = (symTable->maxStackSize + 15) & ~15;
+				functionBody->stackSize = stackSize;
+			}
 		}
 	}
 }
