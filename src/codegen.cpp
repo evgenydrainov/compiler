@@ -126,6 +126,169 @@ GenerateLValueAddress(Node *baseNode,
 }
 
 internal void
+GenerateBinaryExpression(Node *baseNode,
+						 FILE *out,
+						 CodegenContext *context)
+{
+	BinaryNode *node = As<BinaryNode>(baseNode);
+
+	switch (node->op)
+	{
+		default:
+		{
+			Assert(false);
+		} break;
+
+		case BinaryOp_Add:
+		case BinaryOp_Subtract:
+		case BinaryOp_Multiply:
+		case BinaryOp_Divide:
+		case BinaryOp_Modulo:
+		{
+			GenerateExpression(node->lhs, out, context);
+			GenerateExpression(node->rhs, out, context);
+
+			WritePop(out, context, "    pop rcx\n");
+			WritePop(out, context, "    pop rax\n");
+
+			if (node->op == BinaryOp_Add)
+			{
+				fprintf(out, "    add rax, rcx\t; perform addition\n");
+			}
+			else if (node->op == BinaryOp_Subtract)
+			{
+				fprintf(out, "    sub rax, rcx\t; perform subtraction\n");
+			}
+			else if (node->op == BinaryOp_Multiply)
+			{
+				fprintf(out, "    imul rax, rcx\t; perform multiplication\n");
+			}
+			else if (node->op == BinaryOp_Divide)
+			{
+				fprintf(out, "    cqo     \t\t;\n");
+				fprintf(out, "    idiv rcx\t\t; perform division\n");
+			}
+			else if (node->op == BinaryOp_Modulo)
+			{
+				fprintf(out, "    cqo\n");
+				fprintf(out, "    idiv rcx\n");
+				fprintf(out, "    mov rax, rdx\n");
+			}
+			else
+			{
+				Assert(false);
+			}
+
+			WritePush(out, context, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
+		case BinaryOp_Greater:
+		case BinaryOp_Less:
+		case BinaryOp_EqualEqual:
+		case BinaryOp_GreaterEqual:
+		case BinaryOp_LessEqual:
+		case BinaryOp_NotEqual:
+		{
+			GenerateExpression(node->lhs, out, context);
+			GenerateExpression(node->rhs, out, context);
+
+			const char *setccInstruction = "";
+			if (node->op == BinaryOp_Greater)
+			{
+				setccInstruction = "setg";
+			}
+			else if (node->op == BinaryOp_Less)
+			{
+				setccInstruction = "setl";
+			}
+			else if (node->op == BinaryOp_EqualEqual)
+			{
+				setccInstruction = "sete";
+			}
+			else if (node->op == BinaryOp_GreaterEqual)
+			{
+				setccInstruction = "setge";
+			}
+			else if (node->op == BinaryOp_LessEqual)
+			{
+				setccInstruction = "setle";
+			}
+			else if (node->op == BinaryOp_NotEqual)
+			{
+				setccInstruction = "setne";
+			}
+			else
+			{
+				Assert(false);
+			}
+
+			WritePop(out, context, "    pop rcx\n");
+			WritePop(out, context, "    pop rax\n");
+			fprintf(out, "    cmp rax, rcx\n");
+			fprintf(out, "    %s al\n", setccInstruction);
+			fprintf(out, "    movzx rax, al\n");
+			WritePush(out, context, "    push rax\t\t; push the comparison result\n");
+			fprintf(out, "\n");
+		} break;
+
+		case BinaryOp_LogicalAnd:
+		{
+			int uniqueId = context->uniqueLabelId++;
+
+			GenerateExpression(node->lhs, out, context);
+
+			WritePop(out, context, "    pop rax\n");
+			fprintf(out, "    cmp rax, 0\n");
+			fprintf(out, "    je .and_false_%d\n", uniqueId);
+			fprintf(out, "\n");
+
+			GenerateExpression(node->rhs, out, context);
+
+			WritePop(out, context, "    pop rax\n");
+			fprintf(out, "    cmp rax, 0\n");
+			fprintf(out, "    je .and_false_%d\n", uniqueId);
+			fprintf(out, "\n");
+
+			fprintf(out, "    mov rax, 1\n");
+			fprintf(out, "    jmp .and_end_%d\n", uniqueId);
+			fprintf(out, ".and_false_%d:\n", uniqueId);
+			fprintf(out, "    mov rax, 0\n");
+			fprintf(out, ".and_end_%d:\n", uniqueId);
+			WritePush(out, context, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
+		case BinaryOp_LogicalOr:
+		{
+			int uniqueId = context->uniqueLabelId++;
+
+			GenerateExpression(node->lhs, out, context);
+
+			WritePop(out, context, "    pop rax\n");
+			fprintf(out, "    cmp rax, 0\n");
+			fprintf(out, "    jne .or_true_%d\n", uniqueId);
+			fprintf(out, "\n");
+
+			GenerateExpression(node->rhs, out, context);
+
+			WritePop(out, context, "    pop rax\n");
+			fprintf(out, "    cmp rax, 0\n");
+			fprintf(out, "    jne .or_true_%d\n", uniqueId);
+			fprintf(out, "\n");
+
+			fprintf(out, "    mov rax, 0\n");
+			fprintf(out, "    jmp .or_end_%d\n", uniqueId);
+			fprintf(out, ".or_true_%d:\n", uniqueId);
+			fprintf(out, "    mov rax, 1\n");
+			fprintf(out, ".or_end_%d:\n", uniqueId);
+			WritePush(out, context, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+	}
+}
+
+internal void
 GenerateExpression(Node *baseNode,
 				   FILE *out,
 				   CodegenContext *context)
@@ -155,109 +318,9 @@ GenerateExpression(Node *baseNode,
 			fprintf(out, "\n");
 		} break;
 
-		case NodeKind_Add:
-		case NodeKind_Subtract:
-		case NodeKind_Multiply:
-		case NodeKind_Divide:
-		case NodeKind_Modulo:
+		case NodeKind_Binary:
 		{
-			BinaryNode *node = As<BinaryNode>(baseNode);
-
-			GenerateExpression(node->lhs, out, context);
-			GenerateExpression(node->rhs, out, context);
-
-			WritePop(out, context, "    pop rcx\n");
-			WritePop(out, context, "    pop rax\n");
-
-			switch (node->kind)
-			{
-				case NodeKind_Add:
-				{
-					fprintf(out, "    add rax, rcx\t; perform addition\n");
-				} break;
-
-				case NodeKind_Subtract:
-				{
-					fprintf(out, "    sub rax, rcx\t; perform subtraction\n");
-				} break;
-
-				case NodeKind_Multiply:
-				{
-					fprintf(out, "    imul rax, rcx\t; perform multiplication\n");
-				} break;
-
-				case NodeKind_Divide:
-				{
-					fprintf(out, "    cqo     \t\t;\n");
-					fprintf(out, "    idiv rcx\t\t; perform division\n");
-				} break;
-
-				case NodeKind_Modulo:
-				{
-					fprintf(out, "    cqo\n");
-					fprintf(out, "    idiv rcx\n");
-					fprintf(out, "    mov rax, rdx\n");
-				} break;
-
-				default:
-				{
-					Assert(!"node->type not implemented");
-				} break;
-			}
-
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
-		} break;
-
-		case NodeKind_Greater:
-		case NodeKind_Less:
-		case NodeKind_EqualEqual:
-		case NodeKind_GreaterEqual:
-		case NodeKind_LessEqual:
-		case NodeKind_NotEqual:
-		{
-			BinaryNode *node = As<BinaryNode>(baseNode);
-
-			GenerateExpression(node->lhs, out, context);
-			GenerateExpression(node->rhs, out, context);
-
-			const char *setccInstruction = "";
-			if (node->kind == NodeKind_Greater)
-			{
-				setccInstruction = "setg";
-			}
-			else if (node->kind == NodeKind_Less)
-			{
-				setccInstruction = "setl";
-			}
-			else if (node->kind == NodeKind_EqualEqual)
-			{
-				setccInstruction = "sete";
-			}
-			else if (node->kind == NodeKind_GreaterEqual)
-			{
-				setccInstruction = "setge";
-			}
-			else if (node->kind == NodeKind_LessEqual)
-			{
-				setccInstruction = "setle";
-			}
-			else if (node->kind == NodeKind_NotEqual)
-			{
-				setccInstruction = "setne";
-			}
-			else
-			{
-				Assert(false);
-			}
-
-			WritePop(out, context, "    pop rcx\n");
-			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    cmp rax, rcx\n");
-			fprintf(out, "    %s al\n", setccInstruction);
-			fprintf(out, "    movzx rax, al\n");
-			WritePush(out, context, "    push rax\t\t; push the comparison result\n");
-			fprintf(out, "\n");
+			GenerateBinaryExpression(baseNode, out, context);
 		} break;
 
 		case NodeKind_Var:

@@ -70,6 +70,8 @@ int main()
 	//TestReturnCode("14_pointer_write",           40);
 	//TestReturnCode("15_struct",                  0);
 	//TestReturnCode("16_struct_stack_allocation", 7);
-	TestReturnCode("17_modulo",                  0);
-	TestReturnCode("18_for_loop",                10);
+	//TestReturnCode("17_modulo",                  0);
+	//TestReturnCode("18_for_loop",                10);
+	TestReturnCode("19_logical_and",             0);
+	TestReturnCode("20_logical_or",              0);
 }

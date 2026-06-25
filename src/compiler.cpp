@@ -13,6 +13,151 @@
 #include <io.h>
 #include <process.h>
 
+#if 0
+internal void
+PrintTree(Node *baseNode,
+		  const char *prefix,
+		  bool isLeft)
+{
+	if (!baseNode)
+	{
+		return;
+	}
+
+	{
+		const char *name = GetNodeKindName(baseNode->kind);
+		if (baseNode->kind == NodeKind_Binary)
+		{
+			name = GetBinaryOpName(As<BinaryNode>(baseNode)->op);
+		}
+
+		printf("%s%s%s", prefix, isLeft ? "+-- " : "\\-- ", name);
+	}
+
+	printf(" (line=%d)", baseNode->line);
+
+	if (baseNode->kind == NodeKind_Number)
+	{
+		NumberNode *n = As<NumberNode>(baseNode);
+		printf(" (%lld)", n->int64Value);
+	}
+	else if (baseNode->kind == NodeKind_VarDecl)
+	{
+		VarDeclNode *n = As<VarDeclNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(n->name));
+	}
+	else if (baseNode->kind == NodeKind_Var)
+	{
+		VarNode *n = As<VarNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(n->name));
+	}
+	else if (baseNode->kind == NodeKind_Func)
+	{
+		FuncNode *n = As<FuncNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(n->name));
+	}
+	else if (baseNode->kind == NodeKind_Call)
+	{
+		CallNode *n = As<CallNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(n->name));
+	}
+
+	printf("\n");
+
+	char childPrefix[256];
+	snprintf(childPrefix, sizeof(childPrefix), "%s%s", prefix, isLeft ? "|   " : "    ");
+
+	switch (baseNode->kind)
+	{
+		case NodeKind_Block:
+		{
+			BlockNode *n = As<BlockNode>(baseNode);
+			for (int i = 0;
+				 i < n->statements.count;
+				 i++)
+			{
+				Node *statement = n->statements[i];
+				PrintTree(statement, childPrefix, i != n->statements.count-1);
+			}
+		} break;
+
+		case NodeKind_If:
+		{
+			IfNode *node = As<IfNode>(baseNode);
+			if (node->elseBlock)
+			{
+				PrintTree(node->condition, childPrefix, true);
+				PrintTree(node->thenBlock, childPrefix, true);
+				PrintTree(node->elseBlock, childPrefix, false);
+			}
+			else
+			{
+				PrintTree(node->condition, childPrefix, true);
+				PrintTree(node->thenBlock, childPrefix, false);
+			}
+		} break;
+
+		case NodeKind_While:
+		{
+			WhileNode *node = As<WhileNode>(baseNode);
+			PrintTree(node->condition, childPrefix, true);
+			PrintTree(node->body, childPrefix, false);
+		} break;
+
+		case NodeKind_Binary:
+		{
+			BinaryNode *node = As<BinaryNode>(baseNode);
+			if (node->lhs && node->rhs)
+			{
+				PrintTree(node->lhs, childPrefix, true);
+				PrintTree(node->rhs, childPrefix, false);
+			}
+			else if (node->lhs)
+			{
+				PrintTree(node->lhs, childPrefix, false);
+			}
+			else if (node->rhs)
+			{
+				PrintTree(node->rhs, childPrefix, false);
+			}
+		} break;
+
+		case NodeKind_Print:
+		{
+			PrintNode *node = As<PrintNode>(baseNode);
+			PrintTree(node->expr, childPrefix, false);
+		} break;
+
+		case NodeKind_VarDecl:
+		{
+			VarDeclNode *node = As<VarDeclNode>(baseNode);
+			PrintTree(node->expr, childPrefix, false);
+		} break;
+
+		case NodeKind_Assign:
+		{
+			AssignNode *node = As<AssignNode>(baseNode);
+			PrintTree(node->lhs, childPrefix, true);
+			PrintTree(node->rhs, childPrefix, false);
+		} break;
+
+		case NodeKind_Func:
+		{
+			FuncNode *node = As<FuncNode>(baseNode);
+			PrintTree(node->body, childPrefix, false);
+		} break;
+
+		case NodeKind_Return:
+		{
+			ReturnNode *node = As<ReturnNode>(baseNode);
+			PrintTree(node->expr, childPrefix, false);
+		} break;
+
+		default: {} break;
+	}
+}
+#endif
+
 internal string
 LoadFile(const char *fileName)
 {

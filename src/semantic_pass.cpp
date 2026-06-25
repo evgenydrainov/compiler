@@ -115,38 +115,51 @@ ResolveType(Type *type,
 
 internal void
 AnalyzeExpression(Node *baseNode,
-				  SemanticContext *context)
-{
-	SymbolTable *symTable = context->symTable;
-	FunctionTable *funcTable = context->funcTable;
+				  SemanticContext *context);
 
-	switch (baseNode->kind)
+internal void
+AnalyzeBinaryExpression(Node *baseNode,
+						SemanticContext *context)
+{
+	BinaryNode *node = As<BinaryNode>(baseNode);
+
+	switch (node->op)
 	{
 		default:
 		{
 			Assert(false);
 		} break;
 
-		case NodeKind_Number:
+		case BinaryOp_Add:
+		case BinaryOp_Subtract:
+		case BinaryOp_Multiply:
+		case BinaryOp_Divide:
+		case BinaryOp_Modulo:
 		{
-			baseNode->inferredType.kind = TypeKind_Int64;
-		} break;
-
-		case NodeKind_Bool:
-		{
-			baseNode->inferredType.kind = TypeKind_Bool;
-		} break;
-
-		case NodeKind_Add:
-		case NodeKind_Subtract:
-		case NodeKind_Multiply:
-		case NodeKind_Divide:
-		case NodeKind_Modulo:
-		{
-			BinaryNode *node = As<BinaryNode>(baseNode);
-
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
+
+			const char *opName = "";
+			if (node->op == BinaryOp_Add)
+			{
+				opName = "add";
+			}
+			else if (node->op == BinaryOp_Subtract)
+			{
+				opName = "subtract";
+			}
+			else if (node->op == BinaryOp_Multiply)
+			{
+				opName = "multiply";
+			}
+			else if (node->op == BinaryOp_Divide)
+			{
+				opName = "divide";
+			}
+			else if (node->op == BinaryOp_Modulo)
+			{
+				opName = "divide";
+			}
 
 			if (TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
 			{
@@ -157,7 +170,7 @@ AnalyzeExpression(Node *baseNode,
 				else
 				{
 					Error(context, node, "cannot %s '%s' and '%s': types are not numeric",
-						  GetNodeKindPrettyName(node->kind),
+						  opName,
 						  GetTypeKindPrettyName(node->lhs->inferredType.kind),
 						  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 				}
@@ -165,19 +178,17 @@ AnalyzeExpression(Node *baseNode,
 			else
 			{
 				Error(context, node, "cannot %s '%s' and '%s': types are different",
-					  GetNodeKindPrettyName(node->kind),
+					  opName,
 					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
 					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 			}
 		} break;
 
-		case NodeKind_Less:
-		case NodeKind_Greater:
-		case NodeKind_LessEqual:
-		case NodeKind_GreaterEqual:
+		case BinaryOp_Less:
+		case BinaryOp_Greater:
+		case BinaryOp_LessEqual:
+		case BinaryOp_GreaterEqual:
 		{
-			BinaryNode *node = As<BinaryNode>(baseNode);
-
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
 
@@ -202,11 +213,9 @@ AnalyzeExpression(Node *baseNode,
 			}
 		} break;
 
-		case NodeKind_EqualEqual:
-		case NodeKind_NotEqual:
+		case BinaryOp_EqualEqual:
+		case BinaryOp_NotEqual:
 		{
-			BinaryNode *node = As<BinaryNode>(baseNode);
-
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
 
@@ -220,6 +229,54 @@ AnalyzeExpression(Node *baseNode,
 					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
 					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 			}
+		} break;
+
+		case BinaryOp_LogicalAnd:
+		case BinaryOp_LogicalOr:
+		{
+			AnalyzeExpression(node->lhs, context);
+			AnalyzeExpression(node->rhs, context);
+
+			if (node->lhs->inferredType.kind == TypeKind_Bool
+				&& node->rhs->inferredType.kind == TypeKind_Bool)
+			{
+				node->inferredType.kind = TypeKind_Bool;
+			}
+			else
+			{
+				Error(context, node, "lhs and rhs must be boolean");
+			}
+		} break;
+	}
+}
+
+internal void
+AnalyzeExpression(Node *baseNode,
+				  SemanticContext *context)
+{
+	SymbolTable *symTable = context->symTable;
+	FunctionTable *funcTable = context->funcTable;
+
+	switch (baseNode->kind)
+	{
+		default:
+		{
+			Assert(false);
+		} break;
+
+		case NodeKind_Number:
+		{
+			baseNode->inferredType.kind = TypeKind_Int64;
+		} break;
+
+		case NodeKind_Bool:
+		{
+			baseNode->inferredType.kind = TypeKind_Bool;
+		} break;
+
+		case NodeKind_Binary:
+		{
+			AnalyzeBinaryExpression(baseNode, context);
 		} break;
 
 		case NodeKind_Var:

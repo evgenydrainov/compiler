@@ -7,22 +7,28 @@ LeftBindingPower(TokenKind type)
 {
 	switch (type)
 	{
+		case TokenKind_PipePipe:
+			return 1;
+
+		case TokenKind_AmpAmp:
+			return 2;
+
 		case TokenKind_Greater:
 		case TokenKind_Less:
 		case TokenKind_BangEqual:
 		case TokenKind_EqualEqual:
 		case TokenKind_GreaterEqual:
 		case TokenKind_LessEqual:
-			return 1;
+			return 3;
 
 		case TokenKind_Plus:
 		case TokenKind_Minus:
-			return 2;
+			return 4;
 
 		case TokenKind_Asterisk:
 		case TokenKind_Slash:
 		case TokenKind_Percent:
-			return 3;
+			return 5;
 
 		default:
 			return 0;
@@ -42,15 +48,14 @@ MakeNode(int line,
 }
 
 internal BinaryNode *
-MakeBinaryNode(NodeKind kind,
+MakeBinaryNode(BinaryOp op,
 			   int line,
 			   Node *lhs,
 			   Node *rhs,
 			   Arena *arena)
 {
-	BinaryNode *node = PushStruct<BinaryNode>(arena);
-	node->kind = kind;
-	node->line = line;
+	BinaryNode *node = MakeNode<BinaryNode>(line, arena);
+	node->op = op;
 	node->lhs = lhs;
 	node->rhs = rhs;
 
@@ -175,7 +180,7 @@ ParseAtom(Parser *parser,
 		{
 			// unary minus
 
-			BinaryNode *node = MakeBinaryNode(NodeKind_Subtract, parser->current.line, nullptr, nullptr, arena);
+			BinaryNode *node = MakeBinaryNode(BinaryOp_Subtract, parser->current.line, nullptr, nullptr, arena);
 			node->lhs = MakeNumberNode(parser->current.line, 0, arena);
 			AdvanceToken(parser, lexer);
 			node->rhs = ParseAtom(parser, lexer, arena);
@@ -315,62 +320,24 @@ ParseExpression(Parser *parser,
 		Node *rhs = ParseExpression(parser, lexer, bindingPower, arena);
 		switch (kind)
 		{
-			case TokenKind_Plus:
+			default:
 			{
-				lhs = MakeBinaryNode(NodeKind_Add, line, lhs, rhs, arena);
+				Assert(false);
 			} break;
 
-			case TokenKind_Minus:
-			{
-				lhs = MakeBinaryNode(NodeKind_Subtract, line, lhs, rhs, arena);
-			} break;
-
-			case TokenKind_Asterisk:
-			{
-				lhs = MakeBinaryNode(NodeKind_Multiply, line, lhs, rhs, arena);
-			} break;
-
-			case TokenKind_Slash:
-			{
-				lhs = MakeBinaryNode(NodeKind_Divide, line, lhs, rhs, arena);
-			} break;
-
-			case TokenKind_Percent:
-			{
-				lhs = MakeBinaryNode(NodeKind_Modulo, line, lhs, rhs, arena);
-			} break;
-
-			case TokenKind_Less:
-			{
-				lhs = MakeBinaryNode(NodeKind_Less, line, lhs, rhs, arena);
-			} break;
-
-			case TokenKind_Greater:
-			{
-				lhs = MakeBinaryNode(NodeKind_Greater, line, lhs, rhs, arena);
-			} break;
-
-			case TokenKind_EqualEqual:
-			{
-				lhs = MakeBinaryNode(NodeKind_EqualEqual, line, lhs, rhs, arena);
-			} break;
-
-			case TokenKind_LessEqual:
-			{
-				lhs = MakeBinaryNode(NodeKind_LessEqual, line, lhs, rhs, arena);
-			} break;
-
-			case TokenKind_GreaterEqual:
-			{
-				lhs = MakeBinaryNode(NodeKind_GreaterEqual, line, lhs, rhs, arena);
-			} break;
-
-			case TokenKind_BangEqual:
-			{
-				lhs = MakeBinaryNode(NodeKind_NotEqual, line, lhs, rhs, arena);
-			} break;
-
-			default: {} break;
+			case TokenKind_Plus:         lhs = MakeBinaryNode(BinaryOp_Add,          line, lhs, rhs, arena); break;
+			case TokenKind_Minus:        lhs = MakeBinaryNode(BinaryOp_Subtract,     line, lhs, rhs, arena); break;
+			case TokenKind_Asterisk:     lhs = MakeBinaryNode(BinaryOp_Multiply,     line, lhs, rhs, arena); break;
+			case TokenKind_Slash:        lhs = MakeBinaryNode(BinaryOp_Divide,       line, lhs, rhs, arena); break;
+			case TokenKind_Percent:      lhs = MakeBinaryNode(BinaryOp_Modulo,       line, lhs, rhs, arena); break;
+			case TokenKind_Less:         lhs = MakeBinaryNode(BinaryOp_Less,         line, lhs, rhs, arena); break;
+			case TokenKind_Greater:      lhs = MakeBinaryNode(BinaryOp_Greater,      line, lhs, rhs, arena); break;
+			case TokenKind_EqualEqual:   lhs = MakeBinaryNode(BinaryOp_EqualEqual,   line, lhs, rhs, arena); break;
+			case TokenKind_LessEqual:    lhs = MakeBinaryNode(BinaryOp_LessEqual,    line, lhs, rhs, arena); break;
+			case TokenKind_GreaterEqual: lhs = MakeBinaryNode(BinaryOp_GreaterEqual, line, lhs, rhs, arena); break;
+			case TokenKind_BangEqual:    lhs = MakeBinaryNode(BinaryOp_NotEqual,     line, lhs, rhs, arena); break;
+			case TokenKind_AmpAmp:       lhs = MakeBinaryNode(BinaryOp_LogicalAnd,   line, lhs, rhs, arena); break;
+			case TokenKind_PipePipe:     lhs = MakeBinaryNode(BinaryOp_LogicalOr,    line, lhs, rhs, arena); break;
 		}
 	}
 
@@ -546,7 +513,9 @@ ParseForStatement(Parser *parser,
 				  Lexer *lexer,
 				  Arena *arena)
 {
-	// for init; cond; incr { statements; }
+	// for init; cond; incr; { statements; }
+
+	// TODO: get rid of semicolon after incr;
 
 	BlockNode *block = MakeNode<BlockNode>(parser->current.line, arena);
 	block->statements = PushBumpArray<Node *>(arena, 2);

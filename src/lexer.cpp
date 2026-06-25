@@ -321,6 +321,8 @@ GetToken(Lexer *lexer)
 			{">=", TokenKind_GreaterEqual},
 			{"<=", TokenKind_LessEqual},
 			{"->", TokenKind_Arrow},
+			{"&&", TokenKind_AmpAmp},
+			{"||", TokenKind_PipePipe},
 		};
 
 		for (auto &tokenInfo : tokenInfos)
