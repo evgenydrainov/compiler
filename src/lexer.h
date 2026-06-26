@@ -50,7 +50,8 @@
 	X(TokenKind_AmpAmp,           275,       "&&"             ) \
 	X(TokenKind_PipePipe,         276,       "||"             ) \
 	X(TokenKind_GreaterGreater,   277,       ">>"             ) \
-	X(TokenKind_LessLess,         278,       "<<"             )
+	X(TokenKind_LessLess,         278,       "<<"             ) \
+	X(TokenKind_CString,          279,       "cstring"        )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 

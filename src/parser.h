@@ -23,7 +23,9 @@
 	X(NodeKind_Deref,            15,    ""   ) \
 	X(NodeKind_StructDecl,       16,    ""   ) \
 	X(NodeKind_StructFieldDecl,  17,    ""   ) \
-	X(NodeKind_FieldAccess,      18,    ""   )
+	X(NodeKind_FieldAccess,      18,    ""   ) \
+	X(NodeKind_String,           19,    ""   ) \
+	X(NodeKind_CString,          20,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -217,6 +219,21 @@ struct FieldAccessNode : public Node
 	int fieldOffset;
 };
 
+struct StringNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_String;
+
+	string value;
+};
+
+struct CStringNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_CString;
+
+	string value;
+	int uniqueId;
+};
+
 template <typename T>
 inline T *
 As(Node *node)
@@ -229,8 +246,16 @@ struct Parser
 {
 	Token current;
 	bool hadError;
+
+	int uniqueLabelId;
 };
 
 Node *ParseProgram(Parser *parser,
 				   Lexer *lexer,
 				   Arena *arena);
+
+struct GenerateCStringLiteral
+{
+	string value;
+	int uniqueLabelId;
+};

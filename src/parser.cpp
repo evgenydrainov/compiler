@@ -182,6 +182,36 @@ ParseAtom(Parser *parser,
 			result = node;
 		} break;
 
+		case TokenKind_String:
+		{
+			StringNode *node = MakeNode<StringNode>(parser->current.line, arena);
+
+			Assert(parser->current.str.count >= 2);
+			node->value.data = parser->current.str.data + 1;
+			node->value.count = parser->current.str.count - 2;
+
+			AdvanceToken(parser, lexer);
+
+			result = node;
+		} break;
+
+		case TokenKind_CString:
+		{
+			int uniqueId = parser->uniqueLabelId++;
+
+			CStringNode *node = MakeNode<CStringNode>(parser->current.line, arena);
+
+			Assert(parser->current.str.count >= 3);
+			node->value.data = parser->current.str.data + 1;
+			node->value.count = parser->current.str.count - 3;
+
+			node->uniqueId = uniqueId;
+
+			AdvanceToken(parser, lexer);
+
+			result = node;
+		} break;
+
 		case TokenKind_OpenParen:
 		{
 			AdvanceToken(parser, lexer);

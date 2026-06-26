@@ -319,6 +319,15 @@ GenerateExpression(Node *baseNode,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeKind_CString:
+		{
+			CStringNode *node = As<CStringNode>(baseNode);
+
+			fprintf(out, "    lea rax, [rel cstring_literal_%d]\t; load string literal\n", node->uniqueId);
+			WritePush(out, context, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
 		case NodeKind_Bool:
 		{
 			BoolNode *node = As<BoolNode>(baseNode);
@@ -666,6 +675,14 @@ Generate_x86_64(Node *_program,
 
 	fprintf(out, "section .data\n");
 	fprintf(out, "builtin_print_format: db \"%%d\", 10, 0\t\t; 10 is newline, 0 is null terminator\n");
+
+	for (auto &literal : context->cstringLiterals)
+	{
+		fprintf(out, "cstring_literal_%d: db \"" STR_FMT "\", 0\n",
+				literal.uniqueLabelId,
+				STR_ARG(literal.value));
+	}
+
 	fprintf(out, "\n");
 
 	fprintf(out, "section .text\n");

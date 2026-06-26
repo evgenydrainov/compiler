@@ -16,6 +16,8 @@ struct SemanticContext
 	TypeTable *typeTable;
 
 	FuncNode *currentFunction;
+
+	BumpArray<GenerateCStringLiteral> cstringLiterals;
 };
 
 void SemanticPass(Node *_program,

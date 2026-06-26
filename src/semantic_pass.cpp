@@ -275,6 +275,27 @@ AnalyzeExpression(Node *baseNode,
 			baseNode->inferredType.kind = TypeKind_Int64;
 		} break;
 
+		//case NodeKind_String:
+		//{
+		//	baseNode->inferredType.kind = TypeKind_String;
+		//} break;
+
+		case NodeKind_CString:
+		{
+			baseNode->inferredType.kind = TypeKind_Pointer;
+
+			local_persist Type int8Type = { TypeKind_Int8 };
+			baseNode->inferredType.pointerTo = &int8Type;
+
+			CStringNode *node = As<CStringNode>(baseNode);
+
+			GenerateCStringLiteral literal = {};
+			literal.value = node->value;
+			literal.uniqueLabelId = node->uniqueId;
+
+			ArrayAdd(&context->cstringLiterals, literal);
+		} break;
+
 		case NodeKind_Bool:
 		{
 			baseNode->inferredType.kind = TypeKind_Bool;
@@ -615,6 +636,8 @@ SemanticPass(Node *_program,
 			 SemanticContext *context,
 			 Arena *arena)
 {
+	context->cstringLiterals = PushBumpArray<GenerateCStringLiteral>(arena, 32);
+
 	FunctionTable *funcTable = PushStruct<FunctionTable>(arena);
 	SymbolTable *symTable = PushStruct<SymbolTable>(arena);
 	TypeTable *typeTable = PushStruct<TypeTable>(arena);

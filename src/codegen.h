@@ -8,6 +8,8 @@ struct CodegenContext
 {
 	int uniqueLabelId;
 	int stackDepth;
+
+	BumpArray<GenerateCStringLiteral> cstringLiterals;
 };
 
 void Generate_x86_64(Node *_program,

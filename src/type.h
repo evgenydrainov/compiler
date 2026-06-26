@@ -12,7 +12,8 @@
 	X(TypeKind_Int64,       6,    "i64"              ) \
 	X(TypeKind_Bool,        7,    "bool"             ) \
 	X(TypeKind_Pointer,     8,    "pointer"          ) \
-	X(TypeKind_Struct,      9,    "struct"           )
+	X(TypeKind_Struct,      9,    "struct"           ) \
+	X(TypeKind_String,     10,    "string"           )
 
 DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
 

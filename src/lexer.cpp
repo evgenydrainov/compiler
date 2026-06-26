@@ -217,7 +217,17 @@ ParseString(Lexer *lexer)
 	AdvanceChar(lexer);
 	str.count++;
 
-	return MakeToken(lexer, TokenKind_String, str);
+	TokenKind kind = TokenKind_String;
+
+	if (*lexer->current == 'c')
+	{
+		kind = TokenKind_CString;
+
+		AdvanceChar(lexer);
+		str.count++;
+	}
+
+	return MakeToken(lexer, kind, str);
 }
 
 internal Token

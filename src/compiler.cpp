@@ -273,6 +273,7 @@ Compile(CompileOptions options)
 	// PrintTree(program, "", false);
 
 	CodegenContext codegenContext = {};
+	codegenContext.cstringLiterals = semanticContext.cstringLiterals;
 
 	{
 		char fileName[1024];
