@@ -25,7 +25,8 @@
 	X(NodeKind_StructFieldDecl,  17,    ""   ) \
 	X(NodeKind_FieldAccess,      18,    ""   ) \
 	X(NodeKind_String,           19,    ""   ) \
-	X(NodeKind_CString,          20,    ""   )
+	X(NodeKind_CString,          20,    ""   ) \
+	X(NodeKind_Unary,            21,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -50,6 +51,13 @@ DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 	X(BinaryOp_ShiftRight,     17,   ""  )
 
 DEFINE_ENUM_WITH_VALUES(BinaryOp, u32, BINARY_OP_LIST);
+
+#define UNARY_OP_LIST(X) \
+	X(UnaryOp_Negate,          0,    ""  ) \
+	X(UnaryOp_LogicalNot,      1,    ""  ) \
+	X(UnaryOp_BitNegate,       2,    ""  )
+
+DEFINE_ENUM_WITH_VALUES(UnaryOp, u32, UNARY_OP_LIST);
 
 struct Node
 {
@@ -232,6 +240,14 @@ struct CStringNode : public Node
 
 	string value;
 	int uniqueId;
+};
+
+struct UnaryNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Unary;
+
+	UnaryOp op;
+	Node *expr;
 };
 
 template <typename T>

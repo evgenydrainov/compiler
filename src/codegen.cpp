@@ -342,6 +342,34 @@ GenerateExpression(Node *baseNode,
 			GenerateBinaryExpression(baseNode, out, context);
 		} break;
 
+		case NodeKind_Unary:
+		{
+			UnaryNode *node = As<UnaryNode>(baseNode);
+
+			GenerateExpression(node->expr, out, context);
+
+			if (node->op == UnaryOp_Negate)
+			{
+				WritePop(out, context, "    pop rax\n");
+				fprintf(out, "    neg rax\n");
+				WritePush(out, context, "    push rax\n");
+			}
+			else if (node->op == UnaryOp_LogicalNot)
+			{
+				WritePop(out, context, "    pop rax\n");
+				fprintf(out, "    cmp rax, 0\n");
+				fprintf(out, "    sete al\n");
+				fprintf(out, "    movzx rax, al\n");
+				WritePush(out, context, "    push rax\n");
+			}
+			else
+			{
+				Assert(false);
+			}
+
+			fprintf(out, "\n");
+		} break;
+
 		case NodeKind_Var:
 		case NodeKind_Deref:
 		case NodeKind_FieldAccess:

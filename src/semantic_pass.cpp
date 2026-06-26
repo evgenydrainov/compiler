@@ -256,6 +256,15 @@ AnalyzeBinaryExpression(Node *baseNode,
 	}
 }
 
+internal bool
+IsSignedInteger(Type type)
+{
+	return (type.kind == TypeKind_Int64
+			|| type.kind == TypeKind_Int32
+			|| type.kind == TypeKind_Int16
+			|| type.kind == TypeKind_Int8);
+}
+
 internal void
 AnalyzeExpression(Node *baseNode,
 				  SemanticContext *context)
@@ -304,6 +313,42 @@ AnalyzeExpression(Node *baseNode,
 		case NodeKind_Binary:
 		{
 			AnalyzeBinaryExpression(baseNode, context);
+		} break;
+
+		case NodeKind_Unary:
+		{
+			UnaryNode *node = As<UnaryNode>(baseNode);
+
+			AnalyzeExpression(node->expr, context);
+
+			if (node->op == UnaryOp_Negate)
+			{
+				if (IsSignedInteger(node->expr->inferredType))
+				{
+					node->inferredType = node->expr->inferredType;
+				}
+				else
+				{
+					Error(context, node->expr, "cannot negate '%s'",
+						  GetTypeKindPrettyName(node->expr->inferredType.kind));
+				}
+			}
+			else if (node->op == UnaryOp_LogicalNot)
+			{
+				if (node->expr->inferredType.kind == TypeKind_Bool)
+				{
+					node->inferredType.kind = TypeKind_Bool;
+				}
+				else
+				{
+					Error(context, node->expr, "cannot negate '%s'",
+						  GetTypeKindPrettyName(node->expr->inferredType.kind));
+				}
+			}
+			else
+			{
+				Assert(false);
+			}
 		} break;
 
 		case NodeKind_Var:

@@ -24,7 +24,7 @@ main :: proc() -> i64
 	camera.rotation = 0;
 	camera.zoom = 0x4080_0000; // 4.0f
 
-	while WindowShouldClose() == false
+	while !WindowShouldClose()
 	{
 		BeginDrawing();
 

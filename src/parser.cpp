@@ -168,162 +168,187 @@ ParseExpression(Parser *parser,
 internal Node *
 ParseAtom(Parser *parser,
 		  Lexer *lexer,
-		  Arena *arena)
+		  Arena *arena);
+
+internal Node *
+ParseAtom_Inner(Parser *parser,
+				Lexer *lexer,
+				Arena *arena)
 {
-	Node *result = nullptr;
-
-	switch (parser->current.kind)
+	if (parser->current.kind == TokenKind_Number)
 	{
-		case TokenKind_Number:
+		NumberNode *node = MakeNumberNode(parser->current.line, parser->current.numberValue, arena);
+		AdvanceToken(parser, lexer);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_String)
+	{
+		StringNode *node = MakeNode<StringNode>(parser->current.line, arena);
+
+		Assert(parser->current.str.count >= 2);
+		node->value.data = parser->current.str.data + 1;
+		node->value.count = parser->current.str.count - 2;
+
+		AdvanceToken(parser, lexer);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_CString)
+	{
+		int uniqueId = parser->uniqueLabelId++;
+
+		CStringNode *node = MakeNode<CStringNode>(parser->current.line, arena);
+
+		Assert(parser->current.str.count >= 3);
+		node->value.data = parser->current.str.data + 1;
+		node->value.count = parser->current.str.count - 3;
+
+		node->uniqueId = uniqueId;
+
+		AdvanceToken(parser, lexer);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_OpenParen)
+	{
+		AdvanceToken(parser, lexer);
+		Node *node = ParseExpression(parser, lexer, 0, arena);
+		ExpectToken(parser, lexer, TokenKind_CloseParen);
+
+		return node;
+	}
+	
+	if (parser->current.kind == TokenKind_Minus)
+	{
+		// unary minus
+		// -foo
+
+		UnaryNode *node = MakeNode<UnaryNode>(parser->current.line, arena);
+		node->op = UnaryOp_Negate;
+
+		AdvanceToken(parser, lexer);
+
+		node->expr = ParseAtom(parser, lexer, arena);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_Bang)
+	{
+		// logical not
+		// !foo
+
+		UnaryNode *node = MakeNode<UnaryNode>(parser->current.line, arena);
+		node->op = UnaryOp_LogicalNot;
+
+		AdvanceToken(parser, lexer);
+
+		node->expr = ParseAtom(parser, lexer, arena);
+
+		return node;
+	}
+			
+	if (parser->current.kind == TokenKind_Identifier)
+	{
+		if (PeekToken(lexer).kind == TokenKind_OpenParen)
 		{
-			NumberNode *node = MakeNumberNode(parser->current.line, parser->current.numberValue, arena);
-			AdvanceToken(parser, lexer);
+			// function call
+			// foo(a, b, c)
 
-			result = node;
-		} break;
+			const int MAX_ARGUMENTS = 32;
 
-		case TokenKind_String:
-		{
-			StringNode *node = MakeNode<StringNode>(parser->current.line, arena);
+			CallNode *node = MakeNode<CallNode>(parser->current.line, arena);
+			node->name = parser->current.str;
+			node->expressions = PushArray<Node *>(arena, MAX_ARGUMENTS);
+			node->numExpressions = 0;
 
-			Assert(parser->current.str.count >= 2);
-			node->value.data = parser->current.str.data + 1;
-			node->value.count = parser->current.str.count - 2;
+			AdvanceToken(parser, lexer); // eat the function name
+			AdvanceToken(parser, lexer); // eat the '('
 
-			AdvanceToken(parser, lexer);
-
-			result = node;
-		} break;
-
-		case TokenKind_CString:
-		{
-			int uniqueId = parser->uniqueLabelId++;
-
-			CStringNode *node = MakeNode<CStringNode>(parser->current.line, arena);
-
-			Assert(parser->current.str.count >= 3);
-			node->value.data = parser->current.str.data + 1;
-			node->value.count = parser->current.str.count - 3;
-
-			node->uniqueId = uniqueId;
-
-			AdvanceToken(parser, lexer);
-
-			result = node;
-		} break;
-
-		case TokenKind_OpenParen:
-		{
-			AdvanceToken(parser, lexer);
-			Node *node = ParseExpression(parser, lexer, 0, arena);
-			ExpectToken(parser, lexer, TokenKind_CloseParen);
-
-			result = node;
-		} break;
-
-		case TokenKind_Minus:
-		{
-			// unary minus
-
-			BinaryNode *node = MakeBinaryNode(BinaryOp_Subtract, parser->current.line, nullptr, nullptr, arena);
-			node->lhs = MakeNumberNode(parser->current.line, 0, arena);
-			AdvanceToken(parser, lexer);
-			node->rhs = ParseAtom(parser, lexer, arena);
-
-			result = node;
-		} break;
-
-		case TokenKind_Identifier:
-		{
-			if (PeekToken(lexer).kind == TokenKind_OpenParen)
+			while (!parser->hadError
+					&& parser->current.kind != TokenKind_CloseParen)
 			{
-				// function call
-				// foo(a, b, c)
-
-				const int MAX_ARGUMENTS = 32;
-
-				CallNode *node = MakeNode<CallNode>(parser->current.line, arena);
-				node->name = parser->current.str;
-				node->expressions = PushArray<Node *>(arena, MAX_ARGUMENTS);
-				node->numExpressions = 0;
-
-				AdvanceToken(parser, lexer); // eat the function name
-				AdvanceToken(parser, lexer); // eat the '('
-
-				while (!parser->hadError
-					   && parser->current.kind != TokenKind_CloseParen)
+				if (node->numExpressions != 0)
 				{
-					if (node->numExpressions != 0)
-					{
-						ExpectToken(parser, lexer, TokenKind_Comma);
-					}
-
-					Assert(node->numExpressions < MAX_ARGUMENTS);
-					node->expressions[node->numExpressions] = ParseExpression(parser, lexer, 0, arena);
-
-					node->numExpressions++;
+					ExpectToken(parser, lexer, TokenKind_Comma);
 				}
 
-				ExpectToken(parser, lexer, TokenKind_CloseParen);
+				Assert(node->numExpressions < MAX_ARGUMENTS);
+				node->expressions[node->numExpressions] = ParseExpression(parser, lexer, 0, arena);
 
-				result = node;
+				node->numExpressions++;
 			}
-			else
-			{
-				// variable access
 
-				VarNode *node = MakeNode<VarNode>(parser->current.line, arena);
-				node->name = parser->current.str;
+			ExpectToken(parser, lexer, TokenKind_CloseParen);
 
-				AdvanceToken(parser, lexer);
-
-				result = node;
-			}
-		} break;
-
-		case TokenKind_True:
+			return node;
+		}
+		else
 		{
-			BoolNode *node = MakeNode<BoolNode>(parser->current.line, arena);
-			node->boolValue = true;
+			// variable access
+
+			VarNode *node = MakeNode<VarNode>(parser->current.line, arena);
+			node->name = parser->current.str;
+
 			AdvanceToken(parser, lexer);
 
-			result = node;
-		} break;
-
-		case TokenKind_False:
-		{
-			BoolNode *node = MakeNode<BoolNode>(parser->current.line, arena);
-			node->boolValue = false;
-			AdvanceToken(parser, lexer);
-
-			result = node;
-		} break;
-
-		case TokenKind_Ampersand:
-		{
-			AddressOfNode *node = MakeNode<AddressOfNode>(parser->current.line, arena);
-			AdvanceToken(parser, lexer);
-
-			node->what = ParseAtom(parser, lexer, arena);
-
-			result = node;
-		} break;
-
-		case TokenKind_Asterisk:
-		{
-			DerefNode *node = MakeNode<DerefNode>(parser->current.line, arena);
-			AdvanceToken(parser, lexer);
-
-			node->what = ParseAtom(parser, lexer, arena);
-
-			result = node;
-		} break;
-
-		default:
-		{
-			UnexpectedCurrentToken(parser);
-		} break;
+			return node;
+		}
 	}
+
+	if (parser->current.kind == TokenKind_True)
+	{
+		BoolNode *node = MakeNode<BoolNode>(parser->current.line, arena);
+		node->boolValue = true;
+		AdvanceToken(parser, lexer);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_False)
+	{
+		BoolNode *node = MakeNode<BoolNode>(parser->current.line, arena);
+		node->boolValue = false;
+		AdvanceToken(parser, lexer);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_Ampersand)
+	{
+		AddressOfNode *node = MakeNode<AddressOfNode>(parser->current.line, arena);
+		AdvanceToken(parser, lexer);
+
+		node->what = ParseAtom(parser, lexer, arena);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_Asterisk)
+	{
+		DerefNode *node = MakeNode<DerefNode>(parser->current.line, arena);
+		AdvanceToken(parser, lexer);
+
+		node->what = ParseAtom(parser, lexer, arena);
+
+		return node;
+	}
+
+	UnexpectedCurrentToken(parser);
+
+	return nullptr;
+}
+
+internal Node *
+ParseAtom(Parser *parser,
+		  Lexer *lexer,
+		  Arena *arena)
+{
+	Node *result = ParseAtom_Inner(parser, lexer, arena);
 
 	if (parser->current.kind == TokenKind_Dot)
 	{
@@ -336,9 +361,9 @@ ParseAtom(Parser *parser,
 
 		ExpectToken(parser, lexer, TokenKind_Identifier);
 
-		result = node;
+		return node;
 	}
-	
+
 	return result;
 }
 
