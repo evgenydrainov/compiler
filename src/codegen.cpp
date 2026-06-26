@@ -144,6 +144,8 @@ GenerateBinaryExpression(Node *baseNode,
 		case BinaryOp_Multiply:
 		case BinaryOp_Divide:
 		case BinaryOp_Modulo:
+		case BinaryOp_ShiftLeft:
+		case BinaryOp_ShiftRight:
 		{
 			GenerateExpression(node->lhs, out, context);
 			GenerateExpression(node->rhs, out, context);
@@ -173,6 +175,14 @@ GenerateBinaryExpression(Node *baseNode,
 				fprintf(out, "    cqo\n");
 				fprintf(out, "    idiv rcx\n");
 				fprintf(out, "    mov rax, rdx\n");
+			}
+			else if (node->op == BinaryOp_ShiftLeft)
+			{
+				fprintf(out, "    shl rax, cl\n");
+			}
+			else if (node->op == BinaryOp_ShiftRight)
+			{
+				fprintf(out, "    sar rax, cl\n");
 			}
 			else
 			{
@@ -346,27 +356,40 @@ GenerateExpression(Node *baseNode,
 				"r9",
 			};
 
-			Assert(node->numExpressions <= 4);
-
 			int numArgumentsInRegs = Min(node->numExpressions, 4);
+			int numArgumentsOnStack = node->numExpressions - numArgumentsInRegs;
+
+			int padding = ((context->stackDepth + numArgumentsOnStack) % 2) ? 8 : 0;
+			if (padding)
+			{
+				fprintf(out, "    sub rsp, %d\t\t; align stack\n", padding);
+			}
+
+			for (int i = node->numExpressions;
+				 i--;)
+			{
+				GenerateExpression(node->expressions[i], out, context);
+			}
 
 			for (int i = 0;
 				 i < numArgumentsInRegs;
 				 i++)
 			{
-				GenerateExpression(node->expressions[i], out, context);
-			}
-
-			for (int i = numArgumentsInRegs;
-				 i--;)
-			{
 				WritePop(out, context, "    pop %s\t\t\t; put argument\n", paramRegs[i]);
 			}
 			fprintf(out, "\n");
 
-			PushShadowSpace(out, context);
+			fprintf(out, "    sub rsp, 32\t\t; reserve shadow space\n");
 			fprintf(out, "    call " STR_FMT "\n", STR_ARG(node->name));
-			PopShadowSpace(out, context);
+			fprintf(out, "    add rsp, 32\t\t; free shadow space\n");
+
+			if (numArgumentsOnStack + padding/8 > 0)
+			{
+				int cleanup = numArgumentsOnStack*8 + padding;
+				fprintf(out, "    add rsp, %d\t\t; free stack arguments\n", cleanup);
+				context->stackDepth -= numArgumentsOnStack;
+			}
+
 			WritePush(out, context, "    push rax\t\t; push the function return value\n");
 			fprintf(out, "\n");
 		} break;
@@ -565,8 +588,6 @@ GenerateTopLevelStatement(Node *baseNode,
 				"r9",
 			};
 
-			Assert(node->numParams <= 4);
-
 			int numParamsInRegs = Min(node->numParams, 4);
 
 			for (int i = 0;
@@ -576,6 +597,17 @@ GenerateTopLevelStatement(Node *baseNode,
 				ParamNode *param = As<ParamNode>(node->params[i]);
 
 				fprintf(out, "    mov [rbp - %d], %s\t\t; unpack argument\n", param->stackOffset, paramRegs[i]);
+			}
+
+			for (int i = numParamsInRegs;
+				 i < node->numParams;
+				 i++)
+			{
+				ParamNode *param = As<ParamNode>(node->params[i]);
+
+				int callerOffset = 16 + (i - numParamsInRegs)*8;
+				fprintf(out, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d\n", callerOffset, i+1);
+				fprintf(out, "    mov [rbp - %d], rax\n", param->stackOffset);
 			}
 			fprintf(out, "\n");
 

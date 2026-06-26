@@ -7,6 +7,8 @@
 #include <direct.h>
 #include <process.h>
 
+global_variable char compilerPath[1024];
+
 internal void
 TestReturnCode(const char *testName, int expectedCode)
 {
@@ -17,7 +19,7 @@ TestReturnCode(const char *testName, int expectedCode)
 		sprintf_s(inputPath, "%s.c", testName);
 
 		if (_spawnl(_P_WAIT,
-					"..\\build\\Debug\\compiler.exe",
+					compilerPath,
 					"compiler",
 					inputPath,
 					nullptr) != 0)
@@ -48,6 +50,15 @@ TestReturnCode(const char *testName, int expectedCode)
 
 int main()
 {
+	char *currentDir = _getcwd(nullptr, 0);
+	if (!currentDir)
+	{
+		fprintf(stderr, "_getcwd failed\n");
+		exit(1);
+	}
+
+	sprintf_s(compilerPath, "%s\\build\\Debug\\compiler.exe", currentDir);
+
 	if (_chdir("tests") != 0)
 	{
 		fprintf(stderr, "_chdir failed\n");
@@ -76,5 +87,12 @@ int main()
 	//TestReturnCode("20_logical_or",              0);
 	//TestReturnCode("21_if_else",                 0);
 	//TestReturnCode("22_foreign_function",        0);
-	TestReturnCode("23_raylib",                  0);
+
+	if (_chdir("..\\examples\\01_raylib") != 0)
+	{
+		fprintf(stderr, "_chdir failed\n");
+		exit(1);
+	}
+
+	TestReturnCode("main", 0);
 }

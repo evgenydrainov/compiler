@@ -41,6 +41,11 @@ DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 	X(BinaryOp_NotEqual,       10,   ""  ) \
 	X(BinaryOp_LogicalAnd,     11,   ""  ) \
 	X(BinaryOp_LogicalOr,      12,   ""  ) \
+	X(BinaryOp_BitAnd,         13,   ""  ) \
+	X(BinaryOp_BitOr,          14,   ""  ) \
+	X(BinaryOp_BitXor,         15,   ""  ) \
+	X(BinaryOp_ShiftLeft,      16,   ""  ) \
+	X(BinaryOp_ShiftRight,     17,   ""  )
 
 DEFINE_ENUM_WITH_VALUES(BinaryOp, u32, BINARY_OP_LIST);
 

@@ -3,12 +3,16 @@
 #include "common.h"
 
 #define TYPE_KIND_LIST(X) \
-	X(TypeKind_Unknown,     0,    "unknown type"    ) \
-	X(TypeKind_Void,        1,    "void"            ) \
-	X(TypeKind_Int64,       2,    "i64"             ) \
-	X(TypeKind_Bool,        3,    "bool"            ) \
-	X(TypeKind_Pointer,     4,    "pointer"         ) \
-	X(TypeKind_Struct,      5,    "struct"          )
+	X(TypeKind_Unknown,     0,    "unknown type"     ) \
+	X(TypeKind_InferMe,     1,    "not inferred yet" ) \
+	X(TypeKind_Void,        2,    "void"             ) \
+	X(TypeKind_Int8,        3,    "i8"               ) \
+	X(TypeKind_Int16,       4,    "i16"              ) \
+	X(TypeKind_Int32,       5,    "i32"              ) \
+	X(TypeKind_Int64,       6,    "i64"              ) \
+	X(TypeKind_Bool,        7,    "bool"             ) \
+	X(TypeKind_Pointer,     8,    "pointer"          ) \
+	X(TypeKind_Struct,      9,    "struct"           )
 
 DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
 
@@ -54,8 +58,32 @@ SizeOfType(Type type)
 {
 	if (type.kind == TypeKind_Struct)
 	{
-		return type.structInfo->size;
+		if (type.structInfo)
+		{
+			return type.structInfo->size;
+		}
+		else
+		{
+			// type was not resolved
+			return 0;
+		}
 	}
+
+	if (type.kind == TypeKind_Int8)
+	{
+		return 1;
+	}
+
+	if (type.kind == TypeKind_Int16)
+	{
+		return 2;
+	}
+
+	if (type.kind == TypeKind_Int32)
+	{
+		return 4;
+	}
+
 	return 8;
 }
 

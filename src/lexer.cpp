@@ -226,9 +226,17 @@ ParseDecimalNumber(Lexer *lexer)
 	string str = {lexer->current, 0};
 	i64 value = 0;
 
-	while (IsDigit(*lexer->current))
+	while (IsDigit(*lexer->current)
+		   || *lexer->current == '_')
 	{
-		value = 10*value + (*lexer->current - '0');
+		if (*lexer->current == '_')
+		{
+			// ignore
+		}
+		else
+		{
+			value = 10*value + (*lexer->current - '0');
+		}
 
 		AdvanceChar(lexer);
 		str.count++;
@@ -242,8 +250,18 @@ ParseDecimalNumber(Lexer *lexer)
 		AdvanceChar(lexer);
 		str.count++;
 
-		while (IsDigit(*lexer->current))
+		while (IsDigit(*lexer->current)
+			   || *lexer->current == '_')
 		{
+			if (*lexer->current == '_')
+			{
+				// ignore
+			}
+			else
+			{
+				// TODO
+			}
+
 			AdvanceChar(lexer);
 			str.count++;
 		}
@@ -262,7 +280,8 @@ ParseHexadecimalNumber(Lexer *lexer)
 
 	AdvanceChar(lexer, 2); // skip '0x'
 
-	while (IsHexadecimal(*lexer->current))
+	while (IsHexadecimal(*lexer->current)
+		   || *lexer->current == '_')
 	{
 		if (*lexer->current >= '0' && *lexer->current <= '9')
 		{
@@ -275,6 +294,10 @@ ParseHexadecimalNumber(Lexer *lexer)
 		else if (*lexer->current >= 'A' && *lexer->current <= 'F')
 		{
 			value = 16*value + (*lexer->current - 'A' + 10);
+		}
+		else if (*lexer->current == '_')
+		{
+			// ignore
 		}
 
 		AdvanceChar(lexer);
@@ -376,6 +399,8 @@ GetToken(Lexer *lexer)
 			{"->", TokenKind_Arrow},
 			{"&&", TokenKind_AmpAmp},
 			{"||", TokenKind_PipePipe},
+			{">>", TokenKind_GreaterGreater},
+			{"<<", TokenKind_LessLess},
 		};
 
 		for (auto &tokenInfo : tokenInfos)
@@ -413,7 +438,9 @@ GetToken(Lexer *lexer)
 		|| c == ':'
 		|| c == '&'
 		|| c == '%'
-		|| c == '#')
+		|| c == '#'
+		|| c == '|'
+		|| c == '^')
 	{
 		string str = {lexer->current, 1};
 		AdvanceChar(lexer);

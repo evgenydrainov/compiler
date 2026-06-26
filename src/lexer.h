@@ -26,6 +26,8 @@
 	X(TokenKind_Ampersand,        '&',       "&"              ) \
 	X(TokenKind_Percent,          '%',       "%"              ) \
 	X(TokenKind_Hash,             '#',       "#"              ) \
+	X(TokenKind_Pipe,             '|',       "|"              ) \
+	X(TokenKind_Caret,            '^',       "^"              ) \
 	X(TokenKind_Identifier,       256,       "identifier"     ) \
 	X(TokenKind_String,           257,       "string"         ) \
 	X(TokenKind_Number,           258,       "number"         ) \
@@ -46,7 +48,9 @@
 	X(TokenKind_Struct,           273,       "struct"         ) \
 	X(TokenKind_For,              274,       "for"            ) \
 	X(TokenKind_AmpAmp,           275,       "&&"             ) \
-	X(TokenKind_PipePipe,         276,       "||"             )
+	X(TokenKind_PipePipe,         276,       "||"             ) \
+	X(TokenKind_GreaterGreater,   277,       ">>"             ) \
+	X(TokenKind_LessLess,         278,       "<<"             )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 

@@ -13,22 +13,37 @@ LeftBindingPower(TokenKind type)
 		case TokenKind_AmpAmp:
 			return 2;
 
+		case TokenKind_Pipe:
+			return 3;
+
+		case TokenKind_Caret:
+			return 4;
+
+		case TokenKind_Ampersand:
+			return 5;
+
+		case TokenKind_EqualEqual:
+		case TokenKind_BangEqual:
+			return 6;
+
 		case TokenKind_Greater:
 		case TokenKind_Less:
-		case TokenKind_BangEqual:
-		case TokenKind_EqualEqual:
 		case TokenKind_GreaterEqual:
 		case TokenKind_LessEqual:
-			return 3;
+			return 7;
+
+		case TokenKind_GreaterGreater:
+		case TokenKind_LessLess:
+			return 8;
 
 		case TokenKind_Plus:
 		case TokenKind_Minus:
-			return 4;
+			return 9;
 
 		case TokenKind_Asterisk:
 		case TokenKind_Slash:
 		case TokenKind_Percent:
-			return 5;
+			return 10;
 
 		default:
 			return 0;
@@ -325,19 +340,21 @@ ParseExpression(Parser *parser,
 				Assert(false);
 			} break;
 
-			case TokenKind_Plus:         lhs = MakeBinaryNode(BinaryOp_Add,          line, lhs, rhs, arena); break;
-			case TokenKind_Minus:        lhs = MakeBinaryNode(BinaryOp_Subtract,     line, lhs, rhs, arena); break;
-			case TokenKind_Asterisk:     lhs = MakeBinaryNode(BinaryOp_Multiply,     line, lhs, rhs, arena); break;
-			case TokenKind_Slash:        lhs = MakeBinaryNode(BinaryOp_Divide,       line, lhs, rhs, arena); break;
-			case TokenKind_Percent:      lhs = MakeBinaryNode(BinaryOp_Modulo,       line, lhs, rhs, arena); break;
-			case TokenKind_Less:         lhs = MakeBinaryNode(BinaryOp_Less,         line, lhs, rhs, arena); break;
-			case TokenKind_Greater:      lhs = MakeBinaryNode(BinaryOp_Greater,      line, lhs, rhs, arena); break;
-			case TokenKind_EqualEqual:   lhs = MakeBinaryNode(BinaryOp_EqualEqual,   line, lhs, rhs, arena); break;
-			case TokenKind_LessEqual:    lhs = MakeBinaryNode(BinaryOp_LessEqual,    line, lhs, rhs, arena); break;
-			case TokenKind_GreaterEqual: lhs = MakeBinaryNode(BinaryOp_GreaterEqual, line, lhs, rhs, arena); break;
-			case TokenKind_BangEqual:    lhs = MakeBinaryNode(BinaryOp_NotEqual,     line, lhs, rhs, arena); break;
-			case TokenKind_AmpAmp:       lhs = MakeBinaryNode(BinaryOp_LogicalAnd,   line, lhs, rhs, arena); break;
-			case TokenKind_PipePipe:     lhs = MakeBinaryNode(BinaryOp_LogicalOr,    line, lhs, rhs, arena); break;
+			case TokenKind_Plus:           lhs = MakeBinaryNode(BinaryOp_Add,          line, lhs, rhs, arena); break;
+			case TokenKind_Minus:          lhs = MakeBinaryNode(BinaryOp_Subtract,     line, lhs, rhs, arena); break;
+			case TokenKind_Asterisk:       lhs = MakeBinaryNode(BinaryOp_Multiply,     line, lhs, rhs, arena); break;
+			case TokenKind_Slash:          lhs = MakeBinaryNode(BinaryOp_Divide,       line, lhs, rhs, arena); break;
+			case TokenKind_Percent:        lhs = MakeBinaryNode(BinaryOp_Modulo,       line, lhs, rhs, arena); break;
+			case TokenKind_Less:           lhs = MakeBinaryNode(BinaryOp_Less,         line, lhs, rhs, arena); break;
+			case TokenKind_Greater:        lhs = MakeBinaryNode(BinaryOp_Greater,      line, lhs, rhs, arena); break;
+			case TokenKind_EqualEqual:     lhs = MakeBinaryNode(BinaryOp_EqualEqual,   line, lhs, rhs, arena); break;
+			case TokenKind_LessEqual:      lhs = MakeBinaryNode(BinaryOp_LessEqual,    line, lhs, rhs, arena); break;
+			case TokenKind_GreaterEqual:   lhs = MakeBinaryNode(BinaryOp_GreaterEqual, line, lhs, rhs, arena); break;
+			case TokenKind_BangEqual:      lhs = MakeBinaryNode(BinaryOp_NotEqual,     line, lhs, rhs, arena); break;
+			case TokenKind_AmpAmp:         lhs = MakeBinaryNode(BinaryOp_LogicalAnd,   line, lhs, rhs, arena); break;
+			case TokenKind_PipePipe:       lhs = MakeBinaryNode(BinaryOp_LogicalOr,    line, lhs, rhs, arena); break;
+			case TokenKind_GreaterGreater: lhs = MakeBinaryNode(BinaryOp_ShiftRight,   line, lhs, rhs, arena); break;
+			case TokenKind_LessLess:       lhs = MakeBinaryNode(BinaryOp_ShiftLeft,    line, lhs, rhs, arena); break;
 		}
 	}
 
@@ -408,6 +425,24 @@ ParseType(Parser *parser,
 
 		type.pointerTo = PushStruct<Type>(arena);
 		*type.pointerTo = ParseType(parser, lexer, arena);
+	}
+	else if (parser->current.str == "i8")
+	{
+		type.kind = TypeKind_Int8;
+
+		AdvanceToken(parser, lexer);
+	}
+	else if (parser->current.str == "i16")
+	{
+		type.kind = TypeKind_Int16;
+
+		AdvanceToken(parser, lexer);
+	}
+	else if (parser->current.str == "i32")
+	{
+		type.kind = TypeKind_Int32;
+
+		AdvanceToken(parser, lexer);
 	}
 	else if (parser->current.str == "i64")
 	{
@@ -605,11 +640,17 @@ ParseVariableDeclaration(Parser *parser,
 
 	ExpectToken(parser, lexer, TokenKind_Colon);
 
-	node->type = ParseType(parser, lexer, arena);
+	node->type.kind = TypeKind_InferMe;
+
+	if (parser->current.kind != TokenKind_Equal)
+	{
+		node->type = ParseType(parser, lexer, arena);
+	}
 
 	if (parser->current.kind == TokenKind_Equal)
 	{
 		// name : type = expr;
+		// name : = expr;
 
 		// eat the '='
 		AdvanceToken(parser, lexer);
@@ -863,6 +904,13 @@ ParseTopLevelStatement(Parser *parser,
 		}
 	}
 
+	if (parser->current.kind == TokenKind_Semicolon)
+	{
+		// bare semicolon - empty statement
+		AdvanceToken(parser, lexer);
+		return nullptr;
+	}
+
 	UnexpectedCurrentToken(parser);
 
 	return nullptr;
@@ -887,7 +935,14 @@ ParseProgram(Parser *parser,
 			break;
 		}
 
-		ArrayAdd(&block->statements, statement);
+		if (statement)
+		{
+			ArrayAdd(&block->statements, statement);
+		}
+		else
+		{
+			// it's an empty statement - ignore it
+		}
 	}
 
 	return block;

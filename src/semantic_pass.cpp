@@ -111,6 +111,10 @@ ResolveType(Type *type,
 			Error(context, nodeForError, STR_FMT_QUOTED ": unknown type", STR_ARG(type->name));
 		}
 	}
+	//else if (type->kind == TypeKind_Pointer)
+	//{
+	//	ResolveType(type->pointerTo, context, nodeForError);
+	//}
 }
 
 internal void
@@ -135,6 +139,8 @@ AnalyzeBinaryExpression(Node *baseNode,
 		case BinaryOp_Multiply:
 		case BinaryOp_Divide:
 		case BinaryOp_Modulo:
+		case BinaryOp_ShiftLeft:
+		case BinaryOp_ShiftRight:
 		{
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
@@ -414,6 +420,11 @@ AnalyzeStatement(Node *baseNode,
 			if (node->expr)
 			{
 				AnalyzeExpression(node->expr, context);
+
+				if (node->type.kind == TypeKind_InferMe)
+				{
+					node->type = node->expr->inferredType;
+				}
 			}
 
 			ResolveType(&node->type, context, node);
@@ -656,6 +667,8 @@ SemanticPass(Node *_program,
 				{
 					if (!FindField(type->structInfo, field->name))
 					{
+						ResolveType(&field->type, context, field);
+
 						type->structInfo->fields[type->structInfo->numFields].name = field->name;
 						type->structInfo->fields[type->structInfo->numFields].type = field->type;
 
