@@ -346,9 +346,38 @@ GenerateExpression(Node *baseNode,
 		case NodeKind_Deref:
 		case NodeKind_FieldAccess:
 		{
+			int size = SizeOfType(baseNode->inferredType);
+
+			const char *instruction = "mov";
+			const char *tag = "";
+			if (size == 8)
+			{
+				instruction = "mov";
+				tag = ""; // empty
+			}
+			else if (size == 4)
+			{
+				instruction = "movsxd";
+				tag = "dword ";
+			}
+			else if (size == 2)
+			{
+				instruction = "movsx";
+				tag = "word ";
+			}
+			else if (size == 1)
+			{
+				instruction = "movsx";
+				tag = "byte ";
+			}
+			else
+			{
+				Assert(false);
+			}
+
 			GenerateLValueAddress(baseNode, out, context);
 			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    mov rax, [rax]\n");
+			fprintf(out, "    %s rax, %s[rax]\n", instruction, tag);
 			WritePush(out, context, "    push rax\n");
 			fprintf(out, "\n");
 		} break;
@@ -412,6 +441,31 @@ GenerateExpression(Node *baseNode,
 	}
 }
 
+internal const char *
+GetRegisterForTypeSize(Type type)
+{
+	int size = SizeOfType(type);
+	if (size == 8)
+	{
+		return "rax";
+	}
+	else if (size == 4)
+	{
+		return "eax";
+	}
+	else if (size == 2)
+	{
+		return "ax";
+	}
+	else if (size == 1)
+	{
+		return "al";
+	}
+
+	Assert(false);
+	return "rax";
+}
+
 internal void
 GenerateStatement(Node *baseNode,
 				  FILE *out,
@@ -444,9 +498,11 @@ GenerateStatement(Node *baseNode,
 			GenerateExpression(node->rhs, out, context);
 			GenerateLValueAddress(node->lhs, out, context);
 
+			const char *reg = GetRegisterForTypeSize(node->lhs->inferredType);
+
 			WritePop(out, context, "    pop rcx\n");
 			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    mov [rcx], rax\n");
+			fprintf(out, "    mov [rcx], %s\n", reg);
 			fprintf(out, "\n");
 		} break;
 

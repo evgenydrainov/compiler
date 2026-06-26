@@ -6,7 +6,7 @@ main :: proc() -> i64
 	KEY_UP    := 265;
 	KEY_Z     := 90;
 
-	InitWindow(320, 240, "doukutsu"c);
+	InitWindow(320*4, 240*4, "doukutsu"c);
 	SetTargetFPS(60);
 
 	player: Player;
@@ -16,11 +16,21 @@ main :: proc() -> i64
 	texture: Texture;
 	LoadTexture(&texture, "plr.png"c);
 
+	camera: Camera2D;
+	camera.offsetX = 0;
+	camera.offsetY = 0;
+	camera.targetX = 0;
+	camera.targetY = 0;
+	camera.rotation = 0;
+	camera.zoom = 0x4080_0000; // 4.0f
+
 	while WindowShouldClose() == false
 	{
 		BeginDrawing();
 
 		ClearBackground(0);
+
+		BeginMode2D(&camera);
 
 		dirX := 0;
 		if IsKeyDown(KEY_LEFT)
@@ -59,6 +69,8 @@ main :: proc() -> i64
 					(player.y>>16)-8,
 					0xffffffff);
 
+		EndMode2D();
+
 		EndDrawing();
 	}
 
@@ -86,6 +98,8 @@ ClearBackground :: proc(color: i64) #foreign;
 LoadTexture :: proc(texture: *Texture, fileName: *i8) #foreign;
 DrawTexture :: proc(texture: *Texture, posX: i64, posY: i64, tint: i64) #foreign;
 IsKeyPressed :: proc(key: i64) -> bool #foreign;
+BeginMode2D :: proc(camera: *Camera2D) #foreign;
+EndMode2D :: proc() #foreign;
 
 Texture :: struct
 {

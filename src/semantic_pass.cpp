@@ -426,6 +426,94 @@ AnalyzeExpression(Node *baseNode,
 	}
 }
 
+internal bool
+CanImplicitCast(Type destType, Node *source)
+{
+	if (TypesEqual(destType, source->inferredType))
+	{
+		return true;
+	}
+
+	if (source->kind == NodeKind_Number)
+	{
+		NumberNode *number = As<NumberNode>(source);
+
+		struct Range
+		{
+			i64 min;
+			i64 max;
+		};
+
+		Range range = {};
+
+		if (destType.kind == TypeKind_Int32)
+		{
+			range = { INT32_MIN, INT32_MAX };
+		}
+		else if (destType.kind == TypeKind_Int16)
+		{
+			range = { INT16_MIN, INT16_MAX };
+		}
+		else if (destType.kind == TypeKind_Int8)
+		{
+			range = { INT8_MIN, INT8_MAX };
+		}
+		else
+		{
+			Assert(false);
+		}
+
+		if (number->int64Value >= range.min && number->int64Value <= range.max)
+		{
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Int64)
+	{
+		if (source->inferredType.kind == TypeKind_Int32)
+		{
+			// int32 fits in int64
+			return true;
+		}
+		if (source->inferredType.kind == TypeKind_Int16)
+		{
+			// int16 fits in int64
+			return true;
+		}
+		if (source->inferredType.kind == TypeKind_Int8)
+		{
+			// int8 fits in int64
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Int32)
+	{
+		if (source->inferredType.kind == TypeKind_Int16)
+		{
+			// int16 fits in int32
+			return true;
+		}
+		if (source->inferredType.kind == TypeKind_Int8)
+		{
+			// int8 fits in int32
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Int16)
+	{
+		if (source->inferredType.kind == TypeKind_Int8)
+		{
+			// int8 fits in int16
+			return true;
+		}
+	}
+
+	return false;
+}
+
 internal void
 AnalyzeStatement(Node *baseNode,
 				 SemanticContext *context)
@@ -458,9 +546,9 @@ AnalyzeStatement(Node *baseNode,
 
 				if (node->expr)
 				{
-					if (!TypesEqual(node->expr->inferredType, symbol->type))
+					if (!CanImplicitCast(symbol->type, node->expr))
 					{
-						Error(context, node->expr, "cannot assign '%s' to '%s'",
+						Error(context, node->expr, "cannot implicitly cast '%s' to '%s'",
 							  GetTypeKindPrettyName(node->expr->inferredType.kind),
 							  GetTypeKindPrettyName(symbol->type.kind));
 					}
@@ -481,9 +569,9 @@ AnalyzeStatement(Node *baseNode,
 
 			if (IsLValue(node->lhs))
 			{
-				if (!TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
+				if (!CanImplicitCast(node->lhs->inferredType, node->rhs))
 				{
-					Error(context, node->rhs, "cannot assign '%s' to '%s'",
+					Error(context, node->rhs, "cannot implicitly cast '%s' to '%s'",
 						  GetTypeKindPrettyName(node->rhs->inferredType.kind),
 						  GetTypeKindPrettyName(node->lhs->inferredType.kind));
 				}
@@ -545,21 +633,26 @@ AnalyzeStatement(Node *baseNode,
 		{
 			ReturnNode *node = As<ReturnNode>(baseNode);
 
-			Type returnExpressionType = {};
-			returnExpressionType.kind = TypeKind_Void;
-
 			if (node->expr)
 			{
 				AnalyzeExpression(node->expr, context);
 				
-				returnExpressionType = node->expr->inferredType;
+				if (!CanImplicitCast(context->currentFunction->returnType, node->expr))
+				{
+					Error(context, node, "cannot implicitly cast '%s' to '%s'",
+						  GetTypeKindPrettyName(node->expr->inferredType.kind),
+						  GetTypeKindPrettyName(context->currentFunction->returnType.kind));
+				}	
 			}
-
-			if (!TypesEqual(returnExpressionType, context->currentFunction->returnType))
+			else
 			{
-				Error(context, node, "cannot return '%s': function return type is '%s'",
-					  GetTypeKindPrettyName(returnExpressionType.kind),
-					  GetTypeKindPrettyName(context->currentFunction->returnType.kind));
+				// bare return;
+
+				if (context->currentFunction->returnType.kind != TypeKind_Void)
+				{
+					Error(context, node, "cannot return 'void': function return type is '%s'",
+						  GetTypeKindPrettyName(context->currentFunction->returnType.kind));
+				}
 			}
 		} break;
 

@@ -7,7 +7,7 @@
 int main(int argc, char *argv[])
 {
 	//{
-	//	f32 f = 2.0f;
+	//	f32 f = 4.0f;
 	//	u32 v = *(u32 *)&f;
 	//	printf("%08x\n", v);
 	//}
