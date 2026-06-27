@@ -59,15 +59,9 @@ SizeOfType(Type type)
 {
 	if (type.kind == TypeKind_Struct)
 	{
-		if (type.structInfo)
-		{
-			return type.structInfo->size;
-		}
-		else
-		{
-			// type was not resolved
-			return 0;
-		}
+		Assert(type.structInfo && "type was not resolved");
+		
+		return type.structInfo->size;
 	}
 
 	if (type.kind == TypeKind_Int8)
@@ -91,6 +85,8 @@ SizeOfType(Type type)
 inline StructField *
 FindField(StructInfo *info, string name)
 {
+	Assert(info && "type was not resolved");
+
 	StructField *result = nullptr;
 
 	for (int i = 0;

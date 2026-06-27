@@ -112,7 +112,19 @@ GenerateLValueAddress(Node *baseNode,
 		{
 			FieldAccessNode *node = As<FieldAccessNode>(baseNode);
 
-			GenerateLValueAddress(node->expr, out, context);
+			if (node->expr->inferredType.kind == TypeKind_Struct)
+			{
+				GenerateLValueAddress(node->expr, out, context);
+			}
+			else if (node->expr->inferredType.kind == TypeKind_Pointer)
+			{
+				GenerateExpression(node->expr, out, context);
+			}
+			else
+			{
+				Assert(false);
+			}
+			
 			WritePop(out, context, "    pop rax\n");
 			fprintf(out, "    add rax, %d\n", node->fieldOffset);
 			WritePush(out, context, "    push rax\n");
@@ -637,6 +649,17 @@ GenerateStatement(Node *baseNode,
 			}
 			
 			fprintf(out, "    jmp .epilogue\t\t; return\n");
+			fprintf(out, "\n");
+		} break;
+
+		case NodeKind_Asm:
+		{
+			AsmNode *node = As<AsmNode>(baseNode);
+
+			fprintf(out, "    ; inline assembly begin\n");
+			fprintf(out, STR_FMT, STR_ARG(node->code));
+			fprintf(out, "\n");
+			fprintf(out, "    ; inline assembly end\n");
 			fprintf(out, "\n");
 		} break;
 

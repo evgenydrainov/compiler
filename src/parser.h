@@ -26,7 +26,8 @@
 	X(NodeKind_FieldAccess,      18,    ""   ) \
 	X(NodeKind_String,           19,    ""   ) \
 	X(NodeKind_CString,          20,    ""   ) \
-	X(NodeKind_Unary,            21,    ""   )
+	X(NodeKind_Unary,            21,    ""   ) \
+	X(NodeKind_Asm,              22,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -248,6 +249,13 @@ struct UnaryNode : public Node
 
 	UnaryOp op;
 	Node *expr;
+};
+
+struct AsmNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Asm;
+
+	string code;
 };
 
 template <typename T>

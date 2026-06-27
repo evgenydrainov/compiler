@@ -87,6 +87,14 @@ IdentifierType(string str)
 
 	switch (str[0])
 	{
+		case 'a':
+		{
+			if (str == "asm")
+			{
+				result = TokenKind_Asm;
+			}
+		} break;
+
 		case 'i':
 		{
 			if (str == "if")

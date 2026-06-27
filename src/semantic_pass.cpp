@@ -99,16 +99,24 @@ ResolveType(Type *type,
 {
 	if (type->kind == TypeKind_Struct)
 	{
-		Assert(!type->structInfo);
-
-		Type *typeInfo = LookupType(context->typeTable, type->name);
-		if (typeInfo)
+		if (!type->structInfo)
 		{
-			type->structInfo = typeInfo->structInfo;
+			Type *typeInfo = LookupType(context->typeTable, type->name);
+			if (typeInfo)
+			{
+				type->structInfo = typeInfo->structInfo;
+			}
+			else
+			{
+				Error(context, nodeForError, STR_FMT_QUOTED ": unknown type", STR_ARG(type->name));
+
+				local_persist StructInfo dummyStructInfo;
+				type->structInfo = &dummyStructInfo;
+			}
 		}
 		else
 		{
-			Error(context, nodeForError, STR_FMT_QUOTED ": unknown type", STR_ARG(type->name));
+			// type is already resolved
 		}
 	}
 	//else if (type->kind == TypeKind_Pointer)
@@ -277,6 +285,11 @@ AnalyzeExpression(Node *baseNode,
 		default:
 		{
 			Assert(false);
+		} break;
+
+		case NodeKind_Asm:
+		{
+			// do nothing
 		} break;
 
 		case NodeKind_Number:
@@ -463,6 +476,32 @@ AnalyzeExpression(Node *baseNode,
 						  STR_ARG(node->fieldName));
 				}
 			}
+			else if (node->expr->inferredType.kind == TypeKind_Pointer)
+			{
+				// auto dereference
+				// pointer.field
+
+				if (node->expr->inferredType.pointerTo->kind == TypeKind_Struct)
+				{
+					ResolveType(node->expr->inferredType.pointerTo, context, node->expr);
+
+					StructField *field = FindField(node->expr->inferredType.pointerTo->structInfo, node->fieldName);
+					if (field)
+					{
+						node->inferredType = field->type;
+						node->fieldOffset = field->offset;
+					}
+					else
+					{
+						Error(context, node, "struct has no field " STR_FMT_QUOTED,
+							  STR_ARG(node->fieldName));
+					}
+				}
+				else
+				{
+					Error(context, node->expr, "cannot access field of pointer to non-struct");
+				}
+			}
 			else
 			{
 				Error(context, node->expr, "cannot access field of non-struct");
@@ -474,6 +513,11 @@ AnalyzeExpression(Node *baseNode,
 internal bool
 CanImplicitCast(Type destType, Node *source)
 {
+	if (destType.kind == TypeKind_Unknown)
+	{
+		return false;
+	}
+
 	if (TypesEqual(destType, source->inferredType))
 	{
 		return true;

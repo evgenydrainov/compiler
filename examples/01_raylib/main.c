@@ -1,81 +1,50 @@
-main :: proc() -> i64
+Vector2 :: struct
 {
-	KEY_RIGHT := 262;
-	KEY_LEFT  := 263;
-	KEY_DOWN  := 264;
-	KEY_UP    := 265;
-	KEY_Z     := 90;
+	x : i32; // float
+	y : i32; // float
+};
 
-	InitWindow(320*4, 240*4, "doukutsu"c);
-	SetTargetFPS(60);
+Texture :: struct
+{
+	id      : i32;
+	width   : i32;
+	height  : i32;
+	mipmaps : i32;
+	format  : i32;
+};
 
-	player: Player;
-	player.x = 160<<16;
-	player.y = 120<<16;
+Camera2D :: struct
+{
+	offset   : Vector2;
+	target   : Vector2;
+	rotation : i32; // float
+	zoom     : i32; // float
+};
 
-	texture: Texture;
-	LoadTexture(&texture, "plr.png"c);
+Rectangle :: struct
+{
+	x      : i32; // float
+	y      : i32; // float
+	width  : i32; // float
+	height : i32; // float
+};
 
-	camera: Camera2D;
-	camera.offsetX = 0;
-	camera.offsetY = 0;
-	camera.targetX = 0;
-	camera.targetY = 0;
-	camera.rotation = 0;
-	camera.zoom = 0x4080_0000; // 4.0f
-
-	while !WindowShouldClose()
-	{
-		BeginDrawing();
-
-		ClearBackground(0);
-
-		BeginMode2D(&camera);
-
-		dirX := 0;
-		if IsKeyDown(KEY_LEFT)
-		{
-			dirX = dirX - 1;
-		}
-		if IsKeyDown(KEY_RIGHT)
-		{
-			dirX = dirX + 1;
-		}
-
-		player.xspeed = 0x2_0000*dirX;
-
-		if IsKeyPressed(KEY_Z)
-		{
-			player.yspeed = -0x4_0000;
-		}
-
-		{
-			gravity := 0x0_2000;
-
-			player.yspeed = player.yspeed + gravity;
-		}
-
-		player.x = player.x + player.xspeed;
-		player.y = player.y + player.yspeed;
-
-		if player.y > ((240-8)<<16)
-		{
-			player.y = ((240-8)<<16);
-			player.yspeed = 0;
-		}
-
-		DrawTexture(&texture,
-					(player.x>>16)-8,
-					(player.y>>16)-8,
-					0xffffffff);
-
-		EndMode2D();
-
-		EndDrawing();
-	}
-
-	return 0;
-}
+InitWindow        :: proc(width: i64, height: i64, title: *i8)                              #foreign;
+WindowShouldClose :: proc() -> bool                                                         #foreign;
+CloseWindow       :: proc() -> bool                                                         #foreign;
+BeginDrawing      :: proc() -> bool                                                         #foreign;
+EndDrawing        :: proc() -> bool                                                         #foreign;
+SetTargetFPS      :: proc(fps: i64)                                                         #foreign;
+DrawRectangle     :: proc(posX: i64, posY: i64, width: i64, height: i64, color: i64)        #foreign;
+DrawPixel         :: proc(posX: i64, posY: i64, color: i64)                                 #foreign;
+IsKeyDown         :: proc(key: i64) -> bool                                                 #foreign;
+ClearBackground   :: proc(color: i64)                                                       #foreign;
+LoadTexture       :: proc(texture: *Texture, fileName: *i8)                                 #foreign;
+DrawTexture       :: proc(texture: *Texture, posX: i64, posY: i64, tint: i64)               #foreign;
+IsKeyPressed      :: proc(key: i64) -> bool                                                 #foreign;
+BeginMode2D       :: proc(camera: *Camera2D)                                                #foreign;
+EndMode2D         :: proc()                                                                 #foreign;
+DrawTextureRec    :: proc(texture: *Texture, rec: *Rectangle, position: Vector2, tint: i64) #foreign;
 
 Player :: struct
 {
@@ -83,39 +52,149 @@ Player :: struct
 	y: i64;
 	xspeed: i64;
 	yspeed: i64;
+
+	srcX: i64;
+	srcY: i64;
+
+	walkAnim: i64;
 };
 
-InitWindow :: proc(width: i64, height: i64, title: *i8) #foreign;
-WindowShouldClose :: proc() -> bool #foreign;
-CloseWindow :: proc() -> bool #foreign;
-BeginDrawing :: proc() -> bool #foreign;
-EndDrawing :: proc() -> bool #foreign;
-SetTargetFPS :: proc(fps: i64) #foreign;
-DrawRectangle :: proc(posX: i64, posY: i64, width: i64, height: i64, color: i64) #foreign;
-DrawPixel :: proc(posX: i64, posY: i64, color: i64) #foreign;
-IsKeyDown :: proc(key: i64) -> bool #foreign;
-ClearBackground :: proc(color: i64) #foreign;
-LoadTexture :: proc(texture: *Texture, fileName: *i8) #foreign;
-DrawTexture :: proc(texture: *Texture, posX: i64, posY: i64, tint: i64) #foreign;
-IsKeyPressed :: proc(key: i64) -> bool #foreign;
-BeginMode2D :: proc(camera: *Camera2D) #foreign;
-EndMode2D :: proc() #foreign;
-
-Texture :: struct
+Game :: struct
 {
-	id: i32;
-	width: i32;
-	height: i32;
-	mipmaps: i32;
-	format: i32;
+	player: Player;
+
+	texture: Texture;
 };
 
-Camera2D :: struct
+GameUpdate :: proc(game: *Game)
 {
-	offsetX: i32;
-	offsetY: i32;
-	targetX: i32;
-	targetY: i32;
-	rotation: i32;
-	zoom: i32;
-};
+	KEY_RIGHT := 262;
+	KEY_LEFT  := 263;
+	KEY_DOWN  := 264;
+	KEY_UP    := 265;
+	KEY_Z     := 90;
+
+	dirX := 0;
+	if IsKeyDown(KEY_LEFT)
+	{
+		dirX = dirX - 1;
+	}
+	if IsKeyDown(KEY_RIGHT)
+	{
+		dirX = dirX + 1;
+	}
+
+	game.player.xspeed = 0x2_0000*dirX;
+
+	if IsKeyPressed(KEY_Z)
+	{
+		game.player.yspeed = -0x4_0000;
+	}
+
+	{
+		gravity := 0x0_2000;
+
+		game.player.yspeed = game.player.yspeed + gravity;
+	}
+
+	game.player.x = game.player.x + game.player.xspeed;
+	game.player.y = game.player.y + game.player.yspeed;
+
+	if game.player.y > ((240-8)<<16)
+	{
+		game.player.y = ((240-8)<<16);
+		game.player.yspeed = 0;
+	}
+
+	if game.player.xspeed >= 0
+	{
+		game.player.srcY = 16;
+	}
+	if game.player.xspeed < 0
+	{
+		game.player.srcY = 0;
+	}
+
+	if game.player.xspeed == 0
+	{
+		game.player.srcX = 0;
+	}
+	else
+	{
+		game.player.walkAnim = game.player.walkAnim + 1;
+		game.player.walkAnim = game.player.walkAnim % 16;
+
+		game.player.srcX = (game.player.walkAnim / 8) * 16;
+	}
+}
+
+GameDraw :: proc(game: *Game)
+{
+	camera: Camera2D;
+	camera.offset.x = 0;
+	camera.offset.y = 0;
+	camera.target.x = 0;
+	camera.target.y = 0;
+	camera.rotation = 0;
+	camera.zoom = int64_to_float32(4);
+
+	BeginMode2D(&camera);
+
+	//DrawTexture(&game.texture,
+	//			(game.player.x>>16)-8,
+	//			(game.player.y>>16)-8,
+	//			0xffffffff);
+
+	rectangle: Rectangle;
+	rectangle.x = int64_to_float32(game.player.srcX);
+	rectangle.y = int64_to_float32(game.player.srcY);
+	rectangle.width = int64_to_float32(16);
+	rectangle.height = int64_to_float32(16);
+
+	position: Vector2;
+	position.x = int64_to_float32((game.player.x>>16)-8);
+	position.y = int64_to_float32((game.player.y>>16)-8);
+
+	DrawTextureRec(&game.texture,
+				   &rectangle,
+				   position,
+				   0xffffffff);
+
+	EndMode2D();
+}
+
+main :: proc() -> i64
+{
+	InitWindow(320*4, 240*4, "doukutsu"c);
+	SetTargetFPS(60);
+
+	game: Game;
+	game.player.x = 160<<16;
+	game.player.y = 120<<16;
+
+	LoadTexture(&game.texture, "player.png"c);
+
+	while !WindowShouldClose()
+	{
+		GameUpdate(&game);
+
+		BeginDrawing();
+
+		ClearBackground(0);
+
+		GameDraw(&game);
+
+		EndDrawing();
+	}
+
+	return 0;
+}
+
+int64_to_float32 :: proc(value: i64) -> i32
+{
+	asm
+	{
+		cvtsi2ss xmm0, rcx
+		movd eax, xmm0
+	}
+}
