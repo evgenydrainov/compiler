@@ -297,10 +297,21 @@ AnalyzeExpression(Node *baseNode,
 			baseNode->inferredType.kind = TypeKind_Int64;
 		} break;
 
-		//case NodeKind_String:
-		//{
-		//	baseNode->inferredType.kind = TypeKind_String;
-		//} break;
+		case NodeKind_String:
+		{
+			baseNode->inferredType.kind = TypeKind_Struct;
+			baseNode->inferredType.name = "string";
+
+			ResolveType(&baseNode->inferredType, context, baseNode);
+
+			StringNode *node = As<StringNode>(baseNode);
+
+			GenerateStringLiteral literal = {};
+			literal.value = node->value;
+			literal.uniqueLabelId = node->uniqueId;
+
+			ArrayAdd(&context->stringLiterals, literal);
+		} break;
 
 		case NodeKind_CString:
 		{
@@ -819,6 +830,7 @@ SemanticPass(Node *_program,
 			 Arena *arena)
 {
 	context->cstringLiterals = PushBumpArray<GenerateCStringLiteral>(arena, 32);
+	context->stringLiterals = PushBumpArray<GenerateStringLiteral>(arena, 32);
 
 	FunctionTable *funcTable = PushStruct<FunctionTable>(arena);
 	SymbolTable *symTable = PushStruct<SymbolTable>(arena);

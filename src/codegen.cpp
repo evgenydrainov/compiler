@@ -130,6 +130,15 @@ GenerateLValueAddress(Node *baseNode,
 			WritePush(out, context, "    push rax\n");
 		} break;
 
+		case NodeKind_String:
+		{
+			StringNode *node = As<StringNode>(baseNode);
+
+			fprintf(out, "    lea rax, [rel string_literal_%d]\n", node->uniqueId);
+			WritePush(out, context, "    push rax\n");
+			fprintf(out, "\n");
+		} break;
+
 		default:
 		{
 			Assert(false);
@@ -519,11 +528,18 @@ GenerateStatement(Node *baseNode,
 
 			if (node->expr)
 			{
-				GenerateExpression(node->expr, out, context);
+				VarNode varNode = {};
+				varNode.kind = NodeKind_Var;
+				varNode.inferredType = node->type;
+				varNode.name = node->name;
+				varNode.stackOffset = node->stackOffset;
 
-				WritePop(out, context, "    pop rax\t\t\t; store into " STR_FMT_QUOTED "\n", STR_ARG(node->name));
-				fprintf(out, "    mov [rbp - %d], rax\n", node->stackOffset);
-				fprintf(out, "\n");
+				AssignNode assignNode = {};
+				assignNode.kind = NodeKind_Assign;
+				assignNode.lhs = &varNode;
+				assignNode.rhs = node->expr;
+
+				GenerateStatement(&assignNode, out, context);
 			}
 			else
 			{
@@ -535,15 +551,40 @@ GenerateStatement(Node *baseNode,
 		{
 			AssignNode *node = As<AssignNode>(baseNode);
 
-			GenerateExpression(node->rhs, out, context);
-			GenerateLValueAddress(node->lhs, out, context);
+			int size = SizeOfType(node->lhs->inferredType);
+			if (size > 8)
+			{
+				Assert(SizeOfType(node->lhs->inferredType) == SizeOfType(node->rhs->inferredType));
 
-			const char *reg = GetRegisterForTypeSize(node->lhs->inferredType);
+				GenerateLValueAddress(node->rhs, out, context);
+				GenerateLValueAddress(node->lhs, out, context);
 
-			WritePop(out, context, "    pop rcx\n");
-			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    mov [rcx], %s\n", reg);
-			fprintf(out, "\n");
+				WritePop(out, context, "    pop rdi\n");
+				WritePop(out, context, "    pop rsi\n");
+
+				Assert(size % 8 == 0);
+
+				for (int i = 0; i < size; i += 8)
+				{
+					fprintf(out, "    mov rax, [rsi + %d]\n", i);
+					fprintf(out, "    mov [rdi + %d], rax\n", i);
+				}
+
+				fprintf(out, "\n");
+			}
+			else
+			{
+				GenerateExpression(node->rhs, out, context);
+				GenerateLValueAddress(node->lhs, out, context);
+
+				WritePop(out, context, "    pop rcx\n");
+				WritePop(out, context, "    pop rax\n");
+
+				const char *reg = GetRegisterForTypeSize(node->lhs->inferredType);
+
+				fprintf(out, "    mov [rcx], %s\n", reg);
+				fprintf(out, "\n");
+			}
 		} break;
 
 		case NodeKind_If:
@@ -721,7 +762,7 @@ GenerateTopLevelStatement(Node *baseNode,
 			{
 				ParamNode *param = As<ParamNode>(node->params[i]);
 
-				int callerOffset = 16 + (i - numParamsInRegs)*8;
+				int callerOffset = 48 + (i - numParamsInRegs)*8;
 				fprintf(out, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d\n", callerOffset, i+1);
 				fprintf(out, "    mov [rbp - %d], rax\n", param->stackOffset);
 			}
@@ -789,7 +830,19 @@ Generate_x86_64(Node *_program,
 				literal.uniqueLabelId,
 				STR_ARG(literal.value));
 	}
+	fprintf(out, "\n");
 
+	for (auto &literal : context->stringLiterals)
+	{
+		fprintf(out, "string_literal_%d_bytes: db \"" STR_FMT "\", 0\n",
+				literal.uniqueLabelId,
+				STR_ARG(literal.value));
+
+		fprintf(out, "string_literal_%d: dq string_literal_%d_bytes, %d\n",
+				literal.uniqueLabelId,
+				literal.uniqueLabelId,
+				(int)literal.value.count);
+	}
 	fprintf(out, "\n");
 
 	fprintf(out, "section .text\n");

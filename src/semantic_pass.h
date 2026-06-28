@@ -18,6 +18,7 @@ struct SemanticContext
 	FuncNode *currentFunction;
 
 	BumpArray<GenerateCStringLiteral> cstringLiterals;
+	BumpArray<GenerateStringLiteral> stringLiterals;
 };
 
 void SemanticPass(Node *_program,

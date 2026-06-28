@@ -81,8 +81,8 @@ struct AssignNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_Assign;
 
-	Node *lhs;
-	Node *rhs;
+	Node *lhs; // target (dest)
+	Node *rhs; // source
 };
 
 struct VarDeclNode : public Node
@@ -233,6 +233,7 @@ struct StringNode : public Node
 	static constexpr NodeKind KIND = NodeKind_String;
 
 	string value;
+	int uniqueId;
 };
 
 struct CStringNode : public Node
@@ -279,6 +280,12 @@ Node *ParseProgram(Parser *parser,
 				   Arena *arena);
 
 struct GenerateCStringLiteral
+{
+	string value;
+	int uniqueLabelId;
+};
+
+struct GenerateStringLiteral
 {
 	string value;
 	int uniqueLabelId;

@@ -10,6 +10,7 @@ struct CodegenContext
 	int stackDepth;
 
 	BumpArray<GenerateCStringLiteral> cstringLiterals;
+	BumpArray<GenerateStringLiteral> stringLiterals;
 };
 
 void Generate_x86_64(Node *_program,

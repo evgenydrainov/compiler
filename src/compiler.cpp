@@ -274,6 +274,7 @@ Compile(CompileOptions options)
 
 	CodegenContext codegenContext = {};
 	codegenContext.cstringLiterals = semanticContext.cstringLiterals;
+	codegenContext.stringLiterals = semanticContext.stringLiterals;
 
 	{
 		char fileName[1024];
@@ -301,6 +302,7 @@ Compile(CompileOptions options)
 		if (_spawnl(_P_WAIT,
 					"C:\\Users\\Username\\AppData\\Local\\bin\\NASM\\nasm.exe",
 					"nasm",
+					"-g",
 					"-f", "win64",
 					"-o", outputPath,
 					inputPath,
@@ -322,7 +324,7 @@ Compile(CompileOptions options)
 		if (_spawnl(_P_WAIT,
 					findResult.linkExePath,
 					"link",
-					"/nologo",
+					"/nologo", "/DEBUG", "/INCREMENTAL:NO",
 					inputPath,
 					"raylib.lib",
 					"msvcrt.lib",

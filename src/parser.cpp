@@ -190,6 +190,7 @@ ParseAtom_Inner(Parser *parser,
 		Assert(parser->current.str.count >= 2);
 		node->value.data = parser->current.str.data + 1;
 		node->value.count = parser->current.str.count - 2;
+		node->uniqueId = parser->uniqueLabelId++;
 
 		AdvanceToken(parser, lexer);
 
@@ -198,15 +199,12 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_CString)
 	{
-		int uniqueId = parser->uniqueLabelId++;
-
 		CStringNode *node = MakeNode<CStringNode>(parser->current.line, arena);
 
 		Assert(parser->current.str.count >= 3);
 		node->value.data = parser->current.str.data + 1;
 		node->value.count = parser->current.str.count - 3;
-
-		node->uniqueId = uniqueId;
+		node->uniqueId = parser->uniqueLabelId++;
 
 		AdvanceToken(parser, lexer);
 

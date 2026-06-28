@@ -1,3 +1,9 @@
+string :: struct
+{
+	data: *i8;
+	count: i64;
+};
+
 Vector2 :: struct
 {
 	x : i32; // float
@@ -63,7 +69,8 @@ Game :: struct
 {
 	player: Player;
 
-	texture: Texture;
+	tex_player: Texture;
+	tex_tilemap: Texture;
 };
 
 GameUpdate :: proc(game: *Game)
@@ -140,27 +147,28 @@ GameDraw :: proc(game: *Game)
 
 	BeginMode2D(&camera);
 
-	//DrawTexture(&game.texture,
-	//			(game.player.x>>16)-8,
-	//			(game.player.y>>16)-8,
-	//			0xffffffff);
-
-	rectangle: Rectangle;
-	rectangle.x = int64_to_float32(game.player.srcX);
-	rectangle.y = int64_to_float32(game.player.srcY);
-	rectangle.width = int64_to_float32(16);
-	rectangle.height = int64_to_float32(16);
-
-	position: Vector2;
-	position.x = int64_to_float32((game.player.x>>16)-8);
-	position.y = int64_to_float32((game.player.y>>16)-8);
-
-	DrawTextureRec(&game.texture,
-				   &rectangle,
-				   position,
-				   0xffffffff);
+	draw_texture(&game.tex_player,
+				 game.player.srcX, game.player.srcY, 16, 16,
+				 (game.player.x>>16)-8, (game.player.y>>16)-8);
 
 	EndMode2D();
+}
+
+draw_texture :: proc(texture: *Texture,
+					 srcX: i64, srcY: i64, srcWidth: i64, srcHeight: i64,
+					 posX: i64, posY: i64)
+{
+	source: Rectangle;
+	source.x      = int64_to_float32(srcX);
+	source.y      = int64_to_float32(srcY);
+	source.width  = int64_to_float32(srcWidth);
+	source.height = int64_to_float32(srcHeight);
+
+	position: Vector2;
+	position.x = int64_to_float32(posX);
+	position.y = int64_to_float32(posY);
+
+	DrawTextureRec(texture, &source, position, 0xffffffff);
 }
 
 main :: proc() -> i64
@@ -172,7 +180,8 @@ main :: proc() -> i64
 	game.player.x = 160<<16;
 	game.player.y = 120<<16;
 
-	LoadTexture(&game.texture, "player.png"c);
+	LoadTexture(&game.tex_player, "player.png"c);
+	LoadTexture(&game.tex_tilemap, "tilemap.png"c);
 
 	while !WindowShouldClose()
 	{
