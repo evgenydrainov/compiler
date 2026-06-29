@@ -139,6 +139,31 @@ GenerateLValueAddress(Node *baseNode,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeKind_ArrayIndexAccess:
+		{
+			ArrayIndexAccessNode *node = As<ArrayIndexAccessNode>(baseNode);
+
+			int size = 0;
+
+			if (node->arrayExpr->inferredType.kind == TypeKind_Pointer)
+			{
+				GenerateExpression(node->arrayExpr, out, context);
+
+				size = SizeOfType(*node->arrayExpr->inferredType.pointerTo);
+			}
+			else
+			{
+				Assert(false);
+			}
+
+			GenerateExpression(node->indexExpr, out, context);
+
+			WritePop(out, context, "    pop rcx\n");
+			WritePop(out, context, "    pop rbx\n");
+			fprintf(out, "    lea rax, [rbx + rcx * %d]\n", size);
+			WritePush(out, context, "    push rax\n");
+		} break;
+
 		default:
 		{
 			Assert(false);
@@ -394,6 +419,7 @@ GenerateExpression(Node *baseNode,
 		case NodeKind_Var:
 		case NodeKind_Deref:
 		case NodeKind_FieldAccess:
+		case NodeKind_ArrayIndexAccess:
 		{
 			int size = SizeOfType(baseNode->inferredType);
 
@@ -782,6 +808,17 @@ GenerateTopLevelStatement(Node *baseNode,
 		case NodeKind_StructDecl:
 		{
 			// do nothing
+		} break;
+
+		case NodeKind_Asm:
+		{
+			AsmNode *node = As<AsmNode>(baseNode);
+
+			fprintf(out, "; inline assembly begin\n");
+			fprintf(out, STR_FMT, STR_ARG(node->code));
+			fprintf(out, "\n");
+			fprintf(out, "; inline assembly end\n");
+			fprintf(out, "\n");
 		} break;
 
 		default:

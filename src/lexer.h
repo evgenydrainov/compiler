@@ -58,10 +58,10 @@ DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 
 struct Token
 {
-	TokenKind kind;
 	string str;
-	int line;
 	i64 numberValue;
+	TokenKind kind;
+	int line;
 };
 
 struct Lexer

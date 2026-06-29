@@ -130,27 +130,30 @@ AdvanceToken(Parser *parser, Lexer *lexer)
 	parser->current = GetToken(lexer);
 }
 
-internal bool
+internal void
 ExpectToken(Parser *parser,
 			Lexer *lexer,
 			TokenKind kind)
 {
-	bool result = false;
-
-	if (parser->current.kind == kind)
+	if (kind == TokenKind_Semicolon
+		&& parser->numInsertSemicolons > 0)
 	{
-		AdvanceToken(parser, lexer);
-		result = true;
+		parser->numInsertSemicolons--;
 	}
 	else
 	{
-		ErrorAtCurrent(parser,
-					   "expected '%s', but got '%s'",
-					   GetTokenKindPrettyName(kind),
-					   GetTokenKindPrettyName(parser->current.kind));
+		if (parser->current.kind == kind)
+		{
+			AdvanceToken(parser, lexer);
+		}
+		else
+		{
+			ErrorAtCurrent(parser,
+							"expected '%s', but got '%s'",
+							GetTokenKindPrettyName(kind),
+							GetTokenKindPrettyName(parser->current.kind));
+		}
 	}
-
-	return result;
 }
 
 internal void
@@ -348,18 +351,39 @@ ParseAtom(Parser *parser,
 {
 	Node *result = ParseAtom_Inner(parser, lexer, arena);
 
-	while (parser->current.kind == TokenKind_Dot)
+	while (parser->current.kind == TokenKind_Dot
+		   || parser->current.kind == TokenKind_OpenBracket)
 	{
-		FieldAccessNode *node = MakeNode<FieldAccessNode>(parser->current.line, arena);
-		node->expr = result;
+		if (parser->current.kind == TokenKind_Dot)
+		{
+			FieldAccessNode *node = MakeNode<FieldAccessNode>(parser->current.line, arena);
+			node->expr = result;
 
-		AdvanceToken(parser, lexer); // eat the '.'
+			AdvanceToken(parser, lexer); // eat the '.'
 
-		node->fieldName = parser->current.str;
+			node->fieldName = parser->current.str;
 
-		ExpectToken(parser, lexer, TokenKind_Identifier);
+			ExpectToken(parser, lexer, TokenKind_Identifier);
 
-		result = node;
+			result = node;
+		}
+		else if (parser->current.kind == TokenKind_OpenBracket)
+		{
+			ArrayIndexAccessNode *node = MakeNode<ArrayIndexAccessNode>(parser->current.line, arena);
+			node->arrayExpr = result;
+
+			AdvanceToken(parser, lexer); // eat the '['
+
+			node->indexExpr = ParseExpression(parser, lexer, 0, arena);
+
+			ExpectToken(parser, lexer, TokenKind_CloseBracket);
+
+			result = node;
+		}
+		else
+		{
+			Assert(false);
+		}
 	}
 
 	return result;
@@ -428,10 +452,7 @@ ParseBlock(Parser *parser,
 
 	int openBraceTokenLine = parser->current.line;
 
-	if (!ExpectToken(parser, lexer, TokenKind_OpenBrace))
-	{
-		return nullptr;
-	}
+	ExpectToken(parser, lexer, TokenKind_OpenBrace);
 
 	BlockNode *block = MakeNode<BlockNode>(openBraceTokenLine, arena);
 	block->statements = PushBumpArray<Node *>(arena, MAX_STATEMENTS);
@@ -455,10 +476,7 @@ ParseBlock(Parser *parser,
 		}
 	}
 
-	if (!ExpectToken(parser, lexer, TokenKind_CloseBrace))
-	{
-		return nullptr;
-	}
+	ExpectToken(parser, lexer, TokenKind_CloseBrace);
 
 	return block;
 }
@@ -614,9 +632,7 @@ ParseForStatement(Parser *parser,
 				  Lexer *lexer,
 				  Arena *arena)
 {
-	// for init; cond; incr; { statements; }
-
-	// TODO: get rid of semicolon after incr;
+	// for init; cond; incr { statements; }
 
 	BlockNode *block = MakeNode<BlockNode>(parser->current.line, arena);
 	block->statements = PushBumpArray<Node *>(arena, 2);
@@ -638,6 +654,7 @@ ParseForStatement(Parser *parser,
 		whileNode->condition = cond;
 	}
 
+	parser->numInsertSemicolons++;
 	Node *incr = ParseStatement(parser, lexer, arena);
 
 	{
@@ -997,6 +1014,11 @@ ParseTopLevelStatement(Parser *parser,
 		// bare semicolon - empty statement
 		AdvanceToken(parser, lexer);
 		return nullptr;
+	}
+
+	if (parser->current.kind == TokenKind_Asm)
+	{
+		return ParseAsmBlock(parser, lexer, arena);
 	}
 
 	UnexpectedCurrentToken(parser);

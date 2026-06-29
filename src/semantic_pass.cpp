@@ -85,6 +85,7 @@ IsLValue(Node *node)
 		case NodeKind_Var:
 		case NodeKind_Deref:
 		case NodeKind_FieldAccess:
+		case NodeKind_ArrayIndexAccess:
 			return true;
 
 		default:
@@ -285,11 +286,6 @@ AnalyzeExpression(Node *baseNode,
 		default:
 		{
 			Assert(false);
-		} break;
-
-		case NodeKind_Asm:
-		{
-			// do nothing
 		} break;
 
 		case NodeKind_Number:
@@ -516,6 +512,41 @@ AnalyzeExpression(Node *baseNode,
 			else
 			{
 				Error(context, node->expr, "cannot access field of non-struct");
+			}
+		} break;
+
+		case NodeKind_ArrayIndexAccess:
+		{
+			ArrayIndexAccessNode *node = As<ArrayIndexAccessNode>(baseNode);
+
+			AnalyzeExpression(node->arrayExpr, context);
+			AnalyzeExpression(node->indexExpr, context);
+
+			if (node->arrayExpr->inferredType.kind == TypeKind_Pointer)
+			{
+				int size = SizeOfType(*node->arrayExpr->inferredType.pointerTo);
+				if (size == 1
+					|| size == 2
+					|| size == 4
+					|| size == 8)
+				{
+					if (IsSignedInteger(node->indexExpr->inferredType))
+					{
+						node->inferredType = *node->arrayExpr->inferredType.pointerTo;
+					}
+					else
+					{
+						Error(context, node->indexExpr, "");
+					}
+				}
+				else
+				{
+					Error(context, node->arrayExpr, "");
+				}
+			}
+			else
+			{
+				Error(context, node->arrayExpr, "");
 			}
 		} break;
 	}
@@ -754,6 +785,11 @@ AnalyzeStatement(Node *baseNode,
 						  GetTypeKindPrettyName(context->currentFunction->returnType.kind));
 				}
 			}
+		} break;
+
+		case NodeKind_Asm:
+		{
+			// do nothing
 		} break;
 
 		default:

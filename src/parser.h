@@ -5,29 +5,30 @@
 #include "type.h"
 
 #define NODE_KIND_LIST(X) \
-	X(NodeKind_Binary,           0,     ""   ) \
-	X(NodeKind_Number,           1,     ""   ) \
-	X(NodeKind_Var,              2,     ""   ) \
-	X(NodeKind_Assign,           3,     ""   ) \
-	X(NodeKind_VarDecl,          4,     ""   ) \
-	X(NodeKind_Block,            5,     ""   ) \
-	X(NodeKind_If,               6,     ""   ) \
-	X(NodeKind_While,            7,     ""   ) \
-	X(NodeKind_Print,            8,     ""   ) \
-	X(NodeKind_Func,             9,     ""   ) \
-	X(NodeKind_Call,             10,    ""   ) \
-	X(NodeKind_Return,           11,    ""   ) \
-	X(NodeKind_Param,            12,    ""   ) \
-	X(NodeKind_Bool,             13,    ""   ) \
-	X(NodeKind_AddressOf,        14,    ""   ) \
-	X(NodeKind_Deref,            15,    ""   ) \
-	X(NodeKind_StructDecl,       16,    ""   ) \
-	X(NodeKind_StructFieldDecl,  17,    ""   ) \
-	X(NodeKind_FieldAccess,      18,    ""   ) \
-	X(NodeKind_String,           19,    ""   ) \
-	X(NodeKind_CString,          20,    ""   ) \
-	X(NodeKind_Unary,            21,    ""   ) \
-	X(NodeKind_Asm,              22,    ""   )
+	X(NodeKind_Binary,            0,     ""   ) \
+	X(NodeKind_Number,            1,     ""   ) \
+	X(NodeKind_Var,               2,     ""   ) \
+	X(NodeKind_Assign,            3,     ""   ) \
+	X(NodeKind_VarDecl,           4,     ""   ) \
+	X(NodeKind_Block,             5,     ""   ) \
+	X(NodeKind_If,                6,     ""   ) \
+	X(NodeKind_While,             7,     ""   ) \
+	X(NodeKind_Print,             8,     ""   ) \
+	X(NodeKind_Func,              9,     ""   ) \
+	X(NodeKind_Call,              10,    ""   ) \
+	X(NodeKind_Return,            11,    ""   ) \
+	X(NodeKind_Param,             12,    ""   ) \
+	X(NodeKind_Bool,              13,    ""   ) \
+	X(NodeKind_AddressOf,         14,    ""   ) \
+	X(NodeKind_Deref,             15,    ""   ) \
+	X(NodeKind_StructDecl,        16,    ""   ) \
+	X(NodeKind_StructFieldDecl,   17,    ""   ) \
+	X(NodeKind_FieldAccess,       18,    ""   ) \
+	X(NodeKind_ArrayIndexAccess,  19,    ""   ) \
+	X(NodeKind_String,            20,    ""   ) \
+	X(NodeKind_CString,           21,    ""   ) \
+	X(NodeKind_Unary,             22,    ""   ) \
+	X(NodeKind_Asm,               23,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -228,6 +229,14 @@ struct FieldAccessNode : public Node
 	int fieldOffset;
 };
 
+struct ArrayIndexAccessNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_ArrayIndexAccess;
+
+	Node *arrayExpr;
+	Node *indexExpr;
+};
+
 struct StringNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_String;
@@ -273,6 +282,8 @@ struct Parser
 	bool hadError;
 
 	int uniqueLabelId;
+
+	int numInsertSemicolons;
 };
 
 Node *ParseProgram(Parser *parser,

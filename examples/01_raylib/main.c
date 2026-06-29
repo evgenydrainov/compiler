@@ -1,3 +1,28 @@
+asm
+{
+	section .data
+
+	__tilemap_data:
+		dq 33,34,33,34,33,34,33,34,33,34,33,34,33,34,33,34
+		dq 49,50,49,50,49,50,49,50,49,50,49,50,49,50,49,50
+		dq 33,34,33,34,1,1,1,2,1,34,33,34,33,34,33,34
+		dq 49,50,49,1,1,1,1,11,1,50,49,50,49,50,49,50
+		dq 33,34,33,1,1,1,1,27,1,34,33,34,33,34,33,34
+		dq 49,50,49,1,1,1,49,2,49,50,49,50,49,50,49,50
+		dq 33,34,33,1,1,2,2,2,2,2,33,34,2,2,33,34
+		dq 49,50,49,1,1,1,1,1,1,1,1,1,1,50,49,50
+		dq 33,34,33,1,1,1,1,1,1,1,1,1,1,34,33,34
+		dq 49,50,49,50,49,1,1,1,1,1,1,2,2,50,49,50
+		dq 33,34,2,34,2,1,2,2,2,1,2,34,33,34,33,34
+		dq 49,50,49,50,49,1,1,1,1,1,1,50,49,50,49,50
+		dq 33,34,33,34,33,34,33,34,33,34,33,34,33,34,33,34
+		dq 49,50,49,50,49,50,49,50,49,50,49,50,49,50,49,50
+		dq 33,34,33,34,33,34,33,34,33,34,33,34,33,34,33,34
+		dq 49,50,49,50,49,50,49,50,49,50,49,50,49,50,49,50
+
+	section .text
+}
+
 string :: struct
 {
 	data: *i8;
@@ -65,12 +90,21 @@ Player :: struct
 	walkAnim: i64;
 };
 
+Tilemap :: struct
+{
+	data: *i64;
+	width: i64;
+	height: i64;
+};
+
 Game :: struct
 {
 	player: Player;
 
 	tex_player: Texture;
 	tex_tilemap: Texture;
+
+	tilemap: Tilemap;
 };
 
 GameUpdate :: proc(game: *Game)
@@ -104,8 +138,29 @@ GameUpdate :: proc(game: *Game)
 		game.player.yspeed = game.player.yspeed + gravity;
 	}
 
-	game.player.x = game.player.x + game.player.xspeed;
-	game.player.y = game.player.y + game.player.yspeed;
+	{
+		checkX := game.player.x + game.player.xspeed;
+		if CheckTilemapCollision(&game.tilemap, checkX>>16, game.player.y>>16)
+		{
+			game.player.xspeed = 0;
+		}
+		else
+		{
+			game.player.x = checkX;
+		}
+	}
+
+	{
+		checkY := game.player.y + game.player.yspeed;
+		if CheckTilemapCollision(&game.tilemap, game.player.x>>16, checkY>>16)
+		{
+			game.player.yspeed = 0;
+		}
+		else
+		{
+			game.player.y = checkY;
+		}
+	}
 
 	if game.player.y > ((240-8)<<16)
 	{
@@ -147,6 +202,17 @@ GameDraw :: proc(game: *Game)
 
 	BeginMode2D(&camera);
 
+	for y := 0; y < game.tilemap.height; y = y + 1
+	{
+		for x := 0; x < game.tilemap.width; x = x + 1
+		{
+			tile := GetTile(&game.tilemap, x, y);
+			draw_texture(&game.tex_tilemap,
+						 (tile%16)*16, (tile/16)*16, 16, 16,
+						 x*16, y*16);
+		}
+	}
+
 	draw_texture(&game.tex_player,
 				 game.player.srcX, game.player.srcY, 16, 16,
 				 (game.player.x>>16)-8, (game.player.y>>16)-8);
@@ -178,10 +244,14 @@ main :: proc() -> i64
 
 	game: Game;
 	game.player.x = 160<<16;
-	game.player.y = 120<<16;
+	game.player.y = 130<<16;
 
 	LoadTexture(&game.tex_player, "player.png"c);
 	LoadTexture(&game.tex_tilemap, "tilemap.png"c);
+
+	game.tilemap.data = get_tilemap_data();
+	game.tilemap.width = 16;
+	game.tilemap.height = 16;
 
 	while !WindowShouldClose()
 	{
@@ -206,4 +276,32 @@ int64_to_float32 :: proc(value: i64) -> i32
 		cvtsi2ss xmm0, rcx
 		movd eax, xmm0
 	}
+}
+
+get_tilemap_data :: proc() -> *i64
+{
+	asm
+	{
+		lea rax, [rel __tilemap_data]
+	}
+}
+
+GetTile :: proc(tilemap: *Tilemap,
+				tileX: i64, tileY: i64) -> i64
+{
+	index := tileX + tileY * tilemap.width;
+	tile := tilemap.data[index];
+
+	return tile-1;
+}
+
+CheckTilemapCollision :: proc(tilemap: *Tilemap,
+							  pixelX: i64, pixelY: i64) -> bool
+{
+	tileX := pixelX / 16;
+	tileY := pixelY / 16;
+
+	tile := GetTile(tilemap, tileX, tileY);
+
+	return tile != 0;
 }
