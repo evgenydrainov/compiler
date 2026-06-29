@@ -193,11 +193,6 @@ GameUpdate :: proc(game: *Game)
 GameDraw :: proc(game: *Game)
 {
 	camera: Camera2D;
-	camera.offset.x = 0;
-	camera.offset.y = 0;
-	camera.target.x = 0;
-	camera.target.y = 0;
-	camera.rotation = 0;
 	camera.zoom = int64_to_float32(4);
 
 	BeginMode2D(&camera);
@@ -259,7 +254,7 @@ main :: proc() -> i64
 
 		BeginDrawing();
 
-		ClearBackground(0);
+		ClearBackground(0xff000000);
 
 		GameDraw(&game);
 
@@ -289,10 +284,18 @@ get_tilemap_data :: proc() -> *i64
 GetTile :: proc(tilemap: *Tilemap,
 				tileX: i64, tileY: i64) -> i64
 {
-	index := tileX + tileY * tilemap.width;
-	tile := tilemap.data[index];
+	tile := 0;
 
-	return tile-1;
+	if tileX >= 0
+		&& tileX < tilemap.width
+		&& tileY >= 0
+		&& tileY < tilemap.height
+	{
+		index := tileX + tileY * tilemap.width;
+		tile = tilemap.data[index] - 1;
+	}
+
+	return tile;
 }
 
 CheckTilemapCollision :: proc(tilemap: *Tilemap,

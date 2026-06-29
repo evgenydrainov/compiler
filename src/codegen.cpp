@@ -552,14 +552,14 @@ GenerateStatement(Node *baseNode,
 		{
 			VarDeclNode *node = As<VarDeclNode>(baseNode);
 
+			VarNode varNode = {};
+			varNode.kind = NodeKind_Var;
+			varNode.inferredType = node->type;
+			varNode.name = node->name;
+			varNode.stackOffset = node->stackOffset;
+
 			if (node->expr)
 			{
-				VarNode varNode = {};
-				varNode.kind = NodeKind_Var;
-				varNode.inferredType = node->type;
-				varNode.name = node->name;
-				varNode.stackOffset = node->stackOffset;
-
 				AssignNode assignNode = {};
 				assignNode.kind = NodeKind_Assign;
 				assignNode.lhs = &varNode;
@@ -569,7 +569,36 @@ GenerateStatement(Node *baseNode,
 			}
 			else
 			{
-				// variable is uninitialized
+				// initialize to zero by default
+
+				int size = SizeOfType(varNode.inferredType);
+				if (size > 8)
+				{
+					GenerateLValueAddress(&varNode, out, context);
+
+					WritePop(out, context, "    pop rdi\n");
+
+					Assert(size % 8 == 0);
+
+					for (int i = 0; i < size; i += 8)
+					{
+						fprintf(out, "    mov qword [rdi + %d], 0\n", i);
+					}
+
+					fprintf(out, "\n");
+				}
+				else
+				{
+					GenerateLValueAddress(&varNode, out, context);
+
+					WritePop(out, context, "    pop rcx\n");
+					fprintf(out, "    mov rax, 0\n");
+
+					const char *reg = GetRegisterForTypeSize(varNode.inferredType);
+
+					fprintf(out, "    mov [rcx], %s\n", reg);
+					fprintf(out, "\n");
+				}
 			}
 		} break;
 

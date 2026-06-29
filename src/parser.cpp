@@ -735,9 +735,6 @@ ParseVariableDeclaration(Parser *parser,
 
 		// eat the semicolon
 		AdvanceToken(parser, lexer);
-
-		// initialize to zero by default
-		// node->expr = MakeNumberNode(parser->current.line, 0, arena);
 	}
 	else
 	{
