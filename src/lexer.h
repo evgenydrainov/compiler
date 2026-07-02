@@ -52,7 +52,10 @@
 	X(TokenKind_GreaterGreater,   277,       ">>"             ) \
 	X(TokenKind_LessLess,         278,       "<<"             ) \
 	X(TokenKind_CString,          279,       "cstring"        ) \
-	X(TokenKind_Asm,              280,       "asm"            )
+	X(TokenKind_Asm,              280,       "asm"            ) \
+	X(TokenKind_PlusEqual,        281,       "+="             ) \
+	X(TokenKind_MinusEqual,       282,       "-="             ) \
+	X(TokenKind_PercentEqual,     283,       "%="             )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 

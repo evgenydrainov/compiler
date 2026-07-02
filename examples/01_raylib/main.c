@@ -118,11 +118,11 @@ GameUpdate :: proc(game: *Game)
 	dirX := 0;
 	if IsKeyDown(KEY_LEFT)
 	{
-		dirX = dirX - 1;
+		dirX -= 1;
 	}
 	if IsKeyDown(KEY_RIGHT)
 	{
-		dirX = dirX + 1;
+		dirX += 1;
 	}
 
 	game.player.xspeed = 0x2_0000*dirX;
@@ -135,7 +135,7 @@ GameUpdate :: proc(game: *Game)
 	{
 		gravity := 0x0_2000;
 
-		game.player.yspeed = game.player.yspeed + gravity;
+		game.player.yspeed += gravity;
 	}
 
 	{
@@ -168,7 +168,7 @@ GameUpdate :: proc(game: *Game)
 		game.player.yspeed = 0;
 	}
 
-	if game.player.xspeed >= 0
+	if game.player.xspeed > 0
 	{
 		game.player.srcY = 16;
 	}
@@ -183,8 +183,8 @@ GameUpdate :: proc(game: *Game)
 	}
 	else
 	{
-		game.player.walkAnim = game.player.walkAnim + 1;
-		game.player.walkAnim = game.player.walkAnim % 16;
+		game.player.walkAnim += 1;
+		game.player.walkAnim %= 16;
 
 		game.player.srcX = (game.player.walkAnim / 8) * 16;
 	}
@@ -197,9 +197,9 @@ GameDraw :: proc(game: *Game)
 
 	BeginMode2D(&camera);
 
-	for y := 0; y < game.tilemap.height; y = y + 1
+	for y := 0; y < game.tilemap.height; y += 1
 	{
-		for x := 0; x < game.tilemap.width; x = x + 1
+		for x := 0; x < game.tilemap.width; x += 1
 		{
 			tile := GetTile(&game.tilemap, x, y);
 			draw_texture(&game.tex_tilemap,

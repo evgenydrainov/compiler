@@ -850,6 +850,60 @@ ParseStatement(Parser *parser,
 		return node;
 	}
 
+	if (parser->current.kind == TokenKind_PlusEqual)
+	{
+		// lhs += rhs;
+
+		AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
+		node->lhs = expr;
+
+		AdvanceToken(parser, lexer); // eat the '+='
+
+		Node *rhs = ParseExpression(parser, lexer, 0, arena);
+
+		node->rhs = MakeBinaryNode(BinaryOp_Add, parser->current.line, expr, rhs, arena);
+
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_MinusEqual)
+	{
+		// lhs -= rhs;
+
+		AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
+		node->lhs = expr;
+
+		AdvanceToken(parser, lexer); // eat the '-='
+
+		Node *rhs = ParseExpression(parser, lexer, 0, arena);
+
+		node->rhs = MakeBinaryNode(BinaryOp_Subtract, parser->current.line, expr, rhs, arena);
+
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_PercentEqual)
+	{
+		// lhs %= rhs;
+
+		AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
+		node->lhs = expr;
+
+		AdvanceToken(parser, lexer); // eat the '%='
+
+		Node *rhs = ParseExpression(parser, lexer, 0, arena);
+
+		node->rhs = MakeBinaryNode(BinaryOp_Modulo, parser->current.line, expr, rhs, arena);
+
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+		return node;
+	}
+
 	// bare expression
 	// expr;
 	ExpectToken(parser, lexer, TokenKind_Semicolon);
