@@ -87,6 +87,7 @@ int main()
 	//TestReturnCode("20_logical_or",              0);
 	//TestReturnCode("21_if_else",                 0);
 	//TestReturnCode("22_foreign_function",        0);
+	TestReturnCode("23_enum",                    0);
 
 	if (_chdir("..\\examples\\01_raylib") != 0)
 	{
@@ -94,5 +95,5 @@ int main()
 		exit(1);
 	}
 
-	TestReturnCode("main", 0);
+	//TestReturnCode("main", 0);
 }

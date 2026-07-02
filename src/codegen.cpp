@@ -835,6 +835,7 @@ GenerateTopLevelStatement(Node *baseNode,
 		} break;
 
 		case NodeKind_StructDecl:
+		case NodeKind_EnumDecl:
 		{
 			// do nothing
 		} break;

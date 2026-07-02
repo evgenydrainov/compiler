@@ -109,6 +109,10 @@ IdentifierType(string str)
 			{
 				result = TokenKind_Else;
 			}
+			if (str == "enum")
+			{
+				result = TokenKind_Enum;
+			}
 		} break;
 
 		case 'w':

@@ -55,7 +55,8 @@
 	X(TokenKind_Asm,              280,       "asm"            ) \
 	X(TokenKind_PlusEqual,        281,       "+="             ) \
 	X(TokenKind_MinusEqual,       282,       "-="             ) \
-	X(TokenKind_PercentEqual,     283,       "%="             )
+	X(TokenKind_PercentEqual,     283,       "%="             ) \
+	X(TokenKind_Enum,             284,       "enum"           )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 

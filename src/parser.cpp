@@ -850,58 +850,40 @@ ParseStatement(Parser *parser,
 		return node;
 	}
 
-	if (parser->current.kind == TokenKind_PlusEqual)
 	{
-		// lhs += rhs;
+		// compound assignment operators
 
-		AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
-		node->lhs = expr;
+		struct CompoundOperator
+		{
+			TokenKind token;
+			BinaryOp op;
+		};
 
-		AdvanceToken(parser, lexer); // eat the '+='
+		CompoundOperator operators[] =
+		{
+			{TokenKind_PlusEqual, BinaryOp_Add},
+			{TokenKind_MinusEqual, BinaryOp_Subtract},
+			{TokenKind_PercentEqual, BinaryOp_Modulo},
+		};
 
-		Node *rhs = ParseExpression(parser, lexer, 0, arena);
+		for (auto &it : operators)
+		{
+			if (parser->current.kind == it.token)
+			{
+				AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
+				node->lhs = expr;
 
-		node->rhs = MakeBinaryNode(BinaryOp_Add, parser->current.line, expr, rhs, arena);
+				AdvanceToken(parser, lexer);
 
-		ExpectToken(parser, lexer, TokenKind_Semicolon);
+				Node *rhs = ParseExpression(parser, lexer, 0, arena);
 
-		return node;
-	}
+				node->rhs = MakeBinaryNode(it.op, parser->current.line, expr, rhs, arena);
 
-	if (parser->current.kind == TokenKind_MinusEqual)
-	{
-		// lhs -= rhs;
+				ExpectToken(parser, lexer, TokenKind_Semicolon);
 
-		AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
-		node->lhs = expr;
-
-		AdvanceToken(parser, lexer); // eat the '-='
-
-		Node *rhs = ParseExpression(parser, lexer, 0, arena);
-
-		node->rhs = MakeBinaryNode(BinaryOp_Subtract, parser->current.line, expr, rhs, arena);
-
-		ExpectToken(parser, lexer, TokenKind_Semicolon);
-
-		return node;
-	}
-
-	if (parser->current.kind == TokenKind_PercentEqual)
-	{
-		// lhs %= rhs;
-
-		AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
-		node->lhs = expr;
-
-		AdvanceToken(parser, lexer); // eat the '%='
-
-		Node *rhs = ParseExpression(parser, lexer, 0, arena);
-
-		node->rhs = MakeBinaryNode(BinaryOp_Modulo, parser->current.line, expr, rhs, arena);
-
-		ExpectToken(parser, lexer, TokenKind_Semicolon);
-
-		return node;
+				return node;
+			}
+		}
 	}
 
 	// bare expression
@@ -1035,6 +1017,35 @@ ParseStructDefinition(Parser *parser,
 }
 
 internal Node *
+ParseEnumDefinition(Parser *parser,
+					Lexer *lexer,
+					Arena *arena)
+{
+	EnumDeclNode *node = MakeNode<EnumDeclNode>(parser->current.line, arena);
+
+	AdvanceToken(parser, lexer); // eat the enum name
+
+	ExpectToken(parser, lexer, TokenKind_Colon);
+	ExpectToken(parser, lexer, TokenKind_Colon);
+
+	ExpectToken(parser, lexer, TokenKind_Enum);
+
+	ExpectToken(parser, lexer, TokenKind_OpenBrace);
+
+	while (!parser->hadError
+		   && parser->current.kind != TokenKind_CloseBrace)
+	{
+		ExpectToken(parser, lexer, TokenKind_Identifier);
+
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+	}
+
+	ExpectToken(parser, lexer, TokenKind_CloseBrace);
+
+	return node;
+}
+
+internal Node *
 ParseTopLevelStatement(Parser *parser,
 					   Lexer *lexer,
 					   Arena *arena)
@@ -1057,6 +1068,13 @@ ParseTopLevelStatement(Parser *parser,
 			&& peekToken2.kind == TokenKind_Struct)
 		{
 			return ParseStructDefinition(parser, lexer, arena);
+		}
+
+		if (peekToken0.kind == TokenKind_Colon
+			&& peekToken1.kind == TokenKind_Colon
+			&& peekToken2.kind == TokenKind_Enum)
+		{
+			return ParseEnumDefinition(parser, lexer, arena);
 		}
 	}
 
