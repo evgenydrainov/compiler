@@ -1021,7 +1021,11 @@ ParseEnumDefinition(Parser *parser,
 					Lexer *lexer,
 					Arena *arena)
 {
+	const int MAX_ENUMERATORS = 32;
+
 	EnumDeclNode *node = MakeNode<EnumDeclNode>(parser->current.line, arena);
+	node->name = parser->current.str;
+	node->enumerators = PushBumpArray<EnumeratorDeclNode *>(arena, MAX_ENUMERATORS);
 
 	AdvanceToken(parser, lexer); // eat the enum name
 
@@ -1035,9 +1039,14 @@ ParseEnumDefinition(Parser *parser,
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseBrace)
 	{
+		EnumeratorDeclNode *enumerator = MakeNode<EnumeratorDeclNode>(parser->current.line, arena);
+		enumerator->name = parser->current.str;
+
 		ExpectToken(parser, lexer, TokenKind_Identifier);
 
 		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+		ArrayAdd(&node->enumerators, enumerator);
 	}
 
 	ExpectToken(parser, lexer, TokenKind_CloseBrace);

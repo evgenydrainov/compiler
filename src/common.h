@@ -255,3 +255,35 @@ PushBumpArray(Arena *arena, usize capacity)
 
 	return result;
 }
+
+template <typename T, usize capacity>
+struct StaticBumpArray
+{
+	T data[capacity];
+	usize count;
+
+	T &operator[](usize index)
+	{
+		Assert(index >= 0 && index < count);
+		return data[index];
+	}
+
+	const T &operator[](usize index) const
+	{
+		Assert(index >= 0 && index < count);
+		return data[index];
+	}
+
+	T *begin() { return &data[0]; }
+	T *end()   { return &data[count]; }
+};
+
+template <typename T, usize capacity>
+inline void
+ArrayAdd(StaticBumpArray<T, capacity> *array, const T &value)
+{
+	Assert(array->count < capacity);
+
+	array->data[array->count] = value;
+	array->count++;
+}

@@ -29,7 +29,8 @@
 	X(NodeKind_CString,           21,    ""   ) \
 	X(NodeKind_Unary,             22,    ""   ) \
 	X(NodeKind_Asm,               23,    ""   ) \
-	X(NodeKind_EnumDecl,          24,    ""   )
+	X(NodeKind_EnumDecl,          24,    ""   ) \
+	X(NodeKind_EnumeratorDecl,    25,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -269,9 +270,19 @@ struct AsmNode : public Node
 	string code;
 };
 
+struct EnumeratorDeclNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_EnumeratorDecl;
+
+	string name;
+};
+
 struct EnumDeclNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_EnumDecl;
+
+	string name;
+	BumpArray<EnumeratorDeclNode *> enumerators;
 };
 
 template <typename T>

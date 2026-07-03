@@ -100,12 +100,20 @@ ResolveType(Type *type,
 {
 	if (type->kind == TypeKind_Struct)
 	{
-		if (!type->structInfo)
+		if (!type->structInfo
+			&& !type->enumInfo)
 		{
 			Type *typeInfo = LookupType(context->typeTable, type->name);
 			if (typeInfo)
 			{
 				type->structInfo = typeInfo->structInfo;
+				type->enumInfo = typeInfo->enumInfo;
+
+				if (type->enumInfo)
+				{
+					Assert(!type->structInfo);
+					type->kind = TypeKind_Enum;
+				}
 			}
 			else
 			{
@@ -278,8 +286,9 @@ internal void
 AnalyzeExpression(Node *baseNode,
 				  SemanticContext *context)
 {
-	SymbolTable *symTable = context->symTable;
+	SymbolTable   *symTable  = context->symTable;
 	FunctionTable *funcTable = context->funcTable;
+	TypeTable     *typeTable = context->typeTable;
 
 	switch (baseNode->kind)
 	{
@@ -467,6 +476,35 @@ AnalyzeExpression(Node *baseNode,
 		{
 			FieldAccessNode *node = As<FieldAccessNode>(baseNode);
 
+			if (node->expr->kind == NodeKind_Var)
+			{
+				Type *type = LookupType(typeTable, As<VarNode>(node->expr)->name);
+				if (type && type->kind == TypeKind_Enum)
+				{
+					EnumeratorInfo *enumerator = FindEnumerator(type->enumInfo, node->fieldName);
+					if (enumerator)
+					{
+						static_assert(sizeof(NumberNode) <= sizeof(FieldAccessNode));
+
+						int line = node->line;
+
+						NumberNode *newNode = (NumberNode *)node;
+						*newNode = {};
+						newNode->kind = NodeKind_Number;
+						newNode->line = line;
+						newNode->inferredType = *type;
+						newNode->int64Value = enumerator->value;
+					}
+					else
+					{
+						Error(context, node, "enumerator " STR_FMT_QUOTED " does not exist",
+							  STR_ARG(node->fieldName));
+					}
+
+					break;
+				}
+			}
+
 			AnalyzeExpression(node->expr, context);
 
 			if (node->expr->inferredType.kind == TypeKind_Struct)
@@ -565,7 +603,8 @@ CanImplicitCast(Type destType, Node *source)
 		return true;
 	}
 
-	if (source->kind == NodeKind_Number)
+	if (IsSignedInteger(destType)
+		&& source->kind == NodeKind_Number)
 	{
 		NumberNode *number = As<NumberNode>(source);
 
@@ -912,6 +951,7 @@ SemanticPass(Node *_program,
 			{
 				Type *type = DeclareType(typeTable, node->name);
 
+				type->kind = TypeKind_Struct;
 				type->structInfo = PushStruct<StructInfo>(arena);
 				type->structInfo->name = node->name;
 
@@ -941,6 +981,41 @@ SemanticPass(Node *_program,
 			else
 			{
 				Error(context, node, "struct " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
+			}
+		}
+		else if (it->kind == NodeKind_EnumDecl)
+		{
+			EnumDeclNode *node = As<EnumDeclNode>(it);
+
+			if (!LookupType(typeTable, node->name))
+			{
+				Type *type = DeclareType(typeTable, node->name);
+
+				type->kind = TypeKind_Enum;
+				type->enumInfo = PushStruct<EnumInfo>(arena);
+				type->enumInfo->name = node->name;
+
+				i64 enumeratorValue = 0;
+
+				for (EnumeratorDeclNode *enumerator : node->enumerators)
+				{
+					if (!FindEnumerator(type->enumInfo, enumerator->name))
+					{
+						EnumeratorInfo info = {};
+						info.name = enumerator->name;
+						info.value = enumeratorValue++;
+
+						ArrayAdd(&type->enumInfo->enumerators, info);
+					}
+					else
+					{
+						Error(context, enumerator, STR_FMT_QUOTED ": redefinition", STR_ARG(enumerator->name));
+					}
+				}
+			}
+			else
+			{
+				Error(context, node, "enum " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
 			}
 		}
 	}

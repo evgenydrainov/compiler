@@ -13,11 +13,12 @@
 	X(TypeKind_Bool,        7,    "bool"             ) \
 	X(TypeKind_Pointer,     8,    "pointer"          ) \
 	X(TypeKind_Struct,      9,    "struct"           ) \
-	X(TypeKind_String,     10,    "string"           )
+	X(TypeKind_Enum,       10,    "enum"             )
 
 DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
 
 struct StructInfo;
+struct EnumInfo;
 
 struct Type
 {
@@ -25,6 +26,7 @@ struct Type
 	string name;
 	Type *pointerTo;
 	StructInfo *structInfo;
+	EnumInfo *enumInfo;
 };
 
 struct StructField
@@ -42,6 +44,18 @@ struct StructInfo
 	int size;
 };
 
+struct EnumeratorInfo
+{
+	string name;
+	i64 value;
+};
+
+struct EnumInfo
+{
+	string name;
+	StaticBumpArray<EnumeratorInfo, 32> enumerators;
+};
+
 inline bool
 TypesEqual(Type a, Type b)
 {
@@ -57,29 +71,31 @@ TypesEqual(Type a, Type b)
 inline int
 SizeOfType(Type type)
 {
-	if (type.kind == TypeKind_Struct)
+	int result = 0;
+
+	switch (type.kind)
 	{
-		Assert(type.structInfo && "type was not resolved");
-		
-		return type.structInfo->size;
+		case TypeKind_Int8:    {result = 1;} break;
+		case TypeKind_Int16:   {result = 2;} break;
+		case TypeKind_Int32:   {result = 4;} break;
+		case TypeKind_Int64:   {result = 8;} break;
+		case TypeKind_Pointer: {result = 8;} break;
+		case TypeKind_Bool:    {result = 8;} break;
+		case TypeKind_Enum:    {result = 8;} break;
+
+		case TypeKind_Struct:
+		{
+			Assert(type.structInfo && "type was not resolved");
+			result = type.structInfo->size;
+		} break;
+
+		default:
+		{
+			Assert(false);
+		} break;
 	}
 
-	if (type.kind == TypeKind_Int8)
-	{
-		return 1;
-	}
-
-	if (type.kind == TypeKind_Int16)
-	{
-		return 2;
-	}
-
-	if (type.kind == TypeKind_Int32)
-	{
-		return 4;
-	}
-
-	return 8;
+	return result;
 }
 
 inline StructField *
@@ -96,6 +112,27 @@ FindField(StructInfo *info, string name)
 		if (info->fields[i].name == name)
 		{
 			result = &info->fields[i];
+			break;
+		}
+	}
+
+	return result;
+}
+
+inline EnumeratorInfo *
+FindEnumerator(EnumInfo *info, string name)
+{
+	Assert(info && "type was not resolved");
+
+	EnumeratorInfo *result = nullptr;
+
+	for (usize i = 0;
+		 i < info->enumerators.count;
+		 i++)
+	{
+		if (info->enumerators[i].name == name)
+		{
+			result = &info->enumerators[i];
 			break;
 		}
 	}
