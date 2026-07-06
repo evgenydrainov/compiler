@@ -68,10 +68,21 @@ struct Token
 	int line;
 };
 
+struct LexerFrame
+{
+	char *current;
+	int line;
+	string fileName;
+};
+
+#define MAX_INCLUDE_DEPTH 32
+
 struct Lexer
 {
 	char *current;
 	int line;
+	string fileName;
+	StaticBumpArray<LexerFrame, MAX_INCLUDE_DEPTH> includeStack;
 };
 
 Token GetToken(Lexer *lexer);

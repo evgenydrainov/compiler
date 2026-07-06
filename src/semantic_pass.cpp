@@ -282,6 +282,100 @@ IsSignedInteger(Type type)
 			|| type.kind == TypeKind_Int8);
 }
 
+internal bool
+CanImplicitCast(Type destType, Node *source)
+{
+	if (destType.kind == TypeKind_Unknown)
+	{
+		return false;
+	}
+
+	if (TypesEqual(destType, source->inferredType))
+	{
+		return true;
+	}
+
+	if (IsSignedInteger(destType)
+		&& source->kind == NodeKind_Number)
+	{
+		NumberNode *number = As<NumberNode>(source);
+
+		struct Range
+		{
+			i64 min;
+			i64 max;
+		};
+
+		Range range = {};
+
+		if (destType.kind == TypeKind_Int32)
+		{
+			range = { INT32_MIN, INT32_MAX };
+		}
+		else if (destType.kind == TypeKind_Int16)
+		{
+			range = { INT16_MIN, INT16_MAX };
+		}
+		else if (destType.kind == TypeKind_Int8)
+		{
+			range = { INT8_MIN, INT8_MAX };
+		}
+		else
+		{
+			Assert(false);
+		}
+
+		if (number->int64Value >= range.min && number->int64Value <= range.max)
+		{
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Int64)
+	{
+		if (source->inferredType.kind == TypeKind_Int32)
+		{
+			// int32 fits in int64
+			return true;
+		}
+		if (source->inferredType.kind == TypeKind_Int16)
+		{
+			// int16 fits in int64
+			return true;
+		}
+		if (source->inferredType.kind == TypeKind_Int8)
+		{
+			// int8 fits in int64
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Int32)
+	{
+		if (source->inferredType.kind == TypeKind_Int16)
+		{
+			// int16 fits in int32
+			return true;
+		}
+		if (source->inferredType.kind == TypeKind_Int8)
+		{
+			// int8 fits in int32
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Int16)
+	{
+		if (source->inferredType.kind == TypeKind_Int8)
+		{
+			// int8 fits in int16
+			return true;
+		}
+	}
+
+	return false;
+}
+
 internal void
 AnalyzeExpression(Node *baseNode,
 				  SemanticContext *context)
@@ -413,9 +507,9 @@ AnalyzeExpression(Node *baseNode,
 
 						AnalyzeExpression(expr, context);
 
-						if (!TypesEqual(expr->inferredType, function->params[i].type))
+						if (!CanImplicitCast(function->params[i].type, expr))
 						{
-							Error(context, expr, "cannot pass argument of type '%s': function expects '%s'",
+							Error(context, expr, "cannot implicitly cast '%s' to '%s'",
 								  GetTypeKindPrettyName(expr->inferredType.kind),
 								  GetTypeKindPrettyName(function->params[i].type.kind));
 						}
@@ -588,100 +682,6 @@ AnalyzeExpression(Node *baseNode,
 			}
 		} break;
 	}
-}
-
-internal bool
-CanImplicitCast(Type destType, Node *source)
-{
-	if (destType.kind == TypeKind_Unknown)
-	{
-		return false;
-	}
-
-	if (TypesEqual(destType, source->inferredType))
-	{
-		return true;
-	}
-
-	if (IsSignedInteger(destType)
-		&& source->kind == NodeKind_Number)
-	{
-		NumberNode *number = As<NumberNode>(source);
-
-		struct Range
-		{
-			i64 min;
-			i64 max;
-		};
-
-		Range range = {};
-
-		if (destType.kind == TypeKind_Int32)
-		{
-			range = { INT32_MIN, INT32_MAX };
-		}
-		else if (destType.kind == TypeKind_Int16)
-		{
-			range = { INT16_MIN, INT16_MAX };
-		}
-		else if (destType.kind == TypeKind_Int8)
-		{
-			range = { INT8_MIN, INT8_MAX };
-		}
-		else
-		{
-			Assert(false);
-		}
-
-		if (number->int64Value >= range.min && number->int64Value <= range.max)
-		{
-			return true;
-		}
-	}
-
-	if (destType.kind == TypeKind_Int64)
-	{
-		if (source->inferredType.kind == TypeKind_Int32)
-		{
-			// int32 fits in int64
-			return true;
-		}
-		if (source->inferredType.kind == TypeKind_Int16)
-		{
-			// int16 fits in int64
-			return true;
-		}
-		if (source->inferredType.kind == TypeKind_Int8)
-		{
-			// int8 fits in int64
-			return true;
-		}
-	}
-
-	if (destType.kind == TypeKind_Int32)
-	{
-		if (source->inferredType.kind == TypeKind_Int16)
-		{
-			// int16 fits in int32
-			return true;
-		}
-		if (source->inferredType.kind == TypeKind_Int8)
-		{
-			// int8 fits in int32
-			return true;
-		}
-	}
-
-	if (destType.kind == TypeKind_Int16)
-	{
-		if (source->inferredType.kind == TypeKind_Int8)
-		{
-			// int8 fits in int16
-			return true;
-		}
-	}
-
-	return false;
 }
 
 internal void

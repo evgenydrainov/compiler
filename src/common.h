@@ -118,6 +118,9 @@ struct string
 #define GENERATE_ENUM_NAME(Name, Value, PrettyName) case Name: return #Name;
 #define GENERATE_ENUM_PRETTY_NAME(Name, Value, PrettyName) case Name: return PrettyName;
 
+string LoadFile(const char *fileName);
+string LoadFile(string fileName);
+
 struct Arena
 {
 	u8 *data;

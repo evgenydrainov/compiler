@@ -389,6 +389,18 @@ GetToken(Lexer *lexer)
 
 	if (IsAtEnd(lexer))
 	{
+		if (lexer->includeStack.count > 0)
+		{
+			LexerFrame frame = lexer->includeStack[lexer->includeStack.count - 1];
+			lexer->includeStack.count--;
+
+			lexer->current = frame.current;
+			lexer->line = frame.line;
+			lexer->fileName = frame.fileName;
+
+			return GetToken(lexer);
+		}
+
 		return MakeToken(lexer, TokenKind_EOF, {});
 	}
 
@@ -440,6 +452,55 @@ GetToken(Lexer *lexer)
 				return MakeToken(lexer, type, str);
 			}
 		}
+	}
+
+	if (c == '#'
+		|| PeekNextChar(lexer) == 'i')
+	{
+		Lexer saveLexer = *lexer;
+
+		AdvanceChar(lexer); // eat the '#'
+		Token identifier = ParseIdentifier(lexer);
+
+		if (identifier.str == "include")
+		{
+			SkipWhitespace(lexer);
+
+			if (PeekChar(lexer) != '"')
+			{
+				return ErrorToken(lexer, "expected \"filename\" after #include");
+			}
+
+			Token pathToken = ParseString(lexer);
+
+			Assert(pathToken.str.count >= 2);
+			string path = { pathToken.str.data + 1, pathToken.str.count - 2};
+
+			if (lexer->includeStack.count >= MAX_INCLUDE_DEPTH)
+			{
+				return ErrorToken(lexer, "#include nesting too deep (circular include?)");
+			}
+
+			string fileData = LoadFile(path);
+			if (!fileData.data)
+			{
+				return ErrorToken(lexer, "cannot open included file");
+			}
+
+			LexerFrame frame = {};
+			frame.current = lexer->current;
+			frame.line = lexer->line;
+			frame.fileName = lexer->fileName;
+			ArrayAdd(&lexer->includeStack, frame);
+
+			lexer->current = fileData.data;
+			lexer->line = 1;
+			lexer->fileName = path;
+
+			return GetToken(lexer);
+		}
+
+		*lexer = saveLexer;
 	}
 
 	// handle one-letter tokens

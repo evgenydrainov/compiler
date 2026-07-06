@@ -158,35 +158,6 @@ PrintTree(Node *baseNode,
 }
 #endif
 
-internal string
-LoadFile(const char *fileName)
-{
-	string result = {};
-	
-	FILE *file;
-	fopen_s(&file, fileName, "rb");
-	if (file)
-	{
-		fseek(file, 0, SEEK_END);
-		usize fileSize = ftell(file);
-
-		char *fileData = (char *)malloc(fileSize + 1);
-		if (fileData)
-		{
-			fseek(file, 0, SEEK_SET);
-			if (fread(fileData, 1, fileSize, file) == fileSize)
-			{
-				fileData[fileSize] = 0;
-				result = {fileData, fileSize};
-			}
-		}
-		
-		fclose(file);
-	}
-
-	return result;
-}
-
 struct FindLinkerResult
 {
 	const char *linkExePath;

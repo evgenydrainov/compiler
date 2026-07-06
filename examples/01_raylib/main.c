@@ -23,59 +23,8 @@ asm
 	section .text
 }
 
-string :: struct
-{
-	data: *i8;
-	count: i64;
-};
-
-Vector2 :: struct
-{
-	x : i32; // float
-	y : i32; // float
-};
-
-Texture :: struct
-{
-	id      : i32;
-	width   : i32;
-	height  : i32;
-	mipmaps : i32;
-	format  : i32;
-};
-
-Camera2D :: struct
-{
-	offset   : Vector2;
-	target   : Vector2;
-	rotation : i32; // float
-	zoom     : i32; // float
-};
-
-Rectangle :: struct
-{
-	x      : i32; // float
-	y      : i32; // float
-	width  : i32; // float
-	height : i32; // float
-};
-
-InitWindow        :: proc(width: i64, height: i64, title: *i8)                              #foreign;
-WindowShouldClose :: proc() -> bool                                                         #foreign;
-CloseWindow       :: proc() -> bool                                                         #foreign;
-BeginDrawing      :: proc() -> bool                                                         #foreign;
-EndDrawing        :: proc() -> bool                                                         #foreign;
-SetTargetFPS      :: proc(fps: i64)                                                         #foreign;
-DrawRectangle     :: proc(posX: i64, posY: i64, width: i64, height: i64, color: i64)        #foreign;
-DrawPixel         :: proc(posX: i64, posY: i64, color: i64)                                 #foreign;
-IsKeyDown         :: proc(key: i64) -> bool                                                 #foreign;
-ClearBackground   :: proc(color: i64)                                                       #foreign;
-LoadTexture       :: proc(texture: *Texture, fileName: *i8)                                 #foreign;
-DrawTexture       :: proc(texture: *Texture, posX: i64, posY: i64, tint: i64)               #foreign;
-IsKeyPressed      :: proc(key: i64) -> bool                                                 #foreign;
-BeginMode2D       :: proc(camera: *Camera2D)                                                #foreign;
-EndMode2D         :: proc()                                                                 #foreign;
-DrawTextureRec    :: proc(texture: *Texture, rec: *Rectangle, position: Vector2, tint: i64) #foreign;
+#include "../../modules/builtin.c"
+#include "../../modules/raylib/raylib.c"
 
 Player :: struct
 {
@@ -109,11 +58,11 @@ Game :: struct
 
 GameUpdate :: proc(game: *Game)
 {
-	KEY_RIGHT := 262;
-	KEY_LEFT  := 263;
-	KEY_DOWN  := 264;
-	KEY_UP    := 265;
-	KEY_Z     := 90;
+	KEY_RIGHT : i32 = 262;
+	KEY_LEFT  : i32 = 263;
+	KEY_DOWN  : i32 = 264;
+	KEY_UP    : i32 = 265;
+	KEY_Z     : i32 = 90;
 
 	dirX := 0;
 	if IsKeyDown(KEY_LEFT)
@@ -234,7 +183,7 @@ draw_texture :: proc(texture: *Texture,
 
 main :: proc() -> i64
 {
-	InitWindow(320*4, 240*4, "doukutsu"c);
+	InitWindow(1280, 960, "doukutsu"c);
 	SetTargetFPS(60);
 
 	game: Game;
@@ -262,15 +211,6 @@ main :: proc() -> i64
 	}
 
 	return 0;
-}
-
-int64_to_float32 :: proc(value: i64) -> i32
-{
-	asm
-	{
-		cvtsi2ss xmm0, rcx
-		movd eax, xmm0
-	}
 }
 
 get_tilemap_data :: proc() -> *i64

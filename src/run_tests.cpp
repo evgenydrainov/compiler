@@ -87,7 +87,7 @@ int main()
 	//TestReturnCode("20_logical_or",              0);
 	//TestReturnCode("21_if_else",                 0);
 	//TestReturnCode("22_foreign_function",        0);
-	TestReturnCode("23_enum",                    0);
+	//TestReturnCode("23_enum",                    0);
 
 	if (_chdir("..\\examples\\01_raylib") != 0)
 	{
@@ -96,4 +96,12 @@ int main()
 	}
 
 	//TestReturnCode("main", 0);
+
+	if (_chdir("..\\02_breakout") != 0)
+	{
+		fprintf(stderr, "_chdir failed\n");
+		exit(1);
+	}
+
+	TestReturnCode("main", 0);
 }

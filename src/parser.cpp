@@ -486,60 +486,113 @@ ParseType(Parser *parser,
 		  Lexer *lexer,
 		  Arena *arena)
 {
-	Type type = {};
-
 	if (parser->current.kind == TokenKind_Asterisk)
 	{
+		Type type = {};
 		type.kind = TypeKind_Pointer;
 
 		AdvanceToken(parser, lexer); // eat the '*'
 
 		type.pointerTo = PushStruct<Type>(arena);
 		*type.pointerTo = ParseType(parser, lexer, arena);
-	}
-	else if (parser->current.str == "i8")
-	{
-		type.kind = TypeKind_Int8;
 
-		AdvanceToken(parser, lexer);
+		return type;
 	}
-	else if (parser->current.str == "i16")
-	{
-		type.kind = TypeKind_Int16;
 
-		AdvanceToken(parser, lexer);
-	}
-	else if (parser->current.str == "i32")
+	switch (parser->current.str[0])
 	{
-		type.kind = TypeKind_Int32;
+		case 'i':
+		{
+			if (parser->current.str == "i8")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int8 };
+			}
 
-		AdvanceToken(parser, lexer);
-	}
-	else if (parser->current.str == "i64")
-	{
-		type.kind = TypeKind_Int64;
+			if (parser->current.str == "i16")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int16 };
+			}
 
-		AdvanceToken(parser, lexer);
-	}
-	else if (parser->current.str == "bool")
-	{
-		type.kind = TypeKind_Bool;
+			if (parser->current.str == "i32")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int32 };
+			}
 
-		AdvanceToken(parser, lexer);
+			if (parser->current.str == "i64")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int64 };
+			}
+		} break;
+
+		case 'u':
+		{
+			if (parser->current.str == "u8")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int8 }; // TODO: unsigned types
+			}
+
+			if (parser->current.str == "u16")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int16 }; // TODO: unsigned types
+			}
+
+			if (parser->current.str == "u32")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int32 }; // TODO: unsigned types
+			}
+
+			if (parser->current.str == "u64")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int64 }; // TODO: unsigned types
+			}
+		} break;
+
+		case 'f':
+		{
+			if (parser->current.str == "f32")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int32 }; // TODO: floating point types
+			}
+
+			if (parser->current.str == "f64")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int64 }; // TODO: floating point types
+			}
+		} break;
+
+		case 'b':
+		{
+			if (parser->current.str == "bool")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Bool };
+			}
+		} break;
 	}
-	else if (parser->current.kind == TokenKind_Identifier)
+	
+	if (parser->current.kind == TokenKind_Identifier)
 	{
+		Type type = {};
 		type.kind = TypeKind_Struct;
 		type.name = parser->current.str;
 
 		AdvanceToken(parser, lexer);
-	}
-	else
-	{
-		UnexpectedCurrentToken(parser);
+
+		return type;
 	}
 
-	return type;
+	UnexpectedCurrentToken(parser);
+	return {};
 }
 
 internal Node *

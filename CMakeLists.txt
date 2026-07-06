@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 set(CMAKE_UNITY_BUILD ON)
 set(CMAKE_UNITY_BUILD_BATCH_SIZE 64)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 project(compiler)
 
@@ -11,6 +11,7 @@ add_executable(
     compiler
     src/codegen.cpp
     src/codegen.h
+    src/common.cpp
     src/common.h
     src/compiler.cpp
     src/compiler.h
