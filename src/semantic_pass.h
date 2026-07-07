@@ -6,14 +6,16 @@
 struct SymbolTable;
 struct FunctionTable;
 struct TypeTable;
+struct ConstantsTable;
 
 struct SemanticContext
 {
 	bool hadError;
 
-	SymbolTable *symTable;
-	FunctionTable *funcTable;
-	TypeTable *typeTable;
+	SymbolTable    *symTable;
+	FunctionTable  *funcTable;
+	TypeTable      *typeTable;
+	ConstantsTable *constTable;
 
 	FuncNode *currentFunction;
 

@@ -31,7 +31,8 @@
 	X(NodeKind_Asm,               23,    ""   ) \
 	X(NodeKind_EnumDecl,          24,    ""   ) \
 	X(NodeKind_EnumeratorDecl,    25,    ""   ) \
-	X(NodeKind_Cast,              26,    ""   )
+	X(NodeKind_Cast,              26,    ""   ) \
+	X(NodeKind_ConstantDecl,      27,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -292,6 +293,14 @@ struct CastNode : public Node
 
 	Node *what;
 	Type targetType;
+};
+
+struct ConstantDeclNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_ConstantDecl;
+
+	string name;
+	Node *expr;
 };
 
 template <typename T>

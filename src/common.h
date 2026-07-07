@@ -300,11 +300,15 @@ struct StaticBumpArray
 };
 
 template <typename T, usize capacity>
-inline void
+inline T *
 ArrayAdd(StaticBumpArray<T, capacity> *array, const T &value)
 {
 	Assert(array->count < capacity);
 
-	array->data[array->count] = value;
+	T *result = &array->data[array->count];
+
+	*result = value;
 	array->count++;
+
+	return result;
 }

@@ -15,6 +15,7 @@ add_executable(
     src/common.h
     src/compiler.cpp
     src/compiler.h
+    src/constants_table.h
     src/function_table.h
     src/lexer.cpp
     src/lexer.h

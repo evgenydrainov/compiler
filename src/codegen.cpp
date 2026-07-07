@@ -843,6 +843,7 @@ GenerateTopLevelStatement(Node *baseNode,
 
 		case NodeKind_StructDecl:
 		case NodeKind_EnumDecl:
+		case NodeKind_ConstantDecl:
 		{
 			// do nothing
 		} break;

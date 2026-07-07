@@ -3,6 +3,7 @@
 #include "symbol_table.h"
 #include "function_table.h"
 #include "type_table.h"
+#include "constants_table.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -375,9 +376,10 @@ internal void
 AnalyzeExpression(Node *baseNode,
 				  SemanticContext *context)
 {
-	SymbolTable   *symTable  = context->symTable;
-	FunctionTable *funcTable = context->funcTable;
-	TypeTable     *typeTable = context->typeTable;
+	SymbolTable    *symTable   = context->symTable;
+	FunctionTable  *funcTable  = context->funcTable;
+	TypeTable      *typeTable  = context->typeTable;
+	ConstantsTable *constTable = context->constTable;
 
 	switch (baseNode->kind)
 	{
@@ -481,7 +483,24 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
+				Constant *constant = LookupConstant(constTable, node->name);
+				if (constant)
+				{
+					static_assert(sizeof(NumberNode) <= sizeof(VarNode));
+
+					int line = node->line;
+
+					NumberNode *newNode = (NumberNode *)node;
+					*newNode = {};
+					newNode->kind = NodeKind_Number;
+					newNode->line = line;
+					newNode->inferredType.kind = TypeKind_Int64;
+					newNode->int64Value = constant->value;
+				}
+				else
+				{
+					Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
+				}
 			}
 		} break;
 
@@ -907,6 +926,22 @@ AnalyzeTopLevelStatement(Node *baseNode,
 	}
 }
 
+internal i64
+EvaluateConstantExpression(Node *baseNode,
+						   SemanticContext *context)
+{
+	if (baseNode->kind == NodeKind_Number)
+	{
+		NumberNode *node = As<NumberNode>(baseNode);
+
+		return node->int64Value;
+	}
+
+	Error(context, baseNode, "not a constant expression");
+
+	return 0;
+}
+
 void
 SemanticPass(Node *_program,
 			 SemanticContext *context,
@@ -915,13 +950,15 @@ SemanticPass(Node *_program,
 	context->cstringLiterals = PushBumpArray<GenerateCStringLiteral>(arena, 32);
 	context->stringLiterals = PushBumpArray<GenerateStringLiteral>(arena, 32);
 
-	FunctionTable *funcTable = PushStruct<FunctionTable>(arena);
-	SymbolTable *symTable = PushStruct<SymbolTable>(arena);
-	TypeTable *typeTable = PushStruct<TypeTable>(arena);
+	FunctionTable  *funcTable  = PushStruct<FunctionTable>(arena);
+	SymbolTable    *symTable   = PushStruct<SymbolTable>(arena);
+	TypeTable      *typeTable  = PushStruct<TypeTable>(arena);
+	ConstantsTable *constTable = PushStruct<ConstantsTable>(arena);
 
-	context->funcTable = funcTable;
-	context->symTable = symTable;
-	context->typeTable = typeTable;
+	context->funcTable  = funcTable;
+	context->symTable   = symTable;
+	context->typeTable  = typeTable;
+	context->constTable = constTable;
 
 	BlockNode *program = As<BlockNode>(_program);
 
@@ -1024,6 +1061,21 @@ SemanticPass(Node *_program,
 			else
 			{
 				Error(context, node, "enum " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
+			}
+		}
+		else if (it->kind == NodeKind_ConstantDecl)
+		{
+			ConstantDeclNode *node = As<ConstantDeclNode>(it);
+
+			if (!LookupConstant(constTable, node->name))
+			{
+				Constant *constant = DeclareConstant(constTable, node->name);
+
+				constant->value = EvaluateConstantExpression(node->expr, context);
+			}
+			else
+			{
+				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->name));
 			}
 		}
 	}

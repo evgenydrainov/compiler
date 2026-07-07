@@ -1,6 +1,9 @@
 #include "../../modules/builtin.c"
 #include "../../modules/raylib/raylib.c"
 
+GAME_WIDTH  :: 320;
+GAME_HEIGHT :: 240;
+
 GameState :: enum
 {
 	Title;
@@ -24,9 +27,14 @@ GameRender :: proc(game: *Game)
 {
 	if game.state == GameState.Title
 	{
-		draw_text_centered("BREAKOUT"c, 160, 120, 10, 0xffffffff);
+		x := GAME_WIDTH/2;
+		y := GAME_HEIGHT/2;
+		
+		draw_text_centered("BREAKOUT"c, x, y, 10, 0xffffffff);
+		y += 20;
 
-		DrawText("PRESS ENTER TO START"c, 100, 140, 10, 0xffffffff);
+		draw_text_centered("PRESS ENTER TO START"c, x, y, 10, 0xffffffff);
+		y += 20;
 	}
 }
 

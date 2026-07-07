@@ -1131,6 +1131,26 @@ ParseEnumDefinition(Parser *parser,
 }
 
 internal Node *
+ParseConstantDefinition(Parser *parser,
+						Lexer *lexer,
+						Arena *arena)
+{
+	ConstantDeclNode *node = MakeNode<ConstantDeclNode>(parser->current.line, arena);
+	node->name = parser->current.str;
+
+	AdvanceToken(parser, lexer); // eat the constant name
+
+	ExpectToken(parser, lexer, TokenKind_Colon);
+	ExpectToken(parser, lexer, TokenKind_Colon);
+
+	node->expr = ParseExpression(parser, lexer, 0, arena);
+
+	ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+	return node;
+}
+
+internal Node *
 ParseTopLevelStatement(Parser *parser,
 					   Lexer *lexer,
 					   Arena *arena)
@@ -1142,24 +1162,26 @@ ParseTopLevelStatement(Parser *parser,
 		Token peekToken2 = PeekToken(lexer, 3);
 
 		if (peekToken0.kind == TokenKind_Colon
-			&& peekToken1.kind == TokenKind_Colon
-			&& peekToken2.kind == TokenKind_Proc)
+			&& peekToken1.kind == TokenKind_Colon)
 		{
-			return ParseFunctionDefinition(parser, lexer, arena);
-		}
+			if (peekToken2.kind == TokenKind_Proc)
+			{
+				return ParseFunctionDefinition(parser, lexer, arena);
+			}
 
-		if (peekToken0.kind == TokenKind_Colon
-			&& peekToken1.kind == TokenKind_Colon
-			&& peekToken2.kind == TokenKind_Struct)
-		{
-			return ParseStructDefinition(parser, lexer, arena);
-		}
+			if (peekToken2.kind == TokenKind_Struct)
+			{
+				return ParseStructDefinition(parser, lexer, arena);
+			}
 
-		if (peekToken0.kind == TokenKind_Colon
-			&& peekToken1.kind == TokenKind_Colon
-			&& peekToken2.kind == TokenKind_Enum)
-		{
-			return ParseEnumDefinition(parser, lexer, arena);
+			if (peekToken2.kind == TokenKind_Enum)
+			{
+				return ParseEnumDefinition(parser, lexer, arena);
+			}
+
+			// compile-time constant
+			// FOO :: 123;
+			return ParseConstantDefinition(parser, lexer, arena);
 		}
 	}
 
