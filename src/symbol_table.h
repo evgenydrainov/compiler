@@ -46,7 +46,10 @@ DeclareSymbol(SymbolTable *table,
 			  string name,
 			  Type type)
 {
-	table->stackSize += SizeOfType(type);
+	int size = SizeOfType(type);
+	size = Max(size, 8); // align to 8 for now
+
+	table->stackSize += size;
 
 	table->maxStackSize = Max(table->maxStackSize, table->stackSize);
 

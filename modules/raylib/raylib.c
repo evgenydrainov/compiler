@@ -91,3 +91,6 @@ DrawTextureRec :: proc(texture: *Texture, source: *Rectangle, position: Vector2,
 // Text drawing functions
 DrawFPS  :: proc(posX: i32, posY: i32)                                       #foreign; // Draw current FPS
 DrawText :: proc(text: *u8, posX: i32, posY: i32, fontSize: i32, color: i64) #foreign; // Draw text (using default font)
+
+// Text font info functions
+MeasureText :: proc(text: *u8, fontSize: i32) -> i32 #foreign; // Measure string width for default font

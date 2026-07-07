@@ -89,6 +89,8 @@ SizeOfType(Type type)
 			result = type.structInfo->size;
 		} break;
 
+		case TypeKind_Unknown: {} break;
+
 		default:
 		{
 			Assert(false);

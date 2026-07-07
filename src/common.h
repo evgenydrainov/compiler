@@ -30,10 +30,28 @@ typedef double f64;
 
 #define Assert(cond) ((cond) ? (void)0 : __debugbreak())
 
-#define ArrayCount(array) (sizeof(array)/sizeof((array)[0]))
+template <typename T, usize N>
+inline usize
+ArrayCount(const T (&arr)[N])
+{
+	return N;
+}
 
-#define Max(A, B) ((A) >= (B) ? (A) : (B))
-#define Min(A, B) ((A) < (B) ? (A) : (B))
+template <typename T>
+inline T
+Max(T a, T b)
+{
+	T result = (a >= b) ? a : b;
+	return result;
+}
+
+template <typename T>
+inline T
+Min(T a, T b)
+{
+	T result = (a < b) ? a : b;
+	return result;
+}
 
 struct string
 {

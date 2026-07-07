@@ -95,11 +95,19 @@ IdentifierType(string str)
 			}
 		} break;
 
-		case 'i':
+		case 'c':
 		{
-			if (str == "if")
+			if (str == "cast")
 			{
-				result = TokenKind_If;
+				result = TokenKind_Cast;
+			}
+		} break;
+
+		case 'd':
+		{
+			if (str == "do")
+			{
+				result = TokenKind_Do;
 			}
 		} break;
 
@@ -115,19 +123,23 @@ IdentifierType(string str)
 			}
 		} break;
 
-		case 'w':
+		case 'f':
 		{
-			if (str == "while")
+			if (str == "false")
 			{
-				result = TokenKind_While;
+				result = TokenKind_False;
+			}
+			else if (str == "for")
+			{
+				result = TokenKind_For;
 			}
 		} break;
 
-		case 'd':
+		case 'i':
 		{
-			if (str == "do")
+			if (str == "if")
 			{
-				result = TokenKind_Do;
+				result = TokenKind_If;
 			}
 		} break;
 
@@ -151,6 +163,14 @@ IdentifierType(string str)
 			}
 		} break;
 
+		case 's':
+		{
+			if (str == "struct")
+			{
+				result = TokenKind_Struct;
+			}
+		} break;
+
 		case 't':
 		{
 			if (str == "true")
@@ -159,23 +179,11 @@ IdentifierType(string str)
 			}
 		} break;
 
-		case 'f':
+		case 'w':
 		{
-			if (str == "false")
+			if (str == "while")
 			{
-				result = TokenKind_False;
-			}
-			else if (str == "for")
-			{
-				result = TokenKind_For;
-			}
-		} break;
-
-		case 's':
-		{
-			if (str == "struct")
-			{
-				result = TokenKind_Struct;
+				result = TokenKind_While;
 			}
 		} break;
 	}

@@ -162,6 +162,127 @@ UnexpectedCurrentToken(Parser *parser)
 	ErrorAtCurrent(parser, "unexpected token '%s'", GetTokenKindPrettyName(parser->current.kind));
 }
 
+internal Type
+ParseType(Parser *parser,
+		  Lexer *lexer,
+		  Arena *arena)
+{
+	if (parser->current.kind == TokenKind_Asterisk)
+	{
+		Type type = {};
+		type.kind = TypeKind_Pointer;
+
+		AdvanceToken(parser, lexer); // eat the '*'
+
+		type.pointerTo = PushStruct<Type>(arena);
+		*type.pointerTo = ParseType(parser, lexer, arena);
+
+		return type;
+	}
+
+	switch (parser->current.str[0])
+	{
+		case 'i':
+		{
+			if (parser->current.str == "i8")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int8 };
+			}
+
+			if (parser->current.str == "i16")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int16 };
+			}
+
+			if (parser->current.str == "i32")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int32 };
+			}
+
+			if (parser->current.str == "i64")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int64 };
+			}
+
+			if (parser->current.str == "int")
+			{
+				// 'int' is alias for 'i64'
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int64 };
+			}
+		} break;
+
+		case 'u':
+		{
+			if (parser->current.str == "u8")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int8 }; // TODO: unsigned types
+			}
+
+			if (parser->current.str == "u16")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int16 }; // TODO: unsigned types
+			}
+
+			if (parser->current.str == "u32")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int32 }; // TODO: unsigned types
+			}
+
+			if (parser->current.str == "u64")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int64 }; // TODO: unsigned types
+			}
+		} break;
+
+		case 'f':
+		{
+			if (parser->current.str == "f32")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int32 }; // TODO: floating point types
+			}
+
+			if (parser->current.str == "f64")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Int64 }; // TODO: floating point types
+			}
+		} break;
+
+		case 'b':
+		{
+			if (parser->current.str == "bool")
+			{
+				AdvanceToken(parser, lexer);
+				return { .kind = TypeKind_Bool };
+			}
+		} break;
+	}
+	
+	if (parser->current.kind == TokenKind_Identifier)
+	{
+		Type type = {};
+		type.kind = TypeKind_Struct;
+		type.name = parser->current.str;
+
+		AdvanceToken(parser, lexer);
+
+		return type;
+	}
+
+	UnexpectedCurrentToken(parser);
+	return {};
+}
+
 internal Node *
 ParseExpression(Parser *parser,
 				Lexer *lexer,
@@ -339,6 +460,22 @@ ParseAtom_Inner(Parser *parser,
 		return node;
 	}
 
+	if (parser->current.kind == TokenKind_Cast)
+	{
+		CastNode *node = MakeNode<CastNode>(parser->current.line, arena);
+		AdvanceToken(parser, lexer);
+
+		ExpectToken(parser, lexer, TokenKind_OpenParen);
+
+		node->targetType = ParseType(parser, lexer, arena);
+
+		ExpectToken(parser, lexer, TokenKind_CloseParen);
+
+		node->what = ParseAtom(parser, lexer, arena);
+
+		return node;
+	}
+
 	UnexpectedCurrentToken(parser);
 
 	return nullptr;
@@ -479,120 +616,6 @@ ParseBlock(Parser *parser,
 	ExpectToken(parser, lexer, TokenKind_CloseBrace);
 
 	return block;
-}
-
-internal Type
-ParseType(Parser *parser,
-		  Lexer *lexer,
-		  Arena *arena)
-{
-	if (parser->current.kind == TokenKind_Asterisk)
-	{
-		Type type = {};
-		type.kind = TypeKind_Pointer;
-
-		AdvanceToken(parser, lexer); // eat the '*'
-
-		type.pointerTo = PushStruct<Type>(arena);
-		*type.pointerTo = ParseType(parser, lexer, arena);
-
-		return type;
-	}
-
-	switch (parser->current.str[0])
-	{
-		case 'i':
-		{
-			if (parser->current.str == "i8")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int8 };
-			}
-
-			if (parser->current.str == "i16")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int16 };
-			}
-
-			if (parser->current.str == "i32")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int32 };
-			}
-
-			if (parser->current.str == "i64")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int64 };
-			}
-		} break;
-
-		case 'u':
-		{
-			if (parser->current.str == "u8")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int8 }; // TODO: unsigned types
-			}
-
-			if (parser->current.str == "u16")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int16 }; // TODO: unsigned types
-			}
-
-			if (parser->current.str == "u32")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int32 }; // TODO: unsigned types
-			}
-
-			if (parser->current.str == "u64")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int64 }; // TODO: unsigned types
-			}
-		} break;
-
-		case 'f':
-		{
-			if (parser->current.str == "f32")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int32 }; // TODO: floating point types
-			}
-
-			if (parser->current.str == "f64")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int64 }; // TODO: floating point types
-			}
-		} break;
-
-		case 'b':
-		{
-			if (parser->current.str == "bool")
-			{
-				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Bool };
-			}
-		} break;
-	}
-	
-	if (parser->current.kind == TokenKind_Identifier)
-	{
-		Type type = {};
-		type.kind = TypeKind_Struct;
-		type.name = parser->current.str;
-
-		AdvanceToken(parser, lexer);
-
-		return type;
-	}
-
-	UnexpectedCurrentToken(parser);
-	return {};
 }
 
 internal Node *

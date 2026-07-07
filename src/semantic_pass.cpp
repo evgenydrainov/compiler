@@ -134,145 +134,6 @@ ResolveType(Type *type,
 	//}
 }
 
-internal void
-AnalyzeExpression(Node *baseNode,
-				  SemanticContext *context);
-
-internal void
-AnalyzeBinaryExpression(Node *baseNode,
-						SemanticContext *context)
-{
-	BinaryNode *node = As<BinaryNode>(baseNode);
-
-	switch (node->op)
-	{
-		default:
-		{
-			Assert(false);
-		} break;
-
-		case BinaryOp_Add:
-		case BinaryOp_Subtract:
-		case BinaryOp_Multiply:
-		case BinaryOp_Divide:
-		case BinaryOp_Modulo:
-		case BinaryOp_ShiftLeft:
-		case BinaryOp_ShiftRight:
-		{
-			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context);
-
-			const char *opName = "";
-			if (node->op == BinaryOp_Add)
-			{
-				opName = "add";
-			}
-			else if (node->op == BinaryOp_Subtract)
-			{
-				opName = "subtract";
-			}
-			else if (node->op == BinaryOp_Multiply)
-			{
-				opName = "multiply";
-			}
-			else if (node->op == BinaryOp_Divide)
-			{
-				opName = "divide";
-			}
-			else if (node->op == BinaryOp_Modulo)
-			{
-				opName = "divide";
-			}
-
-			if (TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
-			{
-				if (node->lhs->inferredType.kind == TypeKind_Int64)
-				{
-					node->inferredType = node->lhs->inferredType;
-				}
-				else
-				{
-					Error(context, node, "cannot %s '%s' and '%s': types are not numeric",
-						  opName,
-						  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-						  GetTypeKindPrettyName(node->rhs->inferredType.kind));
-				}
-			}
-			else
-			{
-				Error(context, node, "cannot %s '%s' and '%s': types are different",
-					  opName,
-					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
-			}
-		} break;
-
-		case BinaryOp_Less:
-		case BinaryOp_Greater:
-		case BinaryOp_LessEqual:
-		case BinaryOp_GreaterEqual:
-		{
-			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context);
-
-			if (TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
-			{
-				if (node->lhs->inferredType.kind == TypeKind_Int64)
-				{
-					node->inferredType.kind = TypeKind_Bool;
-				}
-				else
-				{
-					Error(context, node, "cannot compare '%s' and '%s': types are not numeric",
-						  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-						  GetTypeKindPrettyName(node->rhs->inferredType.kind));
-				}
-			}
-			else
-			{
-				Error(context, node, "cannot compare '%s' and '%s': types are different",
-					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
-			}
-		} break;
-
-		case BinaryOp_EqualEqual:
-		case BinaryOp_NotEqual:
-		{
-			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context);
-
-			if (TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
-			{
-				node->inferredType.kind = TypeKind_Bool;
-			}
-			else
-			{
-				Error(context, node, "cannot compare '%s' and '%s': types are different",
-					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
-			}
-		} break;
-
-		case BinaryOp_LogicalAnd:
-		case BinaryOp_LogicalOr:
-		{
-			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context);
-
-			if (node->lhs->inferredType.kind == TypeKind_Bool
-				&& node->rhs->inferredType.kind == TypeKind_Bool)
-			{
-				node->inferredType.kind = TypeKind_Bool;
-			}
-			else
-			{
-				Error(context, node, "lhs and rhs must be boolean");
-			}
-		} break;
-	}
-}
-
 internal bool
 IsSignedInteger(Type type)
 {
@@ -374,6 +235,140 @@ CanImplicitCast(Type destType, Node *source)
 	}
 
 	return false;
+}
+
+internal void
+AnalyzeExpression(Node *baseNode,
+				  SemanticContext *context);
+
+internal void
+AnalyzeBinaryExpression(Node *baseNode,
+						SemanticContext *context)
+{
+	BinaryNode *node = As<BinaryNode>(baseNode);
+
+	switch (node->op)
+	{
+		default:
+		{
+			Assert(false);
+		} break;
+
+		case BinaryOp_Add:
+		case BinaryOp_Subtract:
+		case BinaryOp_Multiply:
+		case BinaryOp_Divide:
+		case BinaryOp_Modulo:
+		case BinaryOp_ShiftLeft:
+		case BinaryOp_ShiftRight:
+		{
+			AnalyzeExpression(node->lhs, context);
+			AnalyzeExpression(node->rhs, context);
+
+			const char *opName = "";
+			if (node->op == BinaryOp_Add)
+			{
+				opName = "add";
+			}
+			else if (node->op == BinaryOp_Subtract)
+			{
+				opName = "subtract";
+			}
+			else if (node->op == BinaryOp_Multiply)
+			{
+				opName = "multiply";
+			}
+			else if (node->op == BinaryOp_Divide)
+			{
+				opName = "divide";
+			}
+			else if (node->op == BinaryOp_Modulo)
+			{
+				opName = "divide";
+			}
+
+			if (IsSignedInteger(node->lhs->inferredType)
+				&& IsSignedInteger(node->rhs->inferredType))
+			{
+				if (CanImplicitCast(node->lhs->inferredType, node->rhs))
+				{
+					node->inferredType = node->lhs->inferredType;
+				}
+				else
+				{
+					Error(context, node, "");
+				}
+			}
+			else
+			{
+				Error(context, node, "");
+			}
+		} break;
+
+		case BinaryOp_Less:
+		case BinaryOp_Greater:
+		case BinaryOp_LessEqual:
+		case BinaryOp_GreaterEqual:
+		{
+			AnalyzeExpression(node->lhs, context);
+			AnalyzeExpression(node->rhs, context);
+
+			if (TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
+			{
+				if (node->lhs->inferredType.kind == TypeKind_Int64)
+				{
+					node->inferredType.kind = TypeKind_Bool;
+				}
+				else
+				{
+					Error(context, node, "cannot compare '%s' and '%s': types are not numeric",
+						  GetTypeKindPrettyName(node->lhs->inferredType.kind),
+						  GetTypeKindPrettyName(node->rhs->inferredType.kind));
+				}
+			}
+			else
+			{
+				Error(context, node, "cannot compare '%s' and '%s': types are different",
+					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
+					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
+			}
+		} break;
+
+		case BinaryOp_EqualEqual:
+		case BinaryOp_NotEqual:
+		{
+			AnalyzeExpression(node->lhs, context);
+			AnalyzeExpression(node->rhs, context);
+
+			if (TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
+			{
+				node->inferredType.kind = TypeKind_Bool;
+			}
+			else
+			{
+				Error(context, node, "cannot compare '%s' and '%s': types are different",
+					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
+					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
+			}
+		} break;
+
+		case BinaryOp_LogicalAnd:
+		case BinaryOp_LogicalOr:
+		{
+			AnalyzeExpression(node->lhs, context);
+			AnalyzeExpression(node->rhs, context);
+
+			if (node->lhs->inferredType.kind == TypeKind_Bool
+				&& node->rhs->inferredType.kind == TypeKind_Bool)
+			{
+				node->inferredType.kind = TypeKind_Bool;
+			}
+			else
+			{
+				Error(context, node, "lhs and rhs must be boolean");
+			}
+		} break;
+	}
 }
 
 internal void
@@ -679,6 +674,19 @@ AnalyzeExpression(Node *baseNode,
 			else
 			{
 				Error(context, node->arrayExpr, "");
+			}
+		} break;
+
+		case NodeKind_Cast:
+		{
+			CastNode *node = As<CastNode>(baseNode);
+
+			AnalyzeExpression(node->what, context);
+
+			if (IsSignedInteger(node->what->inferredType)
+				&& IsSignedInteger(node->targetType))
+			{
+				node->inferredType = node->targetType;
 			}
 		} break;
 	}

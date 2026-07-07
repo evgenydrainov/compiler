@@ -457,6 +457,13 @@ GenerateExpression(Node *baseNode,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeKind_Cast:
+		{
+			CastNode *node = As<CastNode>(baseNode);
+
+			GenerateExpression(node->what, out, context);
+		} break;
+
 		case NodeKind_Call:
 		{
 			CallNode *node = As<CallNode>(baseNode);

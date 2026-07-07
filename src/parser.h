@@ -30,7 +30,8 @@
 	X(NodeKind_Unary,             22,    ""   ) \
 	X(NodeKind_Asm,               23,    ""   ) \
 	X(NodeKind_EnumDecl,          24,    ""   ) \
-	X(NodeKind_EnumeratorDecl,    25,    ""   )
+	X(NodeKind_EnumeratorDecl,    25,    ""   ) \
+	X(NodeKind_Cast,              26,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -283,6 +284,14 @@ struct EnumDeclNode : public Node
 
 	string name;
 	BumpArray<EnumeratorDeclNode *> enumerators;
+};
+
+struct CastNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Cast;
+
+	Node *what;
+	Type targetType;
 };
 
 template <typename T>
