@@ -57,23 +57,23 @@ AdvanceChar(Lexer *lexer, int count = 1)
 }
 
 internal Token
-MakeToken(Lexer *lexer, TokenKind kind, string str)
+MakeToken(Lexer *lexer, TokenKind kind, string str, SourceLocation location)
 {
 	Token result = {};
 	result.kind = kind;
 	result.str = str;
-	result.line = lexer->line;
+	result.location = location;
 
 	return result;
 }
 
 internal Token
-ErrorToken(Lexer *lexer, string message)
+ErrorToken(Lexer *lexer, string message, SourceLocation location)
 {
 	Token result = {};
 	result.kind = TokenKind_Error;
 	result.str = message;
-	result.line = lexer->line;
+	result.location = location;
 
 	return result;
 }
@@ -192,7 +192,7 @@ IdentifierType(string str)
 }
 
 internal Token
-ParseIdentifier(Lexer *lexer)
+ParseIdentifier(Lexer *lexer, SourceLocation location)
 {
 	string str = {lexer->current, 0};
 
@@ -204,12 +204,12 @@ ParseIdentifier(Lexer *lexer)
 	}
 
 	TokenKind type = IdentifierType(str);
-	Token result = MakeToken(lexer, type, str);
+	Token result = MakeToken(lexer, type, str, location);
 	return result;
 }
 
 internal Token
-ParseString(Lexer *lexer)
+ParseString(Lexer *lexer, SourceLocation location)
 {
 	string str = {lexer->current, 0};
 
@@ -221,7 +221,7 @@ ParseString(Lexer *lexer)
 	{
 		if (PeekChar(lexer) == '\n')
 		{
-			return ErrorToken(lexer, "newline in string");
+			return ErrorToken(lexer, "newline in string", location);
 		}
 
 		AdvanceChar(lexer);
@@ -230,7 +230,7 @@ ParseString(Lexer *lexer)
 
 	if (IsAtEnd(lexer))
 	{
-		return ErrorToken(lexer, "unterminated string");
+		return ErrorToken(lexer, "unterminated string", location);
 	}
 
 	// eat the closing quote
@@ -247,11 +247,11 @@ ParseString(Lexer *lexer)
 		str.count++;
 	}
 
-	return MakeToken(lexer, kind, str);
+	return MakeToken(lexer, kind, str, location);
 }
 
 internal Token
-ParseDecimalNumber(Lexer *lexer)
+ParseDecimalNumber(Lexer *lexer, SourceLocation location)
 {
 	string str = {lexer->current, 0};
 	i64 value = 0;
@@ -297,13 +297,13 @@ ParseDecimalNumber(Lexer *lexer)
 		}
 	}
 
-	Token result = MakeToken(lexer, TokenKind_Number, str);
+	Token result = MakeToken(lexer, TokenKind_Number, str, location);
 	result.numberValue = value;
 	return result;
 }
 
 internal Token
-ParseHexadecimalNumber(Lexer *lexer)
+ParseHexadecimalNumber(Lexer *lexer, SourceLocation location)
 {
 	string str = {lexer->current, 0};
 	i64 value = 0;
@@ -334,21 +334,21 @@ ParseHexadecimalNumber(Lexer *lexer)
 		str.count++;
 	}
 
-	Token result = MakeToken(lexer, TokenKind_Number, str);
+	Token result = MakeToken(lexer, TokenKind_Number, str, location);
 	result.numberValue = value;
 	return result;
 }
 
 internal Token
-ParseNumber(Lexer *lexer)
+ParseNumber(Lexer *lexer, SourceLocation location)
 {
 	if (PeekChar(lexer) == '0'
 		&& PeekNextChar(lexer) == 'x')
 	{
-		return ParseHexadecimalNumber(lexer);
+		return ParseHexadecimalNumber(lexer, location);
 	}
 
-	return ParseDecimalNumber(lexer);
+	return ParseDecimalNumber(lexer, location);
 }
 
 internal void
@@ -368,6 +368,7 @@ SkipWhitespace(Lexer *lexer)
 		{
 			lexer->line++;
 			AdvanceChar(lexer);
+			lexer->lineStart = lexer->current;
 		}
 		else if (c == '/')
 		{
@@ -395,6 +396,13 @@ GetToken(Lexer *lexer)
 {
 	SkipWhitespace(lexer);
 
+	SourceLocation location =
+	{
+		.fileName = lexer->fileName,
+		.line     = lexer->line,
+		.column   = (int)(lexer->current - lexer->lineStart + 1),
+	};
+
 	if (IsAtEnd(lexer))
 	{
 		if (lexer->includeStack.count > 0)
@@ -405,23 +413,24 @@ GetToken(Lexer *lexer)
 			lexer->current = frame.current;
 			lexer->line = frame.line;
 			lexer->fileName = frame.fileName;
+			lexer->lineStart = frame.lineStart;
 
 			return GetToken(lexer);
 		}
 
-		return MakeToken(lexer, TokenKind_EOF, {});
+		return MakeToken(lexer, TokenKind_EOF, {}, location);
 	}
 
 	char c = PeekChar(lexer);
 
 	if (IsAlpha(c))
 	{
-		return ParseIdentifier(lexer);
+		return ParseIdentifier(lexer, location);
 	}
 
 	if (IsDigit(c))
 	{
-		return ParseNumber(lexer);
+		return ParseNumber(lexer, location);
 	}
 
 	// handle two-letter tokens
@@ -457,7 +466,7 @@ GetToken(Lexer *lexer)
 				TokenKind type = tokenInfo.type;
 				AdvanceChar(lexer, 2);
 
-				return MakeToken(lexer, type, str);
+				return MakeToken(lexer, type, str, location);
 			}
 		}
 	}
@@ -468,7 +477,7 @@ GetToken(Lexer *lexer)
 		Lexer saveLexer = *lexer;
 
 		AdvanceChar(lexer); // eat the '#'
-		Token identifier = ParseIdentifier(lexer);
+		Token identifier = ParseIdentifier(lexer, {});
 
 		if (identifier.str == "include")
 		{
@@ -476,34 +485,37 @@ GetToken(Lexer *lexer)
 
 			if (PeekChar(lexer) != '"')
 			{
-				return ErrorToken(lexer, "expected \"filename\" after #include");
+				return ErrorToken(lexer, "expected \"filename\" after #include", location);
 			}
 
-			Token pathToken = ParseString(lexer);
+			Token pathToken = ParseString(lexer, {});
 
 			Assert(pathToken.str.count >= 2);
 			string path = { pathToken.str.data + 1, pathToken.str.count - 2};
 
 			if (lexer->includeStack.count >= MAX_INCLUDE_DEPTH)
 			{
-				return ErrorToken(lexer, "#include nesting too deep (circular include?)");
+				return ErrorToken(lexer, "#include nesting too deep (circular include?)", location);
 			}
 
 			string fileData = LoadFile(path);
-			if (!fileData.data)
+			if (fileData.count == 0)
 			{
-				return ErrorToken(lexer, "cannot open included file");
+				return ErrorToken(lexer, "cannot open included file", location);
 			}
 
 			LexerFrame frame = {};
 			frame.current = lexer->current;
 			frame.line = lexer->line;
 			frame.fileName = lexer->fileName;
+			frame.lineStart = lexer->lineStart;
+
 			ArrayAdd(&lexer->includeStack, frame);
 
 			lexer->current = fileData.data;
 			lexer->line = 1;
 			lexer->fileName = path;
+			lexer->lineStart = lexer->current;
 
 			return GetToken(lexer);
 		}
@@ -538,13 +550,13 @@ GetToken(Lexer *lexer)
 	{
 		string str = {lexer->current, 1};
 		AdvanceChar(lexer);
-		return MakeToken(lexer, (TokenKind)c, str);
+		return MakeToken(lexer, (TokenKind)c, str, location);
 	}
 
 	if (c == '"')
 	{
-		return ParseString(lexer);
+		return ParseString(lexer, location);
 	}
 
-	return ErrorToken(lexer, "unexpected character");
+	return ErrorToken(lexer, "unexpected character", location);
 }

@@ -52,24 +52,24 @@ LeftBindingPower(TokenKind type)
 
 template <typename T>
 internal T *
-MakeNode(int line,
+MakeNode(SourceLocation location,
 		 Arena *arena)
 {
 	T *node = PushStruct<T>(arena);
 	node->kind = T::KIND;
-	node->line = line;
+	node->location = location;
 
 	return node;
 }
 
 internal BinaryNode *
 MakeBinaryNode(BinaryOp op,
-			   int line,
+			   SourceLocation location,
 			   Node *lhs,
 			   Node *rhs,
 			   Arena *arena)
 {
-	BinaryNode *node = MakeNode<BinaryNode>(line, arena);
+	BinaryNode *node = MakeNode<BinaryNode>(location, arena);
 	node->op = op;
 	node->lhs = lhs;
 	node->rhs = rhs;
@@ -78,11 +78,11 @@ MakeBinaryNode(BinaryOp op,
 }
 
 internal NumberNode *
-MakeNumberNode(int line,
+MakeNumberNode(SourceLocation location,
 			   i64 numberValue,
 			   Arena *arena)
 {
-	NumberNode *node = MakeNode<NumberNode>(line, arena);
+	NumberNode *node = MakeNode<NumberNode>(location, arena);
 	node->int64Value = numberValue;
 
 	return node;
@@ -94,7 +94,8 @@ ErrorAtTokenVA(Parser *parser,
 			   const char *format,
 			   va_list args)
 {
-	fprintf(stderr, "line %d: ", token.line);
+	fprintf(stderr, STR_FMT "(%d, %d): ",
+			STR_ARG(token.location.fileName), token.location.line, token.location.column);
 	vfprintf(stderr, format, args);
 	fprintf(stderr, "\n");
 
@@ -159,7 +160,15 @@ ExpectToken(Parser *parser,
 internal void
 UnexpectedCurrentToken(Parser *parser)
 {
-	ErrorAtCurrent(parser, "unexpected token '%s'", GetTokenKindPrettyName(parser->current.kind));
+	if (parser->current.kind == TokenKind_Error)
+	{
+		string errorMessage = parser->current.str;
+		ErrorAtCurrent(parser, "syntax error: " STR_FMT, STR_ARG(errorMessage));
+	}
+	else
+	{
+		ErrorAtCurrent(parser, "unexpected token '%s'", GetTokenKindPrettyName(parser->current.kind));
+	}
 }
 
 internal Type
@@ -301,7 +310,7 @@ ParseAtom_Inner(Parser *parser,
 {
 	if (parser->current.kind == TokenKind_Number)
 	{
-		NumberNode *node = MakeNumberNode(parser->current.line, parser->current.numberValue, arena);
+		NumberNode *node = MakeNumberNode(parser->current.location, parser->current.numberValue, arena);
 		AdvanceToken(parser, lexer);
 
 		return node;
@@ -309,7 +318,7 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_String)
 	{
-		StringNode *node = MakeNode<StringNode>(parser->current.line, arena);
+		StringNode *node = MakeNode<StringNode>(parser->current.location, arena);
 
 		Assert(parser->current.str.count >= 2);
 		node->value.data = parser->current.str.data + 1;
@@ -323,7 +332,7 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_CString)
 	{
-		CStringNode *node = MakeNode<CStringNode>(parser->current.line, arena);
+		CStringNode *node = MakeNode<CStringNode>(parser->current.location, arena);
 
 		Assert(parser->current.str.count >= 3);
 		node->value.data = parser->current.str.data + 1;
@@ -349,7 +358,7 @@ ParseAtom_Inner(Parser *parser,
 		// unary minus
 		// -foo
 
-		UnaryNode *node = MakeNode<UnaryNode>(parser->current.line, arena);
+		UnaryNode *node = MakeNode<UnaryNode>(parser->current.location, arena);
 		node->op = UnaryOp_Negate;
 
 		AdvanceToken(parser, lexer);
@@ -364,7 +373,7 @@ ParseAtom_Inner(Parser *parser,
 		// logical not
 		// !foo
 
-		UnaryNode *node = MakeNode<UnaryNode>(parser->current.line, arena);
+		UnaryNode *node = MakeNode<UnaryNode>(parser->current.location, arena);
 		node->op = UnaryOp_LogicalNot;
 
 		AdvanceToken(parser, lexer);
@@ -383,7 +392,7 @@ ParseAtom_Inner(Parser *parser,
 
 			const int MAX_ARGUMENTS = 32;
 
-			CallNode *node = MakeNode<CallNode>(parser->current.line, arena);
+			CallNode *node = MakeNode<CallNode>(parser->current.location, arena);
 			node->name = parser->current.str;
 			node->expressions = PushArray<Node *>(arena, MAX_ARGUMENTS);
 			node->numExpressions = 0;
@@ -413,7 +422,7 @@ ParseAtom_Inner(Parser *parser,
 		{
 			// variable access
 
-			VarNode *node = MakeNode<VarNode>(parser->current.line, arena);
+			VarNode *node = MakeNode<VarNode>(parser->current.location, arena);
 			node->name = parser->current.str;
 
 			AdvanceToken(parser, lexer);
@@ -424,7 +433,7 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_True)
 	{
-		BoolNode *node = MakeNode<BoolNode>(parser->current.line, arena);
+		BoolNode *node = MakeNode<BoolNode>(parser->current.location, arena);
 		node->boolValue = true;
 		AdvanceToken(parser, lexer);
 
@@ -433,7 +442,7 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_False)
 	{
-		BoolNode *node = MakeNode<BoolNode>(parser->current.line, arena);
+		BoolNode *node = MakeNode<BoolNode>(parser->current.location, arena);
 		node->boolValue = false;
 		AdvanceToken(parser, lexer);
 
@@ -442,7 +451,7 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_Ampersand)
 	{
-		AddressOfNode *node = MakeNode<AddressOfNode>(parser->current.line, arena);
+		AddressOfNode *node = MakeNode<AddressOfNode>(parser->current.location, arena);
 		AdvanceToken(parser, lexer);
 
 		node->what = ParseAtom(parser, lexer, arena);
@@ -452,7 +461,7 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_Asterisk)
 	{
-		DerefNode *node = MakeNode<DerefNode>(parser->current.line, arena);
+		DerefNode *node = MakeNode<DerefNode>(parser->current.location, arena);
 		AdvanceToken(parser, lexer);
 
 		node->what = ParseAtom(parser, lexer, arena);
@@ -462,7 +471,7 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_Cast)
 	{
-		CastNode *node = MakeNode<CastNode>(parser->current.line, arena);
+		CastNode *node = MakeNode<CastNode>(parser->current.location, arena);
 		AdvanceToken(parser, lexer);
 
 		ExpectToken(parser, lexer, TokenKind_OpenParen);
@@ -493,7 +502,7 @@ ParseAtom(Parser *parser,
 	{
 		if (parser->current.kind == TokenKind_Dot)
 		{
-			FieldAccessNode *node = MakeNode<FieldAccessNode>(parser->current.line, arena);
+			FieldAccessNode *node = MakeNode<FieldAccessNode>(parser->current.location, arena);
 			node->expr = result;
 
 			AdvanceToken(parser, lexer); // eat the '.'
@@ -506,7 +515,7 @@ ParseAtom(Parser *parser,
 		}
 		else if (parser->current.kind == TokenKind_OpenBracket)
 		{
-			ArrayIndexAccessNode *node = MakeNode<ArrayIndexAccessNode>(parser->current.line, arena);
+			ArrayIndexAccessNode *node = MakeNode<ArrayIndexAccessNode>(parser->current.location, arena);
 			node->arrayExpr = result;
 
 			AdvanceToken(parser, lexer); // eat the '['
@@ -542,7 +551,7 @@ ParseExpression(Parser *parser,
 		}
 
 		TokenKind kind = parser->current.kind;
-		int line = parser->current.line;
+		SourceLocation location = parser->current.location;
 
 		AdvanceToken(parser, lexer);
 
@@ -554,21 +563,21 @@ ParseExpression(Parser *parser,
 				Assert(false);
 			} break;
 
-			case TokenKind_Plus:           lhs = MakeBinaryNode(BinaryOp_Add,          line, lhs, rhs, arena); break;
-			case TokenKind_Minus:          lhs = MakeBinaryNode(BinaryOp_Subtract,     line, lhs, rhs, arena); break;
-			case TokenKind_Asterisk:       lhs = MakeBinaryNode(BinaryOp_Multiply,     line, lhs, rhs, arena); break;
-			case TokenKind_Slash:          lhs = MakeBinaryNode(BinaryOp_Divide,       line, lhs, rhs, arena); break;
-			case TokenKind_Percent:        lhs = MakeBinaryNode(BinaryOp_Modulo,       line, lhs, rhs, arena); break;
-			case TokenKind_Less:           lhs = MakeBinaryNode(BinaryOp_Less,         line, lhs, rhs, arena); break;
-			case TokenKind_Greater:        lhs = MakeBinaryNode(BinaryOp_Greater,      line, lhs, rhs, arena); break;
-			case TokenKind_EqualEqual:     lhs = MakeBinaryNode(BinaryOp_EqualEqual,   line, lhs, rhs, arena); break;
-			case TokenKind_LessEqual:      lhs = MakeBinaryNode(BinaryOp_LessEqual,    line, lhs, rhs, arena); break;
-			case TokenKind_GreaterEqual:   lhs = MakeBinaryNode(BinaryOp_GreaterEqual, line, lhs, rhs, arena); break;
-			case TokenKind_BangEqual:      lhs = MakeBinaryNode(BinaryOp_NotEqual,     line, lhs, rhs, arena); break;
-			case TokenKind_AmpAmp:         lhs = MakeBinaryNode(BinaryOp_LogicalAnd,   line, lhs, rhs, arena); break;
-			case TokenKind_PipePipe:       lhs = MakeBinaryNode(BinaryOp_LogicalOr,    line, lhs, rhs, arena); break;
-			case TokenKind_GreaterGreater: lhs = MakeBinaryNode(BinaryOp_ShiftRight,   line, lhs, rhs, arena); break;
-			case TokenKind_LessLess:       lhs = MakeBinaryNode(BinaryOp_ShiftLeft,    line, lhs, rhs, arena); break;
+			case TokenKind_Plus:           lhs = MakeBinaryNode(BinaryOp_Add,          location, lhs, rhs, arena); break;
+			case TokenKind_Minus:          lhs = MakeBinaryNode(BinaryOp_Subtract,     location, lhs, rhs, arena); break;
+			case TokenKind_Asterisk:       lhs = MakeBinaryNode(BinaryOp_Multiply,     location, lhs, rhs, arena); break;
+			case TokenKind_Slash:          lhs = MakeBinaryNode(BinaryOp_Divide,       location, lhs, rhs, arena); break;
+			case TokenKind_Percent:        lhs = MakeBinaryNode(BinaryOp_Modulo,       location, lhs, rhs, arena); break;
+			case TokenKind_Less:           lhs = MakeBinaryNode(BinaryOp_Less,         location, lhs, rhs, arena); break;
+			case TokenKind_Greater:        lhs = MakeBinaryNode(BinaryOp_Greater,      location, lhs, rhs, arena); break;
+			case TokenKind_EqualEqual:     lhs = MakeBinaryNode(BinaryOp_EqualEqual,   location, lhs, rhs, arena); break;
+			case TokenKind_LessEqual:      lhs = MakeBinaryNode(BinaryOp_LessEqual,    location, lhs, rhs, arena); break;
+			case TokenKind_GreaterEqual:   lhs = MakeBinaryNode(BinaryOp_GreaterEqual, location, lhs, rhs, arena); break;
+			case TokenKind_BangEqual:      lhs = MakeBinaryNode(BinaryOp_NotEqual,     location, lhs, rhs, arena); break;
+			case TokenKind_AmpAmp:         lhs = MakeBinaryNode(BinaryOp_LogicalAnd,   location, lhs, rhs, arena); break;
+			case TokenKind_PipePipe:       lhs = MakeBinaryNode(BinaryOp_LogicalOr,    location, lhs, rhs, arena); break;
+			case TokenKind_GreaterGreater: lhs = MakeBinaryNode(BinaryOp_ShiftRight,   location, lhs, rhs, arena); break;
+			case TokenKind_LessLess:       lhs = MakeBinaryNode(BinaryOp_ShiftLeft,    location, lhs, rhs, arena); break;
 		}
 	}
 
@@ -587,11 +596,11 @@ ParseBlock(Parser *parser,
 {
 	const int MAX_STATEMENTS = 1024;
 
-	int openBraceTokenLine = parser->current.line;
+	SourceLocation openBraceTokenLocation = parser->current.location;
 
 	ExpectToken(parser, lexer, TokenKind_OpenBrace);
 
-	BlockNode *block = MakeNode<BlockNode>(openBraceTokenLine, arena);
+	BlockNode *block = MakeNode<BlockNode>(openBraceTokenLocation, arena);
 	block->statements = PushBumpArray<Node *>(arena, MAX_STATEMENTS);
 
 	while (parser->current.kind != TokenKind_CloseBrace
@@ -623,7 +632,7 @@ ParseReturnStatement(Parser *parser,
 					 Lexer *lexer,
 					 Arena *arena)
 {
-	ReturnNode *node = MakeNode<ReturnNode>(parser->current.line, arena);
+	ReturnNode *node = MakeNode<ReturnNode>(parser->current.location, arena);
 
 	// eat the 'return'
 	AdvanceToken(parser, lexer);
@@ -664,7 +673,7 @@ ParseIfStatement(Parser *parser,
 {
 	// if expr { statements; }
 
-	IfNode *node = MakeNode<IfNode>(parser->current.line, arena);
+	IfNode *node = MakeNode<IfNode>(parser->current.location, arena);
 
 	// eat the 'if'
 	AdvanceToken(parser, lexer);
@@ -691,7 +700,7 @@ ParseWhileStatement(Parser *parser,
 {
 	// while expr { statements; }
 
-	WhileNode *node = MakeNode<WhileNode>(parser->current.line, arena);
+	WhileNode *node = MakeNode<WhileNode>(parser->current.location, arena);
 
 	// eat the 'while'
 	AdvanceToken(parser, lexer);
@@ -710,7 +719,7 @@ ParseForStatement(Parser *parser,
 {
 	// for init; cond; incr { statements; }
 
-	BlockNode *block = MakeNode<BlockNode>(parser->current.line, arena);
+	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
 	block->statements = PushBumpArray<Node *>(arena, 2);
 
 	// eat the 'for'
@@ -721,7 +730,7 @@ ParseForStatement(Parser *parser,
 		ArrayAdd(&block->statements, init);
 	}
 
-	WhileNode *whileNode = MakeNode<WhileNode>(parser->current.line, arena);
+	WhileNode *whileNode = MakeNode<WhileNode>(parser->current.location, arena);
 
 	{
 		Node *cond = ParseExpression(parser, lexer, 0, arena);
@@ -734,7 +743,7 @@ ParseForStatement(Parser *parser,
 	Node *incr = ParseStatement(parser, lexer, arena);
 
 	{
-		BlockNode *loopBodyBlock = MakeNode<BlockNode>(parser->current.line, arena);
+		BlockNode *loopBodyBlock = MakeNode<BlockNode>(parser->current.location, arena);
 		loopBodyBlock->statements = PushBumpArray<Node *>(arena, 2);
 
 		{
@@ -759,7 +768,7 @@ ParsePrintStatement(Parser *parser,
 {
 	// print expr;
 
-	PrintNode *node = MakeNode<PrintNode>(parser->current.line, arena);
+	PrintNode *node = MakeNode<PrintNode>(parser->current.location, arena);
 
 	// eat the 'print'
 	AdvanceToken(parser, lexer);
@@ -778,7 +787,7 @@ ParseVariableDeclaration(Parser *parser,
 {
 	// variable declaration
 
-	VarDeclNode *node = MakeNode<VarDeclNode>(parser->current.line, arena);
+	VarDeclNode *node = MakeNode<VarDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
 
 	// eat the variable name
@@ -825,7 +834,7 @@ ParseAsmBlock(Parser *parser,
 			  Lexer *lexer,
 			  Arena *arena)
 {
-	AsmNode *node = MakeNode<AsmNode>(parser->current.line, arena);
+	AsmNode *node = MakeNode<AsmNode>(parser->current.location, arena);
 
 	ExpectToken(parser, lexer, TokenKind_Asm);
 
@@ -914,7 +923,7 @@ ParseStatement(Parser *parser,
 		// assignment
 		// lhs = rhs;
 
-		AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
+		AssignNode *node = MakeNode<AssignNode>(parser->current.location, arena);
 		node->lhs = expr;
 
 		AdvanceToken(parser, lexer); // eat the '='
@@ -946,14 +955,14 @@ ParseStatement(Parser *parser,
 		{
 			if (parser->current.kind == it.token)
 			{
-				AssignNode *node = MakeNode<AssignNode>(parser->current.line, arena);
+				AssignNode *node = MakeNode<AssignNode>(parser->current.location, arena);
 				node->lhs = expr;
 
 				AdvanceToken(parser, lexer);
 
 				Node *rhs = ParseExpression(parser, lexer, 0, arena);
 
-				node->rhs = MakeBinaryNode(it.op, parser->current.line, expr, rhs, arena);
+				node->rhs = MakeBinaryNode(it.op, parser->current.location, expr, rhs, arena);
 
 				ExpectToken(parser, lexer, TokenKind_Semicolon);
 
@@ -979,7 +988,7 @@ ParseFunctionDefinition(Parser *parser,
 
 	const int MAX_ARGUMENTS = 32;
 
-	FuncNode *node = MakeNode<FuncNode>(parser->current.line, arena);
+	FuncNode *node = MakeNode<FuncNode>(parser->current.location, arena);
 	node->name = parser->current.str;
 	node->params = PushArray<Node *>(arena, MAX_ARGUMENTS);
 	node->numParams = 0;
@@ -1002,7 +1011,7 @@ ParseFunctionDefinition(Parser *parser,
 			ExpectToken(parser, lexer, TokenKind_Comma);
 		}
 
-		ParamNode *param = MakeNode<ParamNode>(parser->current.line, arena);
+		ParamNode *param = MakeNode<ParamNode>(parser->current.location, arena);
 		param->name = parser->current.str;
 
 		ExpectToken(parser, lexer, TokenKind_Identifier); // eat the param name
@@ -1057,7 +1066,7 @@ ParseStructDefinition(Parser *parser,
 {
 	const int MAX_STRUCT_FIELDS = 32;
 
-	StructDeclNode *node = MakeNode<StructDeclNode>(parser->current.line, arena);
+	StructDeclNode *node = MakeNode<StructDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
 	node->fields = PushBumpArray<StructFieldDeclNode *>(arena, MAX_STRUCT_FIELDS);
 
@@ -1073,7 +1082,7 @@ ParseStructDefinition(Parser *parser,
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseBrace)
 	{
-		StructFieldDeclNode *field = MakeNode<StructFieldDeclNode>(parser->current.line, arena);
+		StructFieldDeclNode *field = MakeNode<StructFieldDeclNode>(parser->current.location, arena);
 		field->name = parser->current.str;
 
 		ExpectToken(parser, lexer, TokenKind_Identifier);
@@ -1099,7 +1108,7 @@ ParseEnumDefinition(Parser *parser,
 {
 	const int MAX_ENUMERATORS = 32;
 
-	EnumDeclNode *node = MakeNode<EnumDeclNode>(parser->current.line, arena);
+	EnumDeclNode *node = MakeNode<EnumDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
 	node->enumerators = PushBumpArray<EnumeratorDeclNode *>(arena, MAX_ENUMERATORS);
 
@@ -1115,7 +1124,7 @@ ParseEnumDefinition(Parser *parser,
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseBrace)
 	{
-		EnumeratorDeclNode *enumerator = MakeNode<EnumeratorDeclNode>(parser->current.line, arena);
+		EnumeratorDeclNode *enumerator = MakeNode<EnumeratorDeclNode>(parser->current.location, arena);
 		enumerator->name = parser->current.str;
 
 		ExpectToken(parser, lexer, TokenKind_Identifier);
@@ -1135,7 +1144,7 @@ ParseConstantDefinition(Parser *parser,
 						Lexer *lexer,
 						Arena *arena)
 {
-	ConstantDeclNode *node = MakeNode<ConstantDeclNode>(parser->current.line, arena);
+	ConstantDeclNode *node = MakeNode<ConstantDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
 
 	AdvanceToken(parser, lexer); // eat the constant name
@@ -1209,7 +1218,7 @@ ParseProgram(Parser *parser,
 {
 	const int MAX_STATEMENTS = 1024;
 
-	BlockNode *block = MakeNode<BlockNode>(1, arena);
+	BlockNode *block = MakeNode<BlockNode>({}, arena);
 	block->statements = PushBumpArray<Node *>(arena, MAX_STATEMENTS);
 
 	while (!parser->hadError

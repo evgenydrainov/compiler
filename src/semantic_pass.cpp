@@ -18,7 +18,8 @@ Error(SemanticContext *context,
 	va_list args;
 	va_start(args, format);
 
-	fprintf(stderr, "line %d: ", node->line);
+	fprintf(stderr, STR_FMT "(%d, %d): ",
+			STR_ARG(node->location.fileName), node->location.line, node->location.column);
 	vfprintf(stderr, format, args);
 	fprintf(stderr, "\n");
 
@@ -488,12 +489,12 @@ AnalyzeExpression(Node *baseNode,
 				{
 					static_assert(sizeof(NumberNode) <= sizeof(VarNode));
 
-					int line = node->line;
+					SourceLocation location = node->location;
 
 					NumberNode *newNode = (NumberNode *)node;
 					*newNode = {};
 					newNode->kind = NodeKind_Number;
-					newNode->line = line;
+					newNode->location = location;
 					newNode->inferredType.kind = TypeKind_Int64;
 					newNode->int64Value = constant->value;
 				}
@@ -594,12 +595,12 @@ AnalyzeExpression(Node *baseNode,
 					{
 						static_assert(sizeof(NumberNode) <= sizeof(FieldAccessNode));
 
-						int line = node->line;
+						SourceLocation location = node->location;
 
 						NumberNode *newNode = (NumberNode *)node;
 						*newNode = {};
 						newNode->kind = NodeKind_Number;
-						newNode->line = line;
+						newNode->location = location;
 						newNode->inferredType = *type;
 						newNode->int64Value = enumerator->value;
 					}

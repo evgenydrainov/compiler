@@ -38,10 +38,8 @@ inline Constant *
 DeclareConstant(ConstantsTable *table,
 				string name)
 {
-	Constant constant = {};
-	constant.name = name;
-
-	Constant *result = ArrayAdd(&table->constants, constant);
+	Constant *result = ArrayAdd(&table->constants, {});
+	result->name = name;
 
 	return result;
 }

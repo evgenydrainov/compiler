@@ -68,7 +68,7 @@ DEFINE_ENUM_WITH_VALUES(UnaryOp, u32, UNARY_OP_LIST);
 struct Node
 {
 	NodeKind kind;
-	int line;
+	SourceLocation location;
 
 	Type inferredType;
 };

@@ -1,40 +1,48 @@
 #include "../../modules/builtin.c"
 #include "../../modules/raylib/raylib.c"
 
+#include "title.c"
+#include "world.c"
+
 GAME_WIDTH  :: 320;
 GAME_HEIGHT :: 240;
 
+WINDOW_SCALE :: 2;
+
 GameState :: enum
 {
-	Title;
-	Gameplay;
+	TitleScreen;
+	World;
 };
 
 Game :: struct
 {
 	state: GameState;
+	title: TitleScreen;
+	world: World;
 };
 
 GameUpdate :: proc(game: *Game)
 {
-	if game.state == GameState.Title
+	if game.state == GameState.TitleScreen
 	{
-
+		TitleScreenUpdate(&game.title, game);
+	}
+	else if game.state == GameState.World
+	{
+		WorldUpdate(&game.world);
 	}
 }
 
-GameRender :: proc(game: *Game)
+GameDraw :: proc(game: *Game)
 {
-	if game.state == GameState.Title
+	if game.state == GameState.TitleScreen
 	{
-		x := GAME_WIDTH/2;
-		y := GAME_HEIGHT/2;
-		
-		draw_text_centered("BREAKOUT"c, x, y, 10, 0xffffffff);
-		y += 20;
-
-		draw_text_centered("PRESS ENTER TO START"c, x, y, 10, 0xffffffff);
-		y += 20;
+		TitleScreenDraw(&game.title);
+	}
+	else if game.state == GameState.World
+	{
+		WorldDraw(&game.world);
 	}
 }
 
@@ -54,11 +62,11 @@ main :: proc() -> i64
 		ClearBackground(0);
 
 		camera: Camera2D;
-		camera.zoom = int64_to_float32(2);
+		camera.zoom = int64_to_float32(WINDOW_SCALE);
 
 		BeginMode2D(&camera);
 
-		GameRender(&game);
+		GameDraw(&game);
 
 		EndMode2D();
 

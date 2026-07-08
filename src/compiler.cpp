@@ -215,6 +215,8 @@ Compile(CompileOptions options)
 	Lexer lexer = {};
 	lexer.line = 1;
 	lexer.current = sourceCode.data;
+	lexer.fileName = { (char *)options.inputFilePath, strlen(options.inputFilePath) };
+	lexer.lineStart = lexer.current;
 
 	Arena arena = {};
 	arena.capacity = Megabytes(1);

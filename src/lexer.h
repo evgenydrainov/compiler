@@ -61,28 +61,38 @@
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 
+struct SourceLocation
+{
+	string fileName;
+	int line;
+	int column;
+};
+
 struct Token
 {
+	SourceLocation location;
 	string str;
 	i64 numberValue;
 	TokenKind kind;
-	int line;
 };
 
 struct LexerFrame
 {
-	char *current;
-	int line;
 	string fileName;
+	char *current;
+	char *lineStart;
+	int line;
 };
 
 #define MAX_INCLUDE_DEPTH 32
 
 struct Lexer
 {
-	char *current;
-	int line;
 	string fileName;
+	char *current;
+	char *lineStart;
+	int line;
+
 	StaticBumpArray<LexerFrame, MAX_INCLUDE_DEPTH> includeStack;
 };
 

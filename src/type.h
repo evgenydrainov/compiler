@@ -65,6 +65,12 @@ TypesEqual(Type a, Type b)
 		return TypesEqual(*a.pointerTo, *b.pointerTo);
 	}
 
+	if (a.kind == TypeKind_Struct
+		&& b.kind == TypeKind_Struct)
+	{
+		return a.name == b.name;
+	}
+
 	return a.kind == b.kind;
 }
 
