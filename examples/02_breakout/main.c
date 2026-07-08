@@ -24,11 +24,11 @@ Game :: struct
 
 GameUpdate :: proc(game: *Game)
 {
-	if game.state == GameState.TitleScreen
+	if game.state == .TitleScreen
 	{
 		TitleScreenUpdate(&game.title, game);
 	}
-	else if game.state == GameState.World
+	else if game.state == .World
 	{
 		WorldUpdate(&game.world);
 	}
@@ -36,11 +36,11 @@ GameUpdate :: proc(game: *Game)
 
 GameDraw :: proc(game: *Game)
 {
-	if game.state == GameState.TitleScreen
+	if game.state == .TitleScreen
 	{
 		TitleScreenDraw(&game.title);
 	}
-	else if game.state == GameState.World
+	else if game.state == .World
 	{
 		WorldDraw(&game.world);
 	}

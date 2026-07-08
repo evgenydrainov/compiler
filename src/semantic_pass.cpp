@@ -240,10 +240,6 @@ CanImplicitCast(Type destType, Node *source)
 }
 
 internal void
-AnalyzeExpression(Node *baseNode,
-				  SemanticContext *context);
-
-internal void
 AnalyzeBinaryExpression(Node *baseNode,
 						SemanticContext *context)
 {
@@ -340,7 +336,7 @@ AnalyzeBinaryExpression(Node *baseNode,
 		case BinaryOp_NotEqual:
 		{
 			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context);
+			AnalyzeExpression(node->rhs, context, node->lhs->inferredType);
 
 			if (TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
 			{
@@ -373,9 +369,10 @@ AnalyzeBinaryExpression(Node *baseNode,
 	}
 }
 
-internal void
+void
 AnalyzeExpression(Node *baseNode,
-				  SemanticContext *context)
+				  SemanticContext *context,
+				  Type expectedType)
 {
 	SymbolTable    *symTable   = context->symTable;
 	FunctionTable  *funcTable  = context->funcTable;
@@ -585,6 +582,41 @@ AnalyzeExpression(Node *baseNode,
 		{
 			FieldAccessNode *node = As<FieldAccessNode>(baseNode);
 
+			if (!node->expr)
+			{
+				// implicit enum
+				// color: Color = .Red;
+				
+				if (expectedType.kind == TypeKind_Enum)
+				{
+					EnumeratorInfo *enumerator = FindEnumerator(expectedType.enumInfo, node->fieldName);
+					if (enumerator)
+					{
+						static_assert(sizeof(NumberNode) <= sizeof(FieldAccessNode));
+
+						SourceLocation location = node->location;
+
+						NumberNode *newNode = (NumberNode *)node;
+						*newNode = {};
+						newNode->kind = NodeKind_Number;
+						newNode->location = location;
+						newNode->inferredType = expectedType;
+						newNode->int64Value = enumerator->value;
+					}
+					else
+					{
+						Error(context, node, "enumerator " STR_FMT_QUOTED " does not exist",
+							  STR_ARG(node->fieldName));
+					}
+				}
+				else
+				{
+					Error(context, node, "");
+				}
+
+				break;
+			}
+
 			if (node->expr->kind == NodeKind_Var)
 			{
 				Type *type = LookupType(typeTable, As<VarNode>(node->expr)->name);
@@ -763,7 +795,7 @@ AnalyzeStatement(Node *baseNode,
 			AssignNode *node = As<AssignNode>(baseNode);
 
 			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context);
+			AnalyzeExpression(node->rhs, context, node->lhs->inferredType);
 
 			if (IsLValue(node->lhs))
 			{

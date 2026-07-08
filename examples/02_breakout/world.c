@@ -1,7 +1,16 @@
 PADDLE_WIDTH :: 40;
 PADDLE_HEIGHT :: 10;
 
+BRICK_WIDTH :: 40;
+BRICK_HEIGHT :: 10;
+
 Paddle :: struct
+{
+	x: int;
+	y: int;
+};
+
+Brick :: struct
 {
 	x: int;
 	y: int;

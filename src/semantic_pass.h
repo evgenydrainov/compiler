@@ -26,3 +26,7 @@ struct SemanticContext
 void SemanticPass(Node *_program,
 				  SemanticContext *context,
 				  Arena *arena);
+
+void AnalyzeExpression(Node *baseNode,
+					   SemanticContext *context,
+					   Type expectedType = {});

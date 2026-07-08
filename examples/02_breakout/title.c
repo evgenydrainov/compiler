@@ -8,7 +8,7 @@ TitleScreenUpdate :: proc(title: *TitleScreen,
 {
 	if IsKeyPressed(KEY_ENTER)
 	{
-		game.state = GameState.World;
+		game.state = .World;
 		WorldInit(&game.world);
 	}
 }

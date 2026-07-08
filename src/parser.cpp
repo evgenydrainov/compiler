@@ -495,7 +495,12 @@ ParseAtom(Parser *parser,
 		  Lexer *lexer,
 		  Arena *arena)
 {
-	Node *result = ParseAtom_Inner(parser, lexer, arena);
+	Node *result = nullptr;
+	
+	if (parser->current.kind != TokenKind_Dot)
+	{
+		result = ParseAtom_Inner(parser, lexer, arena);
+	}
 
 	while (parser->current.kind == TokenKind_Dot
 		   || parser->current.kind == TokenKind_OpenBracket)
