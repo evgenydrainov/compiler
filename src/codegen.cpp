@@ -151,6 +151,12 @@ GenerateLValueAddress(Node *baseNode,
 
 				size = SizeOfType(*node->arrayExpr->inferredType.pointerTo);
 			}
+			else if (node->arrayExpr->inferredType.kind == TypeKind_Array)
+			{
+				GenerateLValueAddress(node->arrayExpr, out, context);
+
+				size = SizeOfType(*node->arrayExpr->inferredType.arrayElementType);
+			}
 			else
 			{
 				Assert(false);
@@ -160,8 +166,21 @@ GenerateLValueAddress(Node *baseNode,
 
 			WritePop(out, context, "    pop rcx\n");
 			WritePop(out, context, "    pop rbx\n");
-			fprintf(out, "    lea rax, [rbx + rcx * %d]\n", size);
-			WritePush(out, context, "    push rax\n");
+
+			if (size == 1
+				|| size == 2
+				|| size == 4
+				|| size == 8)
+			{
+				fprintf(out, "    lea rax, [rbx + rcx * %d]\n", size);
+				WritePush(out, context, "    push rax\n");
+			}
+			else
+			{
+				fprintf(out, "    imul rcx, rcx, %d\n", size);
+				fprintf(out, "    add rbx, rcx\n");
+				WritePush(out, context, "    push rbx\n");
+			}
 		} break;
 
 		default:

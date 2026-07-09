@@ -13,12 +13,14 @@
 	X(TypeKind_Bool,        7,    "bool"             ) \
 	X(TypeKind_Pointer,     8,    "pointer"          ) \
 	X(TypeKind_Struct,      9,    "struct"           ) \
-	X(TypeKind_Enum,       10,    "enum"             )
+	X(TypeKind_Enum,       11,    "enum"             ) \
+	X(TypeKind_Array,      12,    "array"            )
 
 DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
 
 struct StructInfo;
 struct EnumInfo;
+struct Node;
 
 struct Type
 {
@@ -27,6 +29,10 @@ struct Type
 	Type *pointerTo;
 	StructInfo *structInfo;
 	EnumInfo *enumInfo;
+
+	Type *arrayElementType;
+	Node *arrayLengthExpr;
+	int arrayLength;
 };
 
 struct StructField
@@ -92,7 +98,16 @@ SizeOfType(Type type)
 		case TypeKind_Struct:
 		{
 			Assert(type.structInfo && "type was not resolved");
+
 			result = type.structInfo->size;
+		} break;
+
+		case TypeKind_Array:
+		{
+			Assert(type.arrayLength != 0 && "type was not resolved");
+
+			int elementSize = SizeOfType(*type.arrayElementType);
+			result = type.arrayLength * elementSize;
 		} break;
 
 		case TypeKind_Unknown: {} break;

@@ -171,6 +171,12 @@ UnexpectedCurrentToken(Parser *parser)
 	}
 }
 
+internal Node *
+ParseExpression(Parser *parser,
+				Lexer *lexer,
+				int minBindingPower,
+				Arena *arena);
+
 internal Type
 ParseType(Parser *parser,
 		  Lexer *lexer,
@@ -180,11 +186,28 @@ ParseType(Parser *parser,
 	{
 		Type type = {};
 		type.kind = TypeKind_Pointer;
+		type.pointerTo = PushStruct<Type>(arena);
 
 		AdvanceToken(parser, lexer); // eat the '*'
 
-		type.pointerTo = PushStruct<Type>(arena);
 		*type.pointerTo = ParseType(parser, lexer, arena);
+
+		return type;
+	}
+
+	if (parser->current.kind == TokenKind_OpenBracket)
+	{
+		Type type = {};
+		type.kind = TypeKind_Array;
+		type.arrayElementType = PushStruct<Type>(arena);
+
+		AdvanceToken(parser, lexer); // eat the '['
+
+		type.arrayLengthExpr = ParseExpression(parser, lexer, 0, arena);
+
+		ExpectToken(parser, lexer, TokenKind_CloseBracket);
+
+		*type.arrayElementType = ParseType(parser, lexer, arena);
 
 		return type;
 	}
@@ -291,12 +314,6 @@ ParseType(Parser *parser,
 	UnexpectedCurrentToken(parser);
 	return {};
 }
-
-internal Node *
-ParseExpression(Parser *parser,
-				Lexer *lexer,
-				int minBindingPower,
-				Arena *arena);
 
 internal Node *
 ParseAtom(Parser *parser,

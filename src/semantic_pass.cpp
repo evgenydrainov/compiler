@@ -95,6 +95,22 @@ IsLValue(Node *node)
 	}
 }
 
+internal i64
+EvaluateConstantExpression(Node *baseNode,
+						   SemanticContext *context)
+{
+	if (baseNode->kind == NodeKind_Number)
+	{
+		NumberNode *node = As<NumberNode>(baseNode);
+
+		return node->int64Value;
+	}
+
+	Error(context, baseNode, "not a constant expression");
+
+	return 0;
+}
+
 internal void
 ResolveType(Type *type,
 			SemanticContext *context,
@@ -130,10 +146,29 @@ ResolveType(Type *type,
 			// type is already resolved
 		}
 	}
-	//else if (type->kind == TypeKind_Pointer)
-	//{
-	//	ResolveType(type->pointerTo, context, nodeForError);
-	//}
+	else if (type->kind == TypeKind_Array)
+	{
+		ResolveType(type->arrayElementType, context, nodeForError);
+
+		if (type->arrayLength == 0)
+		{
+			i64 arrayLength = EvaluateConstantExpression(type->arrayLengthExpr, context);
+			if (arrayLength != 0)
+			{
+				type->arrayLength = (int)arrayLength;
+			}
+			else
+			{
+				Error(context, nodeForError, "array length cannot be zero");
+
+				type->arrayLength = 1; // avoid crash
+			}
+		}
+		else
+		{
+			// type is already resolved
+		}
+	}
 }
 
 internal bool
@@ -701,27 +736,19 @@ AnalyzeExpression(Node *baseNode,
 			AnalyzeExpression(node->arrayExpr, context);
 			AnalyzeExpression(node->indexExpr, context);
 
+			if (!IsSignedInteger(node->indexExpr->inferredType))
+			{
+				Error(context, node->indexExpr, "");
+				break;
+			}
+
 			if (node->arrayExpr->inferredType.kind == TypeKind_Pointer)
 			{
-				int size = SizeOfType(*node->arrayExpr->inferredType.pointerTo);
-				if (size == 1
-					|| size == 2
-					|| size == 4
-					|| size == 8)
-				{
-					if (IsSignedInteger(node->indexExpr->inferredType))
-					{
-						node->inferredType = *node->arrayExpr->inferredType.pointerTo;
-					}
-					else
-					{
-						Error(context, node->indexExpr, "");
-					}
-				}
-				else
-				{
-					Error(context, node->arrayExpr, "");
-				}
+				node->inferredType = *node->arrayExpr->inferredType.pointerTo;
+			}
+			else if (node->arrayExpr->inferredType.kind == TypeKind_Array)
+			{
+				node->inferredType = *node->arrayExpr->inferredType.arrayElementType;
 			}
 			else
 			{
@@ -957,22 +984,6 @@ AnalyzeTopLevelStatement(Node *baseNode,
 			Assert(false);
 		} break;
 	}
-}
-
-internal i64
-EvaluateConstantExpression(Node *baseNode,
-						   SemanticContext *context)
-{
-	if (baseNode->kind == NodeKind_Number)
-	{
-		NumberNode *node = As<NumberNode>(baseNode);
-
-		return node->int64Value;
-	}
-
-	Error(context, baseNode, "not a constant expression");
-
-	return 0;
 }
 
 void

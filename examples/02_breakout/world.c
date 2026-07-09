@@ -1,30 +1,50 @@
-PADDLE_WIDTH :: 40;
-PADDLE_HEIGHT :: 10;
-
-BRICK_WIDTH :: 40;
-BRICK_HEIGHT :: 10;
-
-Paddle :: struct
+BallState :: enum
 {
-	x: int;
-	y: int;
+	StickToPaddle;
+	Move;
 };
 
-Brick :: struct
+Entity :: struct
 {
 	x: int;
 	y: int;
+	hspeed: int;
+	vspeed: int;
+	width: int;
+	height: int;
+	ballState: BallState;
 };
 
 World :: struct
 {
-	paddle: Paddle;
+	paddle: Entity;
+	ball: Entity;
+
+	bricks: [12]Entity;
+	numBricks: int;
 };
 
 WorldInit :: proc(world: *World)
 {
 	world.paddle.x = GAME_WIDTH/2;
 	world.paddle.y = GAME_HEIGHT/10*9;
+	world.paddle.width = 40;
+	world.paddle.height = 10;
+
+	world.ball.width = 10;
+	world.ball.height = 10;
+
+	world.numBricks = 12;
+
+	for brickIndex := 0; brickIndex < world.numBricks; brickIndex += 1
+	{
+		brick := &world.bricks[brickIndex];
+
+		brick.width = 40;
+		brick.height = 10;
+		brick.x = 35 + (brick.width  + 10) * (brickIndex%6);
+		brick.y = 10 + (brick.height + 10) * (brickIndex/6);
+	}
 }
 
 WorldUpdate :: proc(world: *World)
@@ -37,11 +57,62 @@ WorldUpdate :: proc(world: *World)
 	{
 		world.paddle.x -= 4;
 	}
+
+	if world.ball.ballState == .StickToPaddle
+	{
+		world.ball.x = world.paddle.x;
+		world.ball.y = world.paddle.y - world.paddle.height/2 - world.ball.height/2;
+
+		if IsKeyPressed(KEY_SPACE)
+		{
+			world.ball.hspeed = 2;
+			world.ball.vspeed = -2;
+			world.ball.ballState = .Move;
+		}
+	}
+	else if world.ball.ballState == .Move
+	{
+		world.ball.x += world.ball.hspeed;
+		world.ball.y += world.ball.vspeed;
+
+		if world.ball.x + world.ball.width/2 >= GAME_WIDTH
+		{
+			world.ball.hspeed = -world.ball.hspeed;
+		}
+		if world.ball.x - world.ball.width/2 < 0
+		{
+			world.ball.hspeed = -world.ball.hspeed;
+		}
+
+		if world.ball.y + world.ball.height/2 >= GAME_HEIGHT
+		{
+			world.ball.vspeed = -world.ball.vspeed;
+		}
+		if world.ball.y - world.ball.height/2 < 0
+		{
+			world.ball.vspeed = -world.ball.vspeed;
+		}
+	}
+}
+
+DrawEntity :: proc(entity: *Entity, color: int)
+{
+	DrawRectangle(cast(i32)(entity.x - entity.width/2),
+				  cast(i32)(entity.y - entity.height/2),
+				  cast(i32)entity.width,
+				  cast(i32)entity.height,
+				  color);
 }
 
 WorldDraw :: proc(world: *World)
 {
-	DrawRectangle(cast(i32)(world.paddle.x-PADDLE_WIDTH/2), cast(i32)(world.paddle.y-PADDLE_HEIGHT/2),
-				  PADDLE_WIDTH, PADDLE_HEIGHT,
-				  0xffffffff);
+	DrawEntity(&world.paddle, 0xffffffff);
+
+	for brickIndex := 0; brickIndex < world.numBricks; brickIndex += 1
+	{
+		brick := &world.bricks[brickIndex];
+		DrawEntity(brick, 0xffffffff);
+	}
+
+	DrawEntity(&world.ball, 0xffffffff);
 }

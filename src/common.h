@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <string.h> // for memset
 
+//#include <stdio.h>
+
 #define internal static
 #define local_persist static
 #define global_variable static
@@ -148,7 +150,13 @@ struct Arena
 
 #define DEFAULT_ALIGNMENT (sizeof(void *))
 
-#define IsPowerOfTwo(x) ((x) != 0 && ((x) & ((x) - 1)) == 0)
+inline bool
+IsPowerOfTwo(usize x)
+{
+	bool result = ((x != 0)
+				   && ((x & (x - 1)) == 0));
+	return result;
+}
 
 inline usize
 AlignForward(usize ptr, usize alignment)
@@ -170,6 +178,13 @@ PushSize(Arena *arena,
 	arena->pos = alignedPos + size;
 
 	memset(result, 0, size);
+
+	/*f32 percentage = arena->pos/(f32)arena->capacity;
+	printf("%f\n", percentage);
+	if (percentage > 0.90)
+	{
+		int k = 123;
+	}*/
 
 	return result;
 }

@@ -46,7 +46,7 @@ GameDraw :: proc(game: *Game)
 	}
 }
 
-main :: proc() -> i64
+main :: proc() -> int
 {
 	InitWindow(640, 480, "breakout"c);
 	SetTargetFPS(60);

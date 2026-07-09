@@ -20,7 +20,7 @@ struct Function
 
 struct FunctionTable
 {
-	Function functions[256];
+	Function functions[128];
 	int count;
 };
 
