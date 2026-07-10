@@ -136,23 +136,35 @@ ExpectToken(Parser *parser,
 			Lexer *lexer,
 			TokenKind kind)
 {
+	bool insertedSemicolon = false;
+
 	if (kind == TokenKind_Semicolon
 		&& parser->numInsertSemicolons > 0)
 	{
 		parser->numInsertSemicolons--;
+		insertedSemicolon = true;
+	}
+
+	if (parser->current.kind == kind)
+	{
+		AdvanceToken(parser, lexer);
 	}
 	else
 	{
-		if (parser->current.kind == kind)
+		if (!insertedSemicolon)
 		{
-			AdvanceToken(parser, lexer);
-		}
-		else
-		{
-			ErrorAtCurrent(parser,
-							"expected '%s', but got '%s'",
-							GetTokenKindPrettyName(kind),
-							GetTokenKindPrettyName(parser->current.kind));
+			if (parser->current.kind == TokenKind_Error)
+			{
+				string errorMessage = parser->current.str;
+				ErrorAtCurrent(parser, "syntax error: " STR_FMT, STR_ARG(errorMessage));
+			}
+			else
+			{
+				ErrorAtCurrent(parser,
+								"expected '%s', but got '%s'",
+								GetTokenKindPrettyName(kind),
+								GetTokenKindPrettyName(parser->current.kind));
+			}
 		}
 	}
 }
@@ -791,7 +803,10 @@ ParseForStatement(Parser *parser,
 			ArrayAdd(&loopBodyBlock->statements, loopBody);
 		}
 
-		ArrayAdd(&loopBodyBlock->statements, incr);
+		if (incr)
+		{
+			ArrayAdd(&loopBodyBlock->statements, incr);
+		}
 
 		whileNode->body = loopBodyBlock;
 	}
@@ -863,7 +878,7 @@ ParseVariableDeclaration(Parser *parser,
 	}
 	else
 	{
-		ErrorAtCurrent(parser, "expected '=' or ';'");
+		UnexpectedCurrentToken(parser);
 	}
 
 	return node;
@@ -953,7 +968,10 @@ ParseStatement(Parser *parser,
 	if (parser->current.kind == TokenKind_Semicolon)
 	{
 		// bare semicolon - empty statement
-		AdvanceToken(parser, lexer);
+
+		// call ExpectToken instead of AdvanceToken to handle numInsertSemicolons
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
 		return nullptr;
 	}
 

@@ -217,15 +217,39 @@ ParseString(Lexer *lexer, SourceLocation location)
 	AdvanceChar(lexer);
 	str.count++;
 
-	while (!IsAtEnd(lexer) && PeekChar(lexer) != '"')
+	while (!IsAtEnd(lexer)
+		   && *lexer->current != '"')
 	{
-		if (PeekChar(lexer) == '\n')
+		if (*lexer->current == '\n')
 		{
 			return ErrorToken(lexer, "newline in string", location);
 		}
 
-		AdvanceChar(lexer);
-		str.count++;
+		if (*lexer->current == '\\')
+		{
+			AdvanceChar(lexer);
+			str.count++;
+
+			if (*lexer->current == 'n'
+				|| *lexer->current == 't'
+				|| *lexer->current == 'r'
+				|| *lexer->current == '0'
+				|| *lexer->current == '\\'
+				|| *lexer->current == '"')
+			{
+				AdvanceChar(lexer);
+				str.count++;
+			}
+			else
+			{
+				return ErrorToken(lexer, "invalid escape sequence", location);
+			}
+		}
+		else
+		{
+			AdvanceChar(lexer);
+			str.count++;
+		}
 	}
 
 	if (IsAtEnd(lexer))

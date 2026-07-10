@@ -97,6 +97,18 @@ WorldUpdate :: proc(world: *World)
 		{
 			world.ball.vspeed = -world.ball.vspeed;
 		}
+
+		for brickIndex := 0; brickIndex < world.numBricks; brickIndex += 1
+		{
+			brick := &world.bricks[brickIndex];
+
+			if EntitiesCollide(&world.ball, brick)
+			{
+				world.ball.vspeed = -world.ball.vspeed;
+				//brick.width = 0;
+				//brick.height = 0;
+			}
+		}
 	}
 }
 

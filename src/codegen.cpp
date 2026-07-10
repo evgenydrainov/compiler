@@ -906,6 +906,67 @@ GenerateTopLevelStatement(Node *baseNode,
 	}
 }
 
+internal int
+WriteStringBytes(string str,
+				 FILE *out)
+{
+	int stringLength = 0;
+
+	bool needComma = false;
+
+	for (usize i = 0;
+		 i < str.count;
+		 i++)
+	{
+		if (needComma)
+		{
+			fprintf(out, ",");
+		}
+
+		if (str[i] == '\\')
+		{
+			i++;
+			if (str[i] == 'n')
+			{
+				fprintf(out, "%d", '\n');
+			}
+			else if (str[i] == 't')
+			{
+				fprintf(out, "%d", '\t');
+			}
+			else if (str[i] == 'r')
+			{
+				fprintf(out, "%d", '\r');
+			}
+			else if (str[i] == '0')
+			{
+				fprintf(out, "%d", '\0');
+			}
+			else if (str[i] == '\\')
+			{
+				fprintf(out, "%d", '\\');
+			}
+			else if (str[i] == '"')
+			{
+				fprintf(out, "%d", '"');
+			}
+			else
+			{
+				Assert(false);
+			}
+		}
+		else
+		{
+			fprintf(out, "%d", str[i]);
+		}
+
+		stringLength++;
+		needComma = true;
+	}
+
+	return stringLength;
+}
+
 void
 Generate_x86_64(Node *_program,
 				FILE *out,
@@ -951,22 +1012,26 @@ Generate_x86_64(Node *_program,
 
 	for (auto &literal : context->cstringLiterals)
 	{
-		fprintf(out, "cstring_literal_%d: db \"" STR_FMT "\", 0\n",
-				literal.uniqueLabelId,
-				STR_ARG(literal.value));
+		fprintf(out, "cstring_literal_%d: db ", literal.uniqueLabelId);
+		
+		WriteStringBytes(literal.value, out);
+
+		fprintf(out, ",0\n");
 	}
 	fprintf(out, "\n");
 
 	for (auto &literal : context->stringLiterals)
 	{
-		fprintf(out, "string_literal_%d_bytes: db \"" STR_FMT "\", 0\n",
-				literal.uniqueLabelId,
-				STR_ARG(literal.value));
+		fprintf(out, "string_literal_%d_bytes: db ", literal.uniqueLabelId);
+
+		int stringLength = WriteStringBytes(literal.value, out);
+
+		fprintf(out, ",0\n");
 
 		fprintf(out, "string_literal_%d: dq string_literal_%d_bytes, %d\n",
 				literal.uniqueLabelId,
 				literal.uniqueLabelId,
-				(int)literal.value.count);
+				stringLength);
 	}
 	fprintf(out, "\n");
 
