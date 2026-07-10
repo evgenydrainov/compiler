@@ -433,15 +433,15 @@ GetToken(Lexer *lexer)
 		return ParseNumber(lexer, location);
 	}
 
-	// handle two-letter tokens
+	// handle two-character tokens
 	{
-		struct TokenInfo
+		struct TwoCharacterTokenInfo
 		{
-			string str;
+			char str[3];
 			TokenKind type;
 		};
 
-		TokenInfo tokenInfos[] =
+		TwoCharacterTokenInfo tokenInfos[] =
 		{
 			{"!=", TokenKind_BangEqual},
 			{"==", TokenKind_EqualEqual},
@@ -523,30 +523,31 @@ GetToken(Lexer *lexer)
 		*lexer = saveLexer;
 	}
 
-	// handle one-letter tokens
-	if (c == '('
+	// handle single-character tokens
+	if (c == '!'
+		|| c == '#'
+		|| c == '%'
+		|| c == '&'
+		|| c == '('
 		|| c == ')'
-		|| c == '{'
-		|| c == '}'
-		|| c == ','
-		|| c == '.'
-		|| c == '-'
-		|| c == '+'
-		|| c == ';'
-		|| c == '/'
 		|| c == '*'
-		|| c == '['
-		|| c == ']'
-		|| c == '!'
+		|| c == '+'
+		|| c == ','
+		|| c == '-'
+		|| c == '.'
+		|| c == '/'
+		|| c == ':'
+		|| c == ';'
+		|| c == '<'
 		|| c == '='
 		|| c == '>'
-		|| c == '<'
-		|| c == ':'
-		|| c == '&'
-		|| c == '%'
-		|| c == '#'
+		|| c == '['
+		|| c == ']'
+		|| c == '^'
+		|| c == '{'
 		|| c == '|'
-		|| c == '^')
+		|| c == '}'
+		|| c == '~')
 	{
 		string str = {lexer->current, 1};
 		AdvanceChar(lexer);

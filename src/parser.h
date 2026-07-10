@@ -37,24 +37,24 @@
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
 #define BINARY_OP_LIST(X) \
-	X(BinaryOp_Add,            0,    ""  ) \
-	X(BinaryOp_Subtract,       1,    ""  ) \
-	X(BinaryOp_Multiply,       2,    ""  ) \
-	X(BinaryOp_Divide,         3,    ""  ) \
-	X(BinaryOp_Modulo,         4,    ""  ) \
-	X(BinaryOp_Less,           5,    ""  ) \
-	X(BinaryOp_Greater,        6,    ""  ) \
-	X(BinaryOp_EqualEqual,     7,    ""  ) \
-	X(BinaryOp_LessEqual,      8,    ""  ) \
-	X(BinaryOp_GreaterEqual,   9,    ""  ) \
-	X(BinaryOp_NotEqual,       10,   ""  ) \
-	X(BinaryOp_LogicalAnd,     11,   ""  ) \
-	X(BinaryOp_LogicalOr,      12,   ""  ) \
-	X(BinaryOp_BitAnd,         13,   ""  ) \
-	X(BinaryOp_BitOr,          14,   ""  ) \
-	X(BinaryOp_BitXor,         15,   ""  ) \
-	X(BinaryOp_ShiftLeft,      16,   ""  ) \
-	X(BinaryOp_ShiftRight,     17,   ""  )
+	X(BinaryOp_Add,            0,    "add"          ) \
+	X(BinaryOp_Subtract,       1,    "subtract"     ) \
+	X(BinaryOp_Multiply,       2,    "multiply"     ) \
+	X(BinaryOp_Divide,         3,    "divide"       ) \
+	X(BinaryOp_Modulo,         4,    "modulo"       ) \
+	X(BinaryOp_Less,           5,    ""             ) \
+	X(BinaryOp_Greater,        6,    ""             ) \
+	X(BinaryOp_EqualEqual,     7,    ""             ) \
+	X(BinaryOp_LessEqual,      8,    ""             ) \
+	X(BinaryOp_GreaterEqual,   9,    ""             ) \
+	X(BinaryOp_NotEqual,       10,   ""             ) \
+	X(BinaryOp_LogicalAnd,     11,   ""             ) \
+	X(BinaryOp_LogicalOr,      12,   ""             ) \
+	X(BinaryOp_BitAnd,         13,   "bit-and"      ) \
+	X(BinaryOp_BitOr,          14,   "bit-or"       ) \
+	X(BinaryOp_BitXor,         15,   "bit-xor"      ) \
+	X(BinaryOp_ShiftLeft,      16,   "shift-left"   ) \
+	X(BinaryOp_ShiftRight,     17,   "shift-right"  )
 
 DEFINE_ENUM_WITH_VALUES(BinaryOp, u32, BINARY_OP_LIST);
 
@@ -159,6 +159,7 @@ struct FuncNode : public Node
 	int numParams;
 
 	bool isForeign;
+	string foreignLinkName;
 };
 
 struct CallNode : public Node
@@ -169,6 +170,8 @@ struct CallNode : public Node
 
 	Node **expressions;
 	int numExpressions;
+
+	string linkName;
 };
 
 struct ReturnNode : public Node

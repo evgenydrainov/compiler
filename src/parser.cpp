@@ -13,31 +13,31 @@ LeftBindingPower(TokenKind type)
 		case TokenKind_AmpAmp:
 			return 2;
 
-		case TokenKind_Pipe:
-			return 3;
-
-		case TokenKind_Caret:
-			return 4;
-
-		case TokenKind_Ampersand:
-			return 5;
-
 		case TokenKind_EqualEqual:
 		case TokenKind_BangEqual:
-			return 6;
+			return 3;
 
 		case TokenKind_Greater:
 		case TokenKind_Less:
 		case TokenKind_GreaterEqual:
 		case TokenKind_LessEqual:
-			return 7;
+			return 4;
 
-		case TokenKind_GreaterGreater:
-		case TokenKind_LessLess:
-			return 8;
+		case TokenKind_Pipe:
+			return 5;
+
+		case TokenKind_Caret:
+			return 6;
+
+		case TokenKind_Ampersand:
+			return 7;
 
 		case TokenKind_Plus:
 		case TokenKind_Minus:
+			return 8;
+
+		case TokenKind_GreaterGreater:
+		case TokenKind_LessLess:
 			return 9;
 
 		case TokenKind_Asterisk:
@@ -399,6 +399,21 @@ ParseAtom_Inner(Parser *parser,
 
 		return node;
 	}
+
+	if (parser->current.kind == TokenKind_Tilde)
+	{
+		// bit-negate
+		// ~foo
+
+		UnaryNode *node = MakeNode<UnaryNode>(parser->current.location, arena);
+		node->op = UnaryOp_BitNegate;
+
+		AdvanceToken(parser, lexer);
+
+		node->expr = ParseAtom(parser, lexer, arena);
+
+		return node;
+	}
 			
 	if (parser->current.kind == TokenKind_Identifier)
 	{
@@ -585,21 +600,24 @@ ParseExpression(Parser *parser,
 				Assert(false);
 			} break;
 
-			case TokenKind_Plus:           lhs = MakeBinaryNode(BinaryOp_Add,          location, lhs, rhs, arena); break;
-			case TokenKind_Minus:          lhs = MakeBinaryNode(BinaryOp_Subtract,     location, lhs, rhs, arena); break;
-			case TokenKind_Asterisk:       lhs = MakeBinaryNode(BinaryOp_Multiply,     location, lhs, rhs, arena); break;
-			case TokenKind_Slash:          lhs = MakeBinaryNode(BinaryOp_Divide,       location, lhs, rhs, arena); break;
-			case TokenKind_Percent:        lhs = MakeBinaryNode(BinaryOp_Modulo,       location, lhs, rhs, arena); break;
-			case TokenKind_Less:           lhs = MakeBinaryNode(BinaryOp_Less,         location, lhs, rhs, arena); break;
-			case TokenKind_Greater:        lhs = MakeBinaryNode(BinaryOp_Greater,      location, lhs, rhs, arena); break;
-			case TokenKind_EqualEqual:     lhs = MakeBinaryNode(BinaryOp_EqualEqual,   location, lhs, rhs, arena); break;
-			case TokenKind_LessEqual:      lhs = MakeBinaryNode(BinaryOp_LessEqual,    location, lhs, rhs, arena); break;
-			case TokenKind_GreaterEqual:   lhs = MakeBinaryNode(BinaryOp_GreaterEqual, location, lhs, rhs, arena); break;
-			case TokenKind_BangEqual:      lhs = MakeBinaryNode(BinaryOp_NotEqual,     location, lhs, rhs, arena); break;
-			case TokenKind_AmpAmp:         lhs = MakeBinaryNode(BinaryOp_LogicalAnd,   location, lhs, rhs, arena); break;
-			case TokenKind_PipePipe:       lhs = MakeBinaryNode(BinaryOp_LogicalOr,    location, lhs, rhs, arena); break;
-			case TokenKind_GreaterGreater: lhs = MakeBinaryNode(BinaryOp_ShiftRight,   location, lhs, rhs, arena); break;
-			case TokenKind_LessLess:       lhs = MakeBinaryNode(BinaryOp_ShiftLeft,    location, lhs, rhs, arena); break;
+			case TokenKind_Plus:           {lhs = MakeBinaryNode(BinaryOp_Add,          location, lhs, rhs, arena);} break;
+			case TokenKind_Minus:          {lhs = MakeBinaryNode(BinaryOp_Subtract,     location, lhs, rhs, arena);} break;
+			case TokenKind_Asterisk:       {lhs = MakeBinaryNode(BinaryOp_Multiply,     location, lhs, rhs, arena);} break;
+			case TokenKind_Slash:          {lhs = MakeBinaryNode(BinaryOp_Divide,       location, lhs, rhs, arena);} break;
+			case TokenKind_Percent:        {lhs = MakeBinaryNode(BinaryOp_Modulo,       location, lhs, rhs, arena);} break;
+			case TokenKind_Less:           {lhs = MakeBinaryNode(BinaryOp_Less,         location, lhs, rhs, arena);} break;
+			case TokenKind_Greater:        {lhs = MakeBinaryNode(BinaryOp_Greater,      location, lhs, rhs, arena);} break;
+			case TokenKind_EqualEqual:     {lhs = MakeBinaryNode(BinaryOp_EqualEqual,   location, lhs, rhs, arena);} break;
+			case TokenKind_LessEqual:      {lhs = MakeBinaryNode(BinaryOp_LessEqual,    location, lhs, rhs, arena);} break;
+			case TokenKind_GreaterEqual:   {lhs = MakeBinaryNode(BinaryOp_GreaterEqual, location, lhs, rhs, arena);} break;
+			case TokenKind_BangEqual:      {lhs = MakeBinaryNode(BinaryOp_NotEqual,     location, lhs, rhs, arena);} break;
+			case TokenKind_AmpAmp:         {lhs = MakeBinaryNode(BinaryOp_LogicalAnd,   location, lhs, rhs, arena);} break;
+			case TokenKind_PipePipe:       {lhs = MakeBinaryNode(BinaryOp_LogicalOr,    location, lhs, rhs, arena);} break;
+			case TokenKind_GreaterGreater: {lhs = MakeBinaryNode(BinaryOp_ShiftRight,   location, lhs, rhs, arena);} break;
+			case TokenKind_LessLess:       {lhs = MakeBinaryNode(BinaryOp_ShiftLeft,    location, lhs, rhs, arena);} break;
+			case TokenKind_Ampersand:      {lhs = MakeBinaryNode(BinaryOp_BitAnd,       location, lhs, rhs, arena);} break;
+			case TokenKind_Pipe:           {lhs = MakeBinaryNode(BinaryOp_BitOr,        location, lhs, rhs, arena);} break;
+			case TokenKind_Caret:          {lhs = MakeBinaryNode(BinaryOp_BitXor,       location, lhs, rhs, arena);} break;
 		}
 	}
 
@@ -1007,6 +1025,7 @@ ParseFunctionDefinition(Parser *parser,
 	// function definition
 	// main :: proc(foo: int) -> i64 { statements; }
 	// main :: proc(foo: int) -> i64 #foreign;
+	// main :: proc(foo: int) -> i64 #foreign "link_name";
 
 	const int MAX_ARGUMENTS = 32;
 
@@ -1068,6 +1087,17 @@ ParseFunctionDefinition(Parser *parser,
 			UnexpectedCurrentToken(parser);
 		}
 		ExpectToken(parser, lexer, TokenKind_Identifier);
+
+		if (parser->current.kind == TokenKind_String)
+		{
+			node->foreignLinkName = parser->current.str;
+
+			Assert(node->foreignLinkName.count >= 2);
+			node->foreignLinkName.data++;
+			node->foreignLinkName.count -= 2;
+
+			AdvanceToken(parser, lexer);
+		}
 
 		ExpectToken(parser, lexer, TokenKind_Semicolon);
 

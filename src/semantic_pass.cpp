@@ -18,10 +18,13 @@ Error(SemanticContext *context,
 	va_list args;
 	va_start(args, format);
 
-	fprintf(stderr, STR_FMT "(%d, %d): ",
-			STR_ARG(node->location.fileName), node->location.line, node->location.column);
-	vfprintf(stderr, format, args);
-	fprintf(stderr, "\n");
+	if (!context->suppressErrors)
+	{
+		fprintf(stderr, STR_FMT "(%d, %d): ",
+				STR_ARG(node->location.fileName), node->location.line, node->location.column);
+		vfprintf(stderr, format, args);
+		fprintf(stderr, "\n");
+	}
 
 	va_end(args);
 	
@@ -105,10 +108,101 @@ EvaluateConstantExpression(Node *baseNode,
 
 		return node->int64Value;
 	}
+	else if (baseNode->kind == NodeKind_Binary)
+	{
+		BinaryNode *node = As<BinaryNode>(baseNode);
 
-	Error(context, baseNode, "not a constant expression");
+		i64 value1 = EvaluateConstantExpression(node->lhs, context);
+		i64 value2 = EvaluateConstantExpression(node->rhs, context);
+
+		i64 result = 0;
+
+		switch (node->op)
+		{
+			case BinaryOp_Add:          {result = value1 + value2;} break;
+			case BinaryOp_Subtract:     {result = value1 - value2;} break;
+			case BinaryOp_Multiply:     {result = value1 * value2;} break;
+			case BinaryOp_Divide:       {result = value1 / value2;} break;
+			case BinaryOp_Modulo:       {result = value1 % value2;} break;
+			case BinaryOp_Less:         {result = value1 < value2;} break;
+			case BinaryOp_Greater:      {result = value1 > value2;} break;
+			case BinaryOp_EqualEqual:   {result = value1 == value2;} break;
+			case BinaryOp_LessEqual:    {result = value1 <= value2;} break;
+			case BinaryOp_GreaterEqual: {result = value1 >= value2;} break;
+			case BinaryOp_NotEqual:     {result = value1 != value2;} break;
+			case BinaryOp_LogicalAnd:   {result = value1 && value2;} break;
+			case BinaryOp_LogicalOr:    {result = value1 || value2;} break;
+			case BinaryOp_BitAnd:       {result = value1 & value2;} break;
+			case BinaryOp_BitOr:        {result = value1 | value2;} break;
+			case BinaryOp_BitXor:       {result = value1 ^ value2;} break;
+			case BinaryOp_ShiftLeft:    {result = value1 << value2;} break;
+			case BinaryOp_ShiftRight:   {result = value1 >> value2;} break;
+		}
+
+		return result;
+	}
+	else if (baseNode->kind == NodeKind_Var)
+	{
+		VarNode *node = As<VarNode>(baseNode);
+
+		Constant *constant = LookupConstant(context->constTable, node->name);
+		if (constant)
+		{
+			return constant->value;
+		}
+		else
+		{
+			Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
+		}
+	}
+	else if (baseNode->kind == NodeKind_Unary)
+	{
+		UnaryNode *node = As<UnaryNode>(baseNode);
+
+		i64 value = EvaluateConstantExpression(node->expr, context);
+
+		i64 result = 0;
+
+		switch (node->op)
+		{
+			case UnaryOp_Negate:     {result = -value;} break;
+			case UnaryOp_LogicalNot: {result = !value;} break;
+			case UnaryOp_BitNegate:  {result = ~value;} break;
+		}
+
+		return result;
+	}
+	else
+	{
+		Error(context, baseNode, "not a constant expression");
+	}
 
 	return 0;
+}
+
+internal bool
+TryEvaluateConstantExpression(Node *baseNode,
+							  SemanticContext *context,
+							  i64 *outResult)
+{
+	bool suppressErrors = context->suppressErrors;
+	context->suppressErrors = true;
+
+	i64 result = EvaluateConstantExpression(baseNode, context);
+	context->suppressErrors = suppressErrors;
+
+	if (!context->hadError)
+	{
+		*outResult = result;
+		return true;
+	}
+	else
+	{
+		context->hadError = false;
+
+		*outResult = 0;
+		return false;
+	}
 }
 
 internal void
@@ -181,7 +275,9 @@ IsSignedInteger(Type type)
 }
 
 internal bool
-CanImplicitCast(Type destType, Node *source)
+CanImplicitlyCast(Type destType,
+				  Node *source,
+				  SemanticContext *context)
 {
 	if (destType.kind == TypeKind_Unknown)
 	{
@@ -193,39 +289,40 @@ CanImplicitCast(Type destType, Node *source)
 		return true;
 	}
 
-	if (IsSignedInteger(destType)
-		&& source->kind == NodeKind_Number)
+	if (IsSignedInteger(destType))
 	{
-		NumberNode *number = As<NumberNode>(source);
+		i64 value;
+		if (TryEvaluateConstantExpression(source, context, &value))
+		{
+			struct Range
+			{
+				i64 min;
+				i64 max;
+			};
 
-		struct Range
-		{
-			i64 min;
-			i64 max;
-		};
+			Range range = {};
 
-		Range range = {};
+			if (destType.kind == TypeKind_Int32)
+			{
+				range = { INT32_MIN, INT32_MAX };
+			}
+			else if (destType.kind == TypeKind_Int16)
+			{
+				range = { INT16_MIN, INT16_MAX };
+			}
+			else if (destType.kind == TypeKind_Int8)
+			{
+				range = { INT8_MIN, INT8_MAX };
+			}
+			else
+			{
+				Assert(false);
+			}
 
-		if (destType.kind == TypeKind_Int32)
-		{
-			range = { INT32_MIN, INT32_MAX };
-		}
-		else if (destType.kind == TypeKind_Int16)
-		{
-			range = { INT16_MIN, INT16_MAX };
-		}
-		else if (destType.kind == TypeKind_Int8)
-		{
-			range = { INT8_MIN, INT8_MAX };
-		}
-		else
-		{
-			Assert(false);
-		}
-
-		if (number->int64Value >= range.min && number->int64Value <= range.max)
-		{
-			return true;
+			if (value >= range.min && value <= range.max)
+			{
+				return true;
+			}
 		}
 	}
 
@@ -294,36 +391,19 @@ AnalyzeBinaryExpression(Node *baseNode,
 		case BinaryOp_Modulo:
 		case BinaryOp_ShiftLeft:
 		case BinaryOp_ShiftRight:
+		case BinaryOp_BitAnd:
+		case BinaryOp_BitOr:
+		case BinaryOp_BitXor:
 		{
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
 
-			const char *opName = "";
-			if (node->op == BinaryOp_Add)
-			{
-				opName = "add";
-			}
-			else if (node->op == BinaryOp_Subtract)
-			{
-				opName = "subtract";
-			}
-			else if (node->op == BinaryOp_Multiply)
-			{
-				opName = "multiply";
-			}
-			else if (node->op == BinaryOp_Divide)
-			{
-				opName = "divide";
-			}
-			else if (node->op == BinaryOp_Modulo)
-			{
-				opName = "divide";
-			}
+			const char *opName = GetBinaryOpPrettyName(node->op);
 
 			if (IsSignedInteger(node->lhs->inferredType)
 				&& IsSignedInteger(node->rhs->inferredType))
 			{
-				if (CanImplicitCast(node->lhs->inferredType, node->rhs))
+				if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 				{
 					node->inferredType = node->lhs->inferredType;
 				}
@@ -474,7 +554,8 @@ AnalyzeExpression(Node *baseNode,
 
 			AnalyzeExpression(node->expr, context);
 
-			if (node->op == UnaryOp_Negate)
+			if (node->op == UnaryOp_Negate
+				|| node->op == UnaryOp_BitNegate)
 			{
 				if (IsSignedInteger(node->expr->inferredType))
 				{
@@ -554,7 +635,7 @@ AnalyzeExpression(Node *baseNode,
 
 						AnalyzeExpression(expr, context);
 
-						if (!CanImplicitCast(function->params[i].type, expr))
+						if (!CanImplicitlyCast(function->params[i].type, expr, context))
 						{
 							Error(context, expr, "cannot implicitly cast '%s' to '%s'",
 								  GetTypeKindPrettyName(expr->inferredType.kind),
@@ -563,6 +644,7 @@ AnalyzeExpression(Node *baseNode,
 					}
 
 					node->inferredType = function->returnType;
+					node->linkName = function->linkName;
 				}
 				else
 				{
@@ -803,7 +885,7 @@ AnalyzeStatement(Node *baseNode,
 
 				if (node->expr)
 				{
-					if (!CanImplicitCast(symbol->type, node->expr))
+					if (!CanImplicitlyCast(symbol->type, node->expr, context))
 					{
 						Error(context, node->expr, "cannot implicitly cast '%s' to '%s'",
 							  GetTypeKindPrettyName(node->expr->inferredType.kind),
@@ -826,7 +908,7 @@ AnalyzeStatement(Node *baseNode,
 
 			if (IsLValue(node->lhs))
 			{
-				if (!CanImplicitCast(node->lhs->inferredType, node->rhs))
+				if (!CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 				{
 					Error(context, node->rhs, "cannot implicitly cast '%s' to '%s'",
 						  GetTypeKindPrettyName(node->rhs->inferredType.kind),
@@ -857,7 +939,9 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->condition->inferredType.kind != TypeKind_Bool)
 			{
-				Error(context, node->condition, "'if' condition must be bool");
+				Error(context, node->condition,
+					  "'if' condition must be boolean, it is of type '%s'",
+					  GetTypeKindPrettyName(node->condition->inferredType.kind));
 			}
 		} break;
 
@@ -870,7 +954,9 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->condition->inferredType.kind != TypeKind_Bool)
 			{
-				Error(context, node->condition, "'while' condition must be bool");
+				Error(context, node->condition,
+					  "'while' condition must be boolean, it is of type '%s'",
+					  GetTypeKindPrettyName(node->condition->inferredType.kind));
 			}
 		} break;
 
@@ -894,7 +980,7 @@ AnalyzeStatement(Node *baseNode,
 			{
 				AnalyzeExpression(node->expr, context);
 				
-				if (!CanImplicitCast(context->currentFunction->returnType, node->expr))
+				if (!CanImplicitlyCast(context->currentFunction->returnType, node->expr, context))
 				{
 					Error(context, node, "cannot implicitly cast '%s' to '%s'",
 						  GetTypeKindPrettyName(node->expr->inferredType.kind),
@@ -1017,6 +1103,15 @@ SemanticPass(Node *_program,
 				Function *func = DeclareFunction(funcTable, functionDef->name);
 				func->numParams = functionDef->numParams;
 				func->returnType = functionDef->returnType;
+				func->linkName = functionDef->name;
+
+				if (functionDef->isForeign)
+				{
+					if (functionDef->foreignLinkName.count > 0)
+					{
+						func->linkName = functionDef->foreignLinkName;
+					}
+				}
 
 				for (int paramIndex = 0;
 					 paramIndex < functionDef->numParams;

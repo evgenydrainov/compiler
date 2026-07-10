@@ -16,6 +16,8 @@ struct Function
 	int numParams;
 
 	Type returnType;
+
+	string linkName;
 };
 
 struct FunctionTable

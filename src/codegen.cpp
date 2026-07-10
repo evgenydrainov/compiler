@@ -211,6 +211,9 @@ GenerateBinaryExpression(Node *baseNode,
 		case BinaryOp_Modulo:
 		case BinaryOp_ShiftLeft:
 		case BinaryOp_ShiftRight:
+		case BinaryOp_BitAnd:
+		case BinaryOp_BitOr:
+		case BinaryOp_BitXor:
 		{
 			GenerateExpression(node->lhs, out, context);
 			GenerateExpression(node->rhs, out, context);
@@ -248,6 +251,18 @@ GenerateBinaryExpression(Node *baseNode,
 			else if (node->op == BinaryOp_ShiftRight)
 			{
 				fprintf(out, "    sar rax, cl\n");
+			}
+			else if (node->op == BinaryOp_BitAnd)
+			{
+				fprintf(out, "    and rax, rcx\n");
+			}
+			else if (node->op == BinaryOp_BitOr)
+			{
+				fprintf(out, "    or rax, rcx\n");
+			}
+			else if (node->op == BinaryOp_BitXor)
+			{
+				fprintf(out, "    xor rax, rcx\n");
 			}
 			else
 			{
@@ -427,6 +442,12 @@ GenerateExpression(Node *baseNode,
 				fprintf(out, "    movzx rax, al\n");
 				WritePush(out, context, "    push rax\n");
 			}
+			else if (node->op == UnaryOp_BitNegate)
+			{
+				WritePop(out, context, "    pop rax\n");
+				fprintf(out, "    not rax\n");
+				WritePush(out, context, "    push rax\n");
+			}
 			else
 			{
 				Assert(false);
@@ -519,7 +540,7 @@ GenerateExpression(Node *baseNode,
 			fprintf(out, "\n");
 
 			fprintf(out, "    sub rsp, 32\t\t; reserve shadow space\n");
-			fprintf(out, "    call " STR_FMT "\n", STR_ARG(node->name));
+			fprintf(out, "    call " STR_FMT "\n", STR_ARG(node->linkName));
 			fprintf(out, "    add rsp, 32\t\t; free shadow space\n");
 
 			if (numArgumentsOnStack + padding/8 > 0)
@@ -900,13 +921,23 @@ Generate_x86_64(Node *_program,
 		if (it->kind == NodeKind_Func)
 		{
 			FuncNode *node = As<FuncNode>(it);
+
+			string linkName = node->name;
 			if (node->isForeign)
 			{
-				fprintf(out, "extern " STR_FMT "\n", STR_ARG(node->name));
+				if (node->foreignLinkName.count > 0)
+				{
+					linkName = node->foreignLinkName;
+				}
+			}
+
+			if (node->isForeign)
+			{
+				fprintf(out, "extern " STR_FMT "\n", STR_ARG(linkName));
 			}
 			else
 			{
-				fprintf(out, "global " STR_FMT "\n", STR_ARG(node->name));
+				fprintf(out, "global " STR_FMT "\n", STR_ARG(linkName));
 			}
 		}
 	}

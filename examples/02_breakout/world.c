@@ -92,6 +92,11 @@ WorldUpdate :: proc(world: *World)
 		{
 			world.ball.vspeed = -world.ball.vspeed;
 		}
+
+		if EntitiesCollide(&world.ball, &world.paddle)
+		{
+			world.ball.vspeed = -world.ball.vspeed;
+		}
 	}
 }
 
@@ -115,4 +120,25 @@ WorldDraw :: proc(world: *World)
 	}
 
 	DrawEntity(&world.ball, 0xffffffff);
+}
+
+EntitiesCollide :: proc(entity1: *Entity, entity2: *Entity) -> bool
+{
+	return RectVsRect(entity1.x - entity1.width/2,
+					  entity1.y - entity1.height/2,
+					  entity1.width,
+					  entity1.height,
+					  entity2.x - entity2.width/2,
+					  entity2.y - entity2.height/2,
+					  entity2.width,
+					  entity2.height);
+}
+
+RectVsRect :: proc(x1: int, y1: int, width1: int, height1: int,
+				   x2: int, y2: int, width2: int, height2: int) -> bool
+{
+	return (x1 < x2+width2
+			&& x1+width1 > x2
+			&& y1 < y2+height2
+			&& y1+height1 > y2);
 }

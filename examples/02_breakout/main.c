@@ -48,10 +48,15 @@ GameDraw :: proc(game: *Game)
 
 main :: proc() -> int
 {
-	InitWindow(640, 480, "breakout"c);
+	print_int8(123);
+	
+	InitWindow(GAME_WIDTH*WINDOW_SCALE, GAME_HEIGHT*WINDOW_SCALE, "breakout"c);
 	SetTargetFPS(60);
-
+	
 	game: Game;
+
+	foo := ~0;
+	print foo;
 
 	while !WindowShouldClose()
 	{

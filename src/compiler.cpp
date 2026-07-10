@@ -34,7 +34,7 @@ PrintTree(Node *baseNode,
 		printf("%s%s%s", prefix, isLeft ? "+-- " : "\\-- ", name);
 	}
 
-	printf(" (line=%d)", baseNode->line);
+	printf(" (line=%d)", baseNode->location.line);
 
 	if (baseNode->kind == NodeKind_Number)
 	{
