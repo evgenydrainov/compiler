@@ -232,7 +232,7 @@ ResolveType(Type *type,
 				Error(context, nodeForError, STR_FMT_QUOTED ": unknown type", STR_ARG(type->name));
 
 				local_persist StructInfo dummyStructInfo;
-				type->structInfo = &dummyStructInfo;
+				type->structInfo = &dummyStructInfo; // avoid crashes
 			}
 		}
 		else
@@ -262,6 +262,10 @@ ResolveType(Type *type,
 		{
 			// type is already resolved
 		}
+	}
+	else if (type->kind == TypeKind_Pointer)
+	{
+		ResolveType(type->pointerTo, context, nodeForError);
 	}
 }
 
@@ -1043,12 +1047,16 @@ AnalyzeTopLevelStatement(Node *baseNode,
 			{
 				ParamNode *param = As<ParamNode>(node->params[i]);
 
-				if (param->type.kind == TypeKind_Struct)
-				{
-					Error(context, param, "cannot pass struct by value");
-				}
-
 				ResolveType(&param->type, context, param);
+
+				int size = SizeOfType(param->type);
+				if (!(size == 1
+					  || size == 2
+					  || size == 4
+					  || size == 8))
+				{
+					Error(context, param, "cannot pass argument of size %d by value", size);
+				}
 
 				if (LookupSymbol(symTable, param->name, 0))
 				{
@@ -1065,7 +1073,14 @@ AnalyzeTopLevelStatement(Node *baseNode,
 			FuncNode *saveCurrentFunction = context->currentFunction;
 			context->currentFunction = node;
 
-			AnalyzeBlock(node->body, context);
+			if (node->body)
+			{
+				AnalyzeBlock(node->body, context);
+			}
+			else
+			{
+				// it's a foreign function
+			}
 
 			context->currentFunction = saveCurrentFunction;
 
@@ -1236,14 +1251,15 @@ SemanticPass(Node *_program,
 		if (it->kind == NodeKind_Func)
 		{
 			FuncNode *functionDef = As<FuncNode>(it);
-			if (!functionDef->isForeign)
+
+			// clear the symbol table for every function
+			memset(symTable, 0, sizeof(*symTable));
+
+			AnalyzeTopLevelStatement(functionDef, context);
+
+			if (functionDef->body)
 			{
 				BlockNode *functionBody = As<BlockNode>(functionDef->body);
-
-				// clear the symbol table for every function
-				memset(symTable, 0, sizeof(*symTable));
-
-				AnalyzeTopLevelStatement(functionDef, context);
 
 				int stackSize = (symTable->maxStackSize + 15) & ~15;
 				functionBody->stackSize = stackSize;
