@@ -1004,6 +1004,13 @@ AnalyzeStatement(Node *baseNode,
 			// do nothing
 		} break;
 
+		case NodeKind_Yield:
+		{
+			YieldNode *node = As<YieldNode>(baseNode);
+
+			node->yieldIndex = ++context->currentFunction->yieldIndex;
+		} break;
+
 		default:
 		{
 			AnalyzeExpression(baseNode, context);

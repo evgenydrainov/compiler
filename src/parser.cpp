@@ -939,6 +939,15 @@ ParseStatement(Parser *parser,
 		return ParsePrintStatement(parser, lexer, arena);
 	}
 
+	if (parser->current.kind == TokenKind_Yield)
+	{
+		// yield;
+		YieldNode *node = MakeNode<YieldNode>(parser->current.location, arena);
+		AdvanceToken(parser, lexer); // eat the 'yield'
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+		return node;
+	}
+
 	if (parser->current.kind == TokenKind_OpenBrace)
 	{
 		// empty scope
@@ -1100,28 +1109,38 @@ ParseFunctionDefinition(Parser *parser,
 	{
 		AdvanceToken(parser, lexer); // eat the '#'
 
-		if (parser->current.str != "foreign")
+		if (parser->current.str == "foreign")
+		{
+			ExpectToken(parser, lexer, TokenKind_Identifier);
+
+			if (parser->current.kind == TokenKind_String)
+			{
+				node->foreignLinkName = parser->current.str;
+
+				Assert(node->foreignLinkName.count >= 2);
+				node->foreignLinkName.data++;
+				node->foreignLinkName.count -= 2;
+
+				AdvanceToken(parser, lexer);
+			}
+
+			ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+			node->isForeign = true;
+		}
+		else if (parser->current.str == "coroutine")
+		{
+			ExpectToken(parser, lexer, TokenKind_Identifier);
+
+			node->isCoroutine = true;
+		}
+		else
 		{
 			UnexpectedCurrentToken(parser);
 		}
-		ExpectToken(parser, lexer, TokenKind_Identifier);
-
-		if (parser->current.kind == TokenKind_String)
-		{
-			node->foreignLinkName = parser->current.str;
-
-			Assert(node->foreignLinkName.count >= 2);
-			node->foreignLinkName.data++;
-			node->foreignLinkName.count -= 2;
-
-			AdvanceToken(parser, lexer);
-		}
-
-		ExpectToken(parser, lexer, TokenKind_Semicolon);
-
-		node->isForeign = true;
 	}
-	else
+
+	if (!node->isForeign)
 	{
 		node->body = ParseBlock(parser, lexer, arena);
 	}

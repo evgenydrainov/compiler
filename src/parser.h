@@ -32,7 +32,8 @@
 	X(NodeKind_EnumDecl,          24,    ""   ) \
 	X(NodeKind_EnumeratorDecl,    25,    ""   ) \
 	X(NodeKind_Cast,              26,    ""   ) \
-	X(NodeKind_ConstantDecl,      27,    ""   )
+	X(NodeKind_ConstantDecl,      27,    ""   ) \
+	X(NodeKind_Yield,             28,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -160,6 +161,9 @@ struct FuncNode : public Node
 
 	bool isForeign;
 	string foreignLinkName;
+
+	bool isCoroutine;
+	int yieldIndex;
 };
 
 struct CallNode : public Node
@@ -304,6 +308,13 @@ struct ConstantDeclNode : public Node
 
 	string name;
 	Node *expr;
+};
+
+struct YieldNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Yield;
+
+	int yieldIndex;
 };
 
 template <typename T>

@@ -186,6 +186,14 @@ IdentifierType(string str)
 				result = TokenKind_While;
 			}
 		} break;
+
+		case 'y':
+		{
+			if (str == "yield")
+			{
+				result = TokenKind_Yield;
+			}
+		} break;
 	}
 
 	return result;

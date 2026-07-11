@@ -4,6 +4,11 @@ string :: struct
 	count: i64;
 };
 
+CoroutineState :: struct
+{
+	state: int;
+};
+
 int64_to_float32 :: proc(value: i64) -> i32
 {
 	asm

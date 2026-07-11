@@ -806,6 +806,17 @@ GenerateStatement(Node *baseNode,
 			fprintf(out, "\n");
 		} break;
 
+		case NodeKind_Yield:
+		{
+			YieldNode *node = As<YieldNode>(baseNode);
+
+			fprintf(out, "    mov rax, [rbp - 8]\n");
+			fprintf(out, "    mov [rax], %d\n", node->yieldIndex);
+			fprintf(out, "    jmp .epilogue\n");
+			fprintf(out, ".coroutine_state_%d:\n", node->yieldIndex);
+			fprintf(out, "\n");
+		} break;
+
 		default:
 		{
 			GenerateExpression(baseNode, out, context);
@@ -870,7 +881,35 @@ GenerateTopLevelStatement(Node *baseNode,
 			}
 			fprintf(out, "\n");
 
+			if (node->isCoroutine)
+			{
+				fprintf(out, "    mov rax, [rbp - 8]\n");
+				fprintf(out, "    mov rax, [rax]\n");
+				fprintf(out, "\n");
+				
+				for (int i = 0;
+					 i <= node->yieldIndex;
+					 i++)
+				{
+					fprintf(out, "    cmp rax, %d\n", i);
+					fprintf(out, "    je .coroutine_state_%d\n", i);
+				}
+				fprintf(out, "\n");
+
+				fprintf(out, "    jmp .epilogue\n");
+				fprintf(out, "\n");
+
+				fprintf(out, ".coroutine_state_0:\n");
+			}
+
 			GenerateBlock(node->body, out, context);
+
+			if (node->isCoroutine)
+			{
+				fprintf(out, "    mov rax, qword [rbp - 8]\n");
+				fprintf(out, "    mov qword [rax], -1\n");
+				fprintf(out, "\n");
+			}
 
 			fprintf(out, ".epilogue:\n");
 			fprintf(out, "    mov rsp, rbp\n");
