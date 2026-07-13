@@ -115,6 +115,16 @@ EvaluateConstantExpression(Node *baseNode,
 		i64 value1 = EvaluateConstantExpression(node->lhs, context);
 		i64 value2 = EvaluateConstantExpression(node->rhs, context);
 
+		if (node->op == BinaryOp_Divide
+			|| node->op == BinaryOp_Modulo)
+		{
+			if (value2 == 0)
+			{
+				Error(context, baseNode, "division by zero");
+				return 0;
+			}
+		}
+
 		i64 result = 0;
 
 		switch (node->op)
@@ -145,15 +155,19 @@ EvaluateConstantExpression(Node *baseNode,
 	{
 		VarNode *node = As<VarNode>(baseNode);
 
+		i64 result = 0;
+
 		Constant *constant = LookupConstant(context->constTable, node->name);
 		if (constant)
 		{
-			return constant->value;
+			result = constant->value;
 		}
 		else
 		{
 			Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
 		}
+
+		return result;
 	}
 	else if (baseNode->kind == NodeKind_Unary)
 	{
@@ -270,15 +284,6 @@ ResolveType(Type *type,
 }
 
 internal bool
-IsSignedInteger(Type type)
-{
-	return (type.kind == TypeKind_Int64
-			|| type.kind == TypeKind_Int32
-			|| type.kind == TypeKind_Int16
-			|| type.kind == TypeKind_Int8);
-}
-
-internal bool
 CanImplicitlyCast(Type destType,
 				  Node *source,
 				  SemanticContext *context)
@@ -306,7 +311,11 @@ CanImplicitlyCast(Type destType,
 
 			Range range = {};
 
-			if (destType.kind == TypeKind_Int32)
+			if (destType.kind == TypeKind_Int64)
+			{
+				range = { INT64_MIN, INT64_MAX };
+			}
+			else if (destType.kind == TypeKind_Int32)
 			{
 				range = { INT32_MIN, INT32_MAX };
 			}
@@ -324,6 +333,47 @@ CanImplicitlyCast(Type destType,
 			}
 
 			if (value >= range.min && value <= range.max)
+			{
+				return true;
+			}
+		}
+	}
+
+	if (IsUnsignedInteger(destType))
+	{
+		i64 value;
+		if (TryEvaluateConstantExpression(source, context, &value))
+		{
+			struct Range
+			{
+				u64 min;
+				u64 max;
+			};
+
+			Range range = {};
+
+			if (destType.kind == TypeKind_UInt64)
+			{
+				range = { 0, UINT64_MAX };
+			}
+			else if (destType.kind == TypeKind_UInt32)
+			{
+				range = { 0, UINT32_MAX };
+			}
+			else if (destType.kind == TypeKind_UInt16)
+			{
+				range = { 0, UINT16_MAX };
+			}
+			else if (destType.kind == TypeKind_UInt8)
+			{
+				range = { 0, UINT8_MAX };
+			}
+			else
+			{
+				Assert(false);
+			}
+
+			if ((u64)value >= range.min && (u64)value <= range.max)
 			{
 				return true;
 			}
@@ -404,17 +454,10 @@ AnalyzeBinaryExpression(Node *baseNode,
 
 			const char *opName = GetBinaryOpPrettyName(node->op);
 
-			if (IsSignedInteger(node->lhs->inferredType)
-				&& IsSignedInteger(node->rhs->inferredType))
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
+				&& IsInteger(node->lhs->inferredType))
 			{
-				if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
-				{
-					node->inferredType = node->lhs->inferredType;
-				}
-				else
-				{
-					Error(context, node, "");
-				}
+				node->inferredType = node->lhs->inferredType;
 			}
 			else
 			{
@@ -430,22 +473,14 @@ AnalyzeBinaryExpression(Node *baseNode,
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
 
-			if (TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
+				&& IsInteger(node->lhs->inferredType))
 			{
-				if (node->lhs->inferredType.kind == TypeKind_Int64)
-				{
-					node->inferredType.kind = TypeKind_Bool;
-				}
-				else
-				{
-					Error(context, node, "cannot compare '%s' and '%s': types are not numeric",
-						  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-						  GetTypeKindPrettyName(node->rhs->inferredType.kind));
-				}
+				node->inferredType.kind = TypeKind_Bool;
 			}
 			else
 			{
-				Error(context, node, "cannot compare '%s' and '%s': types are different",
+				Error(context, node, "cannot compare '%s' and '%s'",
 					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
 					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 			}
@@ -457,13 +492,15 @@ AnalyzeBinaryExpression(Node *baseNode,
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context, node->lhs->inferredType);
 
-			if (TypesEqual(node->lhs->inferredType, node->rhs->inferredType))
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
+				&& (IsInteger(node->lhs->inferredType)
+					|| node->lhs->inferredType.kind == TypeKind_Enum))
 			{
 				node->inferredType.kind = TypeKind_Bool;
 			}
 			else
 			{
-				Error(context, node, "cannot compare '%s' and '%s': types are different",
+				Error(context, node, "cannot compare '%s' and '%s'",
 					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
 					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 			}
@@ -530,8 +567,8 @@ AnalyzeExpression(Node *baseNode,
 		{
 			baseNode->inferredType.kind = TypeKind_Pointer;
 
-			local_persist Type int8Type = { TypeKind_Int8 };
-			baseNode->inferredType.pointerTo = &int8Type;
+			local_persist Type uint8Type = { TypeKind_UInt8 };
+			baseNode->inferredType.pointerTo = &uint8Type;
 
 			CStringNode *node = As<CStringNode>(baseNode);
 
@@ -848,10 +885,14 @@ AnalyzeExpression(Node *baseNode,
 
 			AnalyzeExpression(node->what, context);
 
-			if (IsSignedInteger(node->what->inferredType)
-				&& IsSignedInteger(node->targetType))
+			if (IsInteger(node->what->inferredType)
+				&& IsInteger(node->targetType))
 			{
 				node->inferredType = node->targetType;
+			}
+			else
+			{
+				Error(context, node, "cannot cast");
 			}
 		} break;
 	}

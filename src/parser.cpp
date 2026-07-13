@@ -265,25 +265,25 @@ ParseType(Parser *parser,
 			if (parser->current.str == "u8")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int8 }; // TODO: unsigned types
+				return { .kind = TypeKind_UInt8 };
 			}
 
 			if (parser->current.str == "u16")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int16 }; // TODO: unsigned types
+				return { .kind = TypeKind_UInt16 };
 			}
 
 			if (parser->current.str == "u32")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int32 }; // TODO: unsigned types
+				return { .kind = TypeKind_UInt32 };
 			}
 
 			if (parser->current.str == "u64")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int64 }; // TODO: unsigned types
+				return { .kind = TypeKind_UInt64 };
 			}
 		} break;
 

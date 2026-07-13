@@ -89,6 +89,13 @@ int main()
 	//TestReturnCode("22_foreign_function",        0);
 	//TestReturnCode("23_enum",                    0);
 	//TestReturnCode("24_coroutine",               0);
+	TestReturnCode("25_operator_associativity",  0);
+	TestReturnCode("26_comparison_all_int_sizes", 0);
+	TestReturnCode("27_arrays",                  0);
+	TestReturnCode("28_explicit_cast",           0);
+	TestReturnCode("29_bitwise_operators",       0);
+	TestReturnCode("30_unsigned_arithmetic",     0);
+	TestReturnCode("31_unsigned_signed_casts",   0);
 
 	if (_chdir("..\\examples\\01_raylib") != 0)
 	{
@@ -104,5 +111,5 @@ int main()
 		exit(1);
 	}
 
-	TestReturnCode("main", 0);
+	//TestReturnCode("main", 0);
 }

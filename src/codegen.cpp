@@ -21,35 +21,31 @@ GenerateBlock(Node *baseNode,
 }
 
 internal void
-WritePush(FILE *out,
-		  CodegenContext *context,
-		  const char *format,
-		  ...)
+Emit(FILE *out,
+	 CodegenContext *context,
+	 const char *format,
+	 ...)
 {
 	va_list args;
 	va_start(args, format);
 
 	vfprintf(out, format, args);
+	fprintf(out, "\n");
 
 	va_end(args);
 
-	context->stackDepth++;
-}
+	string formatStr = { (char *)format, strlen(format) };
+	TrimLeft(&formatStr);
 
-internal void
-WritePop(FILE *out,
-		 CodegenContext *context,
-		 const char *format,
-		 ...)
-{
-	va_list args;
-	va_start(args, format);
+	if (StartsWith(formatStr, "push "))
+	{
+		context->stackDepth++;
+	}
 
-	vfprintf(out, format, args);
-
-	va_end(args);
-
-	context->stackDepth--;
+	if (StartsWith(formatStr, "pop "))
+	{
+		context->stackDepth--;
+	}
 }
 
 internal void
@@ -62,7 +58,7 @@ PushShadowSpace(FILE *out,
 		numBytes += 8;
 	}
 
-	fprintf(out, "    sub rsp, %d\t\t; push shadow space\n", numBytes);
+	Emit(out, context, "    sub rsp, %d\t\t; push shadow space", numBytes);
 }
 
 internal void
@@ -75,7 +71,7 @@ PopShadowSpace(FILE *out,
 		numBytes += 8;
 	}
 
-	fprintf(out, "    add rsp, %d\t\t; pop shadow space\n", numBytes);
+	Emit(out, context, "    add rsp, %d\t\t; pop shadow space", numBytes);
 }
 
 internal void
@@ -94,11 +90,11 @@ GenerateLValueAddress(Node *baseNode,
 		{
 			VarNode *node = As<VarNode>(baseNode);
 
-			fprintf(out, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED "\n",
-					node->stackOffset,
-					STR_ARG(node->name));
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED,
+				 node->stackOffset,
+				 STR_ARG(node->name));
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Deref:
@@ -124,19 +120,21 @@ GenerateLValueAddress(Node *baseNode,
 			{
 				Assert(false);
 			}
-			
-			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    add rax, %d\n", node->fieldOffset);
-			WritePush(out, context, "    push rax\n");
+
+			Emit(out, context, "    pop rax");
+			Emit(out, context, "    add rax, %d\t\t; add offset of field " STR_FMT_QUOTED,
+				 node->fieldOffset,
+				 STR_ARG(node->fieldName));
+			Emit(out, context, "    push rax");
 		} break;
 
 		case NodeKind_String:
 		{
 			StringNode *node = As<StringNode>(baseNode);
 
-			fprintf(out, "    lea rax, [rel string_literal_%d]\n", node->uniqueId);
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    lea rax, [rel string_literal_%d]", node->uniqueId);
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_ArrayIndexAccess:
@@ -164,22 +162,22 @@ GenerateLValueAddress(Node *baseNode,
 
 			GenerateExpression(node->indexExpr, out, context);
 
-			WritePop(out, context, "    pop rcx\n");
-			WritePop(out, context, "    pop rbx\n");
+			Emit(out, context, "    pop rcx");
+			Emit(out, context, "    pop rbx");
 
 			if (size == 1
 				|| size == 2
 				|| size == 4
 				|| size == 8)
 			{
-				fprintf(out, "    lea rax, [rbx + rcx * %d]\n", size);
-				WritePush(out, context, "    push rax\n");
+				Emit(out, context, "    lea rax, [rbx + rcx * %d]", size);
+				Emit(out, context, "    push rax");
 			}
 			else
 			{
-				fprintf(out, "    imul rcx, rcx, %d\n", size);
-				fprintf(out, "    add rbx, rcx\n");
-				WritePush(out, context, "    push rbx\n");
+				Emit(out, context, "    imul rcx, rcx, %d", size);
+				Emit(out, context, "    add rbx, rcx");
+				Emit(out, context, "    push rbx");
 			}
 		} break;
 
@@ -218,59 +216,95 @@ GenerateBinaryExpression(Node *baseNode,
 			GenerateExpression(node->lhs, out, context);
 			GenerateExpression(node->rhs, out, context);
 
-			WritePop(out, context, "    pop rcx\n");
-			WritePop(out, context, "    pop rax\n");
+			Emit(out, context, "    pop rcx");
+			Emit(out, context, "    pop rax");
 
 			if (node->op == BinaryOp_Add)
 			{
-				fprintf(out, "    add rax, rcx\t; perform addition\n");
+				Emit(out, context, "    add rax, rcx\t; perform addition");
 			}
 			else if (node->op == BinaryOp_Subtract)
 			{
-				fprintf(out, "    sub rax, rcx\t; perform subtraction\n");
+				Emit(out, context, "    sub rax, rcx\t; perform subtraction");
 			}
 			else if (node->op == BinaryOp_Multiply)
 			{
-				fprintf(out, "    imul rax, rcx\t; perform multiplication\n");
+				Emit(out, context, "    imul rax, rcx\t; perform multiplication");
 			}
 			else if (node->op == BinaryOp_Divide)
 			{
-				fprintf(out, "    cqo     \t\t;\n");
-				fprintf(out, "    idiv rcx\t\t; perform division\n");
+				Emit(out, context, "    cqo     \t\t;");
+
+				if (IsSignedInteger(node->inferredType))
+				{
+					Emit(out, context, "    idiv rcx\t\t; perform division");
+				}
+				else if (IsUnsignedInteger(node->inferredType))
+				{
+					Emit(out, context, "    div rcx\t\t; perform division");
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
 			else if (node->op == BinaryOp_Modulo)
 			{
-				fprintf(out, "    cqo\n");
-				fprintf(out, "    idiv rcx\n");
-				fprintf(out, "    mov rax, rdx\n");
+				Emit(out, context, "    cqo");
+
+				if (IsSignedInteger(node->inferredType))
+				{
+					Emit(out, context, "    idiv rcx\t\t; perform division");
+				}
+				else if (IsUnsignedInteger(node->inferredType))
+				{
+					Emit(out, context, "    div rcx\t\t; perform division");
+				}
+				else
+				{
+					Assert(false);
+				}
+
+				Emit(out, context, "    mov rax, rdx");
 			}
 			else if (node->op == BinaryOp_ShiftLeft)
 			{
-				fprintf(out, "    shl rax, cl\n");
+				Emit(out, context, "    shl rax, cl");
 			}
 			else if (node->op == BinaryOp_ShiftRight)
 			{
-				fprintf(out, "    sar rax, cl\n");
+				if (IsSignedInteger(node->inferredType))
+				{
+					Emit(out, context, "    sar rax, cl");
+				}
+				else if (IsUnsignedInteger(node->inferredType))
+				{
+					Emit(out, context, "    shr rax, cl");
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
 			else if (node->op == BinaryOp_BitAnd)
 			{
-				fprintf(out, "    and rax, rcx\n");
+				Emit(out, context, "    and rax, rcx");
 			}
 			else if (node->op == BinaryOp_BitOr)
 			{
-				fprintf(out, "    or rax, rcx\n");
+				Emit(out, context, "    or rax, rcx");
 			}
 			else if (node->op == BinaryOp_BitXor)
 			{
-				fprintf(out, "    xor rax, rcx\n");
+				Emit(out, context, "    xor rax, rcx");
 			}
 			else
 			{
 				Assert(false);
 			}
 
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
 		} break;
 
 		case BinaryOp_Greater:
@@ -284,25 +318,10 @@ GenerateBinaryExpression(Node *baseNode,
 			GenerateExpression(node->rhs, out, context);
 
 			const char *setccInstruction = "";
-			if (node->op == BinaryOp_Greater)
-			{
-				setccInstruction = "setg";
-			}
-			else if (node->op == BinaryOp_Less)
-			{
-				setccInstruction = "setl";
-			}
-			else if (node->op == BinaryOp_EqualEqual)
+
+			if (node->op == BinaryOp_EqualEqual)
 			{
 				setccInstruction = "sete";
-			}
-			else if (node->op == BinaryOp_GreaterEqual)
-			{
-				setccInstruction = "setge";
-			}
-			else if (node->op == BinaryOp_LessEqual)
-			{
-				setccInstruction = "setle";
 			}
 			else if (node->op == BinaryOp_NotEqual)
 			{
@@ -310,16 +329,65 @@ GenerateBinaryExpression(Node *baseNode,
 			}
 			else
 			{
-				Assert(false);
+				if (IsSignedInteger(node->lhs->inferredType))
+				{
+					if (node->op == BinaryOp_Greater)
+					{
+						setccInstruction = "setg";
+					}
+					else if (node->op == BinaryOp_Less)
+					{
+						setccInstruction = "setl";
+					}
+					else if (node->op == BinaryOp_GreaterEqual)
+					{
+						setccInstruction = "setge";
+					}
+					else if (node->op == BinaryOp_LessEqual)
+					{
+						setccInstruction = "setle";
+					}
+					else
+					{
+						Assert(false);
+					}
+				}
+				else if (IsUnsignedInteger(node->lhs->inferredType))
+				{
+					if (node->op == BinaryOp_Greater)
+					{
+						setccInstruction = "seta";
+					}
+					else if (node->op == BinaryOp_Less)
+					{
+						setccInstruction = "setb";
+					}
+					else if (node->op == BinaryOp_GreaterEqual)
+					{
+						setccInstruction = "setae";
+					}
+					else if (node->op == BinaryOp_LessEqual)
+					{
+						setccInstruction = "setbe";
+					}
+					else
+					{
+						Assert(false);
+					}
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
 
-			WritePop(out, context, "    pop rcx\n");
-			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    cmp rax, rcx\n");
-			fprintf(out, "    %s al\n", setccInstruction);
-			fprintf(out, "    movzx rax, al\n");
-			WritePush(out, context, "    push rax\t\t; push the comparison result\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    pop rcx");
+			Emit(out, context, "    pop rax");
+			Emit(out, context, "    cmp rax, rcx");
+			Emit(out, context, "    %s al", setccInstruction);
+			Emit(out, context, "    movzx rax, al");
+			Emit(out, context, "    push rax\t\t; push the comparison result");
+			Emit(out, context, "");
 		} break;
 
 		case BinaryOp_LogicalAnd:
@@ -328,25 +396,25 @@ GenerateBinaryExpression(Node *baseNode,
 
 			GenerateExpression(node->lhs, out, context);
 
-			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    cmp rax, 0\n");
-			fprintf(out, "    je .and_false_%d\n", uniqueId);
-			fprintf(out, "\n");
+			Emit(out, context, "    pop rax");
+			Emit(out, context, "    cmp rax, 0");
+			Emit(out, context, "    je .and_false_%d", uniqueId);
+			Emit(out, context, "");
 
 			GenerateExpression(node->rhs, out, context);
 
-			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    cmp rax, 0\n");
-			fprintf(out, "    je .and_false_%d\n", uniqueId);
-			fprintf(out, "\n");
+			Emit(out, context, "    pop rax");
+			Emit(out, context, "    cmp rax, 0");
+			Emit(out, context, "    je .and_false_%d", uniqueId);
+			Emit(out, context, "");
 
-			fprintf(out, "    mov rax, 1\n");
-			fprintf(out, "    jmp .and_end_%d\n", uniqueId);
-			fprintf(out, ".and_false_%d:\n", uniqueId);
-			fprintf(out, "    mov rax, 0\n");
-			fprintf(out, ".and_end_%d:\n", uniqueId);
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    mov rax, 1");
+			Emit(out, context, "    jmp .and_end_%d", uniqueId);
+			Emit(out, context, ".and_false_%d:", uniqueId);
+			Emit(out, context, "    mov rax, 0");
+			Emit(out, context, ".and_end_%d:", uniqueId);
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
 		} break;
 
 		case BinaryOp_LogicalOr:
@@ -355,25 +423,25 @@ GenerateBinaryExpression(Node *baseNode,
 
 			GenerateExpression(node->lhs, out, context);
 
-			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    cmp rax, 0\n");
-			fprintf(out, "    jne .or_true_%d\n", uniqueId);
-			fprintf(out, "\n");
+			Emit(out, context, "    pop rax");
+			Emit(out, context, "    cmp rax, 0");
+			Emit(out, context, "    jne .or_true_%d", uniqueId);
+			Emit(out, context, "");
 
 			GenerateExpression(node->rhs, out, context);
 
-			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    cmp rax, 0\n");
-			fprintf(out, "    jne .or_true_%d\n", uniqueId);
-			fprintf(out, "\n");
+			Emit(out, context, "    pop rax");
+			Emit(out, context, "    cmp rax, 0");
+			Emit(out, context, "    jne .or_true_%d", uniqueId);
+			Emit(out, context, "");
 
-			fprintf(out, "    mov rax, 0\n");
-			fprintf(out, "    jmp .or_end_%d\n", uniqueId);
-			fprintf(out, ".or_true_%d:\n", uniqueId);
-			fprintf(out, "    mov rax, 1\n");
-			fprintf(out, ".or_end_%d:\n", uniqueId);
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    mov rax, 0");
+			Emit(out, context, "    jmp .or_end_%d", uniqueId);
+			Emit(out, context, ".or_true_%d:", uniqueId);
+			Emit(out, context, "    mov rax, 1");
+			Emit(out, context, ".or_end_%d:", uniqueId);
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
 		} break;
 	}
 }
@@ -394,27 +462,27 @@ GenerateExpression(Node *baseNode,
 		{
 			NumberNode *node = As<NumberNode>(baseNode);
 
-			fprintf(out, "    mov rax, %lld\t\t; load integer literal\n", node->int64Value);
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    mov rax, %lld\t\t; load integer literal", node->int64Value);
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_CString:
 		{
 			CStringNode *node = As<CStringNode>(baseNode);
 
-			fprintf(out, "    lea rax, [rel cstring_literal_%d]\t; load string literal\n", node->uniqueId);
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    lea rax, [rel cstring_literal_%d]\t; load string literal", node->uniqueId);
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Bool:
 		{
 			BoolNode *node = As<BoolNode>(baseNode);
 
-			fprintf(out, "    mov rax, %d\t\t; load boolean literal\n", (int)node->boolValue);
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    mov rax, %d\t\t; load boolean literal", (int)node->boolValue);
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Binary:
@@ -430,30 +498,30 @@ GenerateExpression(Node *baseNode,
 
 			if (node->op == UnaryOp_Negate)
 			{
-				WritePop(out, context, "    pop rax\n");
-				fprintf(out, "    neg rax\n");
-				WritePush(out, context, "    push rax\n");
+				Emit(out, context, "    pop rax");
+				Emit(out, context, "    neg rax");
+				Emit(out, context, "    push rax");
 			}
 			else if (node->op == UnaryOp_LogicalNot)
 			{
-				WritePop(out, context, "    pop rax\n");
-				fprintf(out, "    cmp rax, 0\n");
-				fprintf(out, "    sete al\n");
-				fprintf(out, "    movzx rax, al\n");
-				WritePush(out, context, "    push rax\n");
+				Emit(out, context, "    pop rax");
+				Emit(out, context, "    cmp rax, 0");
+				Emit(out, context, "    sete al");
+				Emit(out, context, "    movzx rax, al");
+				Emit(out, context, "    push rax");
 			}
 			else if (node->op == UnaryOp_BitNegate)
 			{
-				WritePop(out, context, "    pop rax\n");
-				fprintf(out, "    not rax\n");
-				WritePush(out, context, "    push rax\n");
+				Emit(out, context, "    pop rax");
+				Emit(out, context, "    not rax");
+				Emit(out, context, "    push rax");
 			}
 			else
 			{
 				Assert(false);
 			}
 
-			fprintf(out, "\n");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Var:
@@ -463,38 +531,58 @@ GenerateExpression(Node *baseNode,
 		{
 			int size = SizeOfType(baseNode->inferredType);
 
-			const char *instruction = "mov";
-			const char *tag = "";
-			if (size == 8)
+			GenerateLValueAddress(baseNode, out, context);
+			Emit(out, context, "    pop rax");
+
+			if (IsSignedInteger(baseNode->inferredType))
 			{
-				instruction = "mov";
-				tag = ""; // empty
-			}
-			else if (size == 4)
-			{
-				instruction = "movsxd";
-				tag = "dword ";
-			}
-			else if (size == 2)
-			{
-				instruction = "movsx";
-				tag = "word ";
-			}
-			else if (size == 1)
-			{
-				instruction = "movsx";
-				tag = "byte ";
+				if (size == 8)
+				{
+					Emit(out, context, "    mov rax, qword [rax]");
+				}
+				else if (size == 4)
+				{
+					Emit(out, context, "    movsxd rax, dword [rax]");
+				}
+				else if (size == 2)
+				{
+					Emit(out, context, "    movsx rax, word [rax]");
+				}
+				else if (size == 1)
+				{
+					Emit(out, context, "    movsx rax, byte [rax]");
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
 			else
 			{
-				Assert(false);
+				if (size == 8)
+				{
+					Emit(out, context, "    mov rax, qword [rax]");
+				}
+				else if (size == 4)
+				{
+					Emit(out, context, "    mov eax, dword [rax]");
+				}
+				else if (size == 2)
+				{
+					Emit(out, context, "    movzx rax, word [rax]");
+				}
+				else if (size == 1)
+				{
+					Emit(out, context, "    movzx rax, byte [rax]");
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
 
-			GenerateLValueAddress(baseNode, out, context);
-			WritePop(out, context, "    pop rax\n");
-			fprintf(out, "    %s rax, %s[rax]\n", instruction, tag);
-			WritePush(out, context, "    push rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Cast:
@@ -522,7 +610,7 @@ GenerateExpression(Node *baseNode,
 			int padding = ((context->stackDepth + numArgumentsOnStack) % 2) ? 8 : 0;
 			if (padding)
 			{
-				fprintf(out, "    sub rsp, %d\t\t; align stack\n", padding);
+				Emit(out, context, "    sub rsp, %d\t\t; align stack", padding);
 			}
 
 			for (int i = node->numExpressions;
@@ -535,23 +623,23 @@ GenerateExpression(Node *baseNode,
 				 i < numArgumentsInRegs;
 				 i++)
 			{
-				WritePop(out, context, "    pop %s\t\t\t; put argument\n", paramRegs[i]);
+				Emit(out, context, "    pop %s\t\t\t; put argument", paramRegs[i]);
 			}
-			fprintf(out, "\n");
+			Emit(out, context, "");
 
-			fprintf(out, "    sub rsp, 32\t\t; reserve shadow space\n");
-			fprintf(out, "    call " STR_FMT "\n", STR_ARG(node->linkName));
-			fprintf(out, "    add rsp, 32\t\t; free shadow space\n");
+			Emit(out, context, "    sub rsp, 32\t\t; reserve shadow space");
+			Emit(out, context, "    call " STR_FMT, STR_ARG(node->linkName));
+			Emit(out, context, "    add rsp, 32\t\t; free shadow space");
 
 			if (numArgumentsOnStack + padding/8 > 0)
 			{
 				int cleanup = numArgumentsOnStack*8 + padding;
-				fprintf(out, "    add rsp, %d\t\t; free stack arguments\n", cleanup);
+				Emit(out, context, "    add rsp, %d\t\t; free stack arguments", cleanup);
 				context->stackDepth -= numArgumentsOnStack;
 			}
 
-			WritePush(out, context, "    push rax\t\t; push the function return value\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    push rax\t\t; push the function return value");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_AddressOf:
@@ -623,28 +711,28 @@ GenerateStatement(Node *baseNode,
 				{
 					GenerateLValueAddress(&varNode, out, context);
 
-					WritePop(out, context, "    pop rdi\n");
+					Emit(out, context, "    pop rdi");
 
 					Assert(size % 8 == 0);
 
 					for (int i = 0; i < size; i += 8)
 					{
-						fprintf(out, "    mov qword [rdi + %d], 0\n", i);
+						Emit(out, context, "    mov qword [rdi + %d], 0", i);
 					}
 
-					fprintf(out, "\n");
+					Emit(out, context, "");
 				}
 				else
 				{
 					GenerateLValueAddress(&varNode, out, context);
 
-					WritePop(out, context, "    pop rcx\n");
-					fprintf(out, "    mov rax, 0\n");
+					Emit(out, context, "    pop rcx");
+					Emit(out, context, "    mov rax, 0");
 
 					const char *reg = GetRegisterForTypeSize(varNode.inferredType);
 
-					fprintf(out, "    mov [rcx], %s\n", reg);
-					fprintf(out, "\n");
+					Emit(out, context, "    mov [rcx], %s", reg);
+					Emit(out, context, "");
 				}
 			}
 		} break;
@@ -661,31 +749,31 @@ GenerateStatement(Node *baseNode,
 				GenerateLValueAddress(node->rhs, out, context);
 				GenerateLValueAddress(node->lhs, out, context);
 
-				WritePop(out, context, "    pop rdi\n");
-				WritePop(out, context, "    pop rsi\n");
+				Emit(out, context, "    pop rdi");
+				Emit(out, context, "    pop rsi");
 
 				Assert(size % 8 == 0);
 
 				for (int i = 0; i < size; i += 8)
 				{
-					fprintf(out, "    mov rax, [rsi + %d]\n", i);
-					fprintf(out, "    mov [rdi + %d], rax\n", i);
+					Emit(out, context, "    mov rax, [rsi + %d]", i);
+					Emit(out, context, "    mov [rdi + %d], rax", i);
 				}
 
-				fprintf(out, "\n");
+				Emit(out, context, "");
 			}
 			else
 			{
 				GenerateExpression(node->rhs, out, context);
 				GenerateLValueAddress(node->lhs, out, context);
 
-				WritePop(out, context, "    pop rcx\n");
-				WritePop(out, context, "    pop rax\n");
+				Emit(out, context, "    pop rcx");
+				Emit(out, context, "    pop rax");
 
 				const char *reg = GetRegisterForTypeSize(node->lhs->inferredType);
 
-				fprintf(out, "    mov [rcx], %s\n", reg);
-				fprintf(out, "\n");
+				Emit(out, context, "    mov [rcx], %s", reg);
+				Emit(out, context, "");
 			}
 		} break;
 
@@ -699,34 +787,34 @@ GenerateStatement(Node *baseNode,
 			{
 				GenerateExpression(node->condition, out, context);
 
-				WritePop(out, context, "    pop rax\t\t; load the comparison result\n");
-				fprintf(out, "    cmp rax, 0\n");
-				fprintf(out, "    je .else_%d\n", uniqueId);
-				fprintf(out, "\n");
+				Emit(out, context, "    pop rax\t\t; load the comparison result");
+				Emit(out, context, "    cmp rax, 0");
+				Emit(out, context, "    je .else_%d", uniqueId);
+				Emit(out, context, "");
 
 				GenerateStatement(node->thenBlock, out, context);
 
-				fprintf(out, "    jmp .end_%d\n", uniqueId);
-				fprintf(out, ".else_%d:\n", uniqueId);
+				Emit(out, context, "    jmp .end_%d", uniqueId);
+				Emit(out, context, ".else_%d:", uniqueId);
 
 				GenerateStatement(node->elseBlock, out, context);
 
-				fprintf(out, ".end_%d:\n", uniqueId);
-				fprintf(out, "\n");
+				Emit(out, context, ".end_%d:", uniqueId);
+				Emit(out, context, "");
 			}
 			else
 			{
 				GenerateExpression(node->condition, out, context);
 
-				WritePop(out, context, "    pop rax\t\t; load the comparison result\n");
-				fprintf(out, "    cmp rax, 0\n");
-				fprintf(out, "    je .end_%d\n", uniqueId);
-				fprintf(out, "\n");
+				Emit(out, context, "    pop rax\t\t; load the comparison result");
+				Emit(out, context, "    cmp rax, 0");
+				Emit(out, context, "    je .end_%d", uniqueId);
+				Emit(out, context, "");
 
 				GenerateStatement(node->thenBlock, out, context);
 
-				fprintf(out, ".end_%d:\n", uniqueId);
-				fprintf(out, "\n");
+				Emit(out, context, ".end_%d:", uniqueId);
+				Emit(out, context, "");
 			}
 		} break;
 
@@ -736,20 +824,20 @@ GenerateStatement(Node *baseNode,
 
 			int uniqueId = context->uniqueLabelId++;
 
-			fprintf(out, ".loop_%d:\n", uniqueId);
+			Emit(out, context, ".loop_%d:", uniqueId);
 
 			GenerateExpression(node->condition, out, context);
 
-			WritePop(out, context, "    pop rax\t\t; load the comparison result\n");
-			fprintf(out, "    cmp rax, 0\n");
-			fprintf(out, "    je .end_%d\n", uniqueId);
-			fprintf(out, "\n");
+			Emit(out, context, "    pop rax\t\t; load the comparison result");
+			Emit(out, context, "    cmp rax, 0");
+			Emit(out, context, "    je .end_%d", uniqueId);
+			Emit(out, context, "");
 
 			GenerateBlock(node->body, out, context);
 
-			fprintf(out, "    jmp .loop_%d\n", uniqueId);
-			fprintf(out, ".end_%d:\n", uniqueId);
-			fprintf(out, "\n");
+			Emit(out, context, "    jmp .loop_%d", uniqueId);
+			Emit(out, context, ".end_%d:", uniqueId);
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Print:
@@ -758,15 +846,15 @@ GenerateStatement(Node *baseNode,
 
 			GenerateExpression(node->expr, out, context);
 
-			WritePop(out, context, "    pop rax\t\t\t; store expression result into rax\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    pop rax\t\t\t; store expression result into rax");
+			Emit(out, context, "");
 
-			fprintf(out, "    lea rcx, [rel builtin_print_format]\t\t; put 1st argument into rcx\n");
-			fprintf(out, "    mov rdx, rax\t\t\t; put 2nd argument into rdx\n");
+			Emit(out, context, "    lea rcx, [rel builtin_print_format]\t\t; put 1st argument into rcx");
+			Emit(out, context, "    mov rdx, rax\t\t\t; put 2nd argument into rdx");
 			PushShadowSpace(out, context);
-			fprintf(out, "    call printf\n");
+			Emit(out, context, "    call printf");
 			PopShadowSpace(out, context);
-			fprintf(out, "\n");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Block:
@@ -784,45 +872,45 @@ GenerateStatement(Node *baseNode,
 			{
 				GenerateExpression(node->expr, out, context);
 
-				WritePop(out, context, "    pop rax\t\t\t; store expression result into rax\n");
+				Emit(out, context, "    pop rax\t\t\t; store expression result into rax");
 			}
 			else
 			{
 				// bare return;
 			}
-			
-			fprintf(out, "    jmp .epilogue\t\t; return\n");
-			fprintf(out, "\n");
+
+			Emit(out, context, "    jmp .epilogue\t\t; return");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Asm:
 		{
 			AsmNode *node = As<AsmNode>(baseNode);
 
-			fprintf(out, "    ; inline assembly begin\n");
-			fprintf(out, STR_FMT, STR_ARG(node->code));
-			fprintf(out, "\n");
-			fprintf(out, "    ; inline assembly end\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    ; inline assembly begin");
+			Emit(out, context, STR_FMT, STR_ARG(node->code));
+			Emit(out, context, "");
+			Emit(out, context, "    ; inline assembly end");
+			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Yield:
 		{
 			YieldNode *node = As<YieldNode>(baseNode);
 
-			fprintf(out, "    mov rax, [rbp - 8]\n");
-			fprintf(out, "    mov [rax], %d\n", node->yieldIndex);
-			fprintf(out, "    jmp .epilogue\n");
-			fprintf(out, ".coroutine_state_%d:\n", node->yieldIndex);
-			fprintf(out, "\n");
+			Emit(out, context, "    mov rax, [rbp - 8]");
+			Emit(out, context, "    mov [rax], %d", node->yieldIndex);
+			Emit(out, context, "    jmp .epilogue");
+			Emit(out, context, ".coroutine_state_%d:", node->yieldIndex);
+			Emit(out, context, "");
 		} break;
 
 		default:
 		{
 			GenerateExpression(baseNode, out, context);
 
-			WritePop(out, context, "    pop rax\t\t\t; discard the result\n");
-			fprintf(out, "\n");
+			Emit(out, context, "    pop rax\t\t\t; discard the result");
+			Emit(out, context, "");
 		} break;
 	}
 }
@@ -844,11 +932,12 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			BlockNode *functionBody = As<BlockNode>(node->body);
 
-			fprintf(out, STR_FMT ":\n", STR_ARG(node->name));
-			fprintf(out, "    push rbp\n"); // does not affect context->stackDepth
-			fprintf(out, "    mov rbp, rsp\n");
-			fprintf(out, "    sub rsp, %d\n", functionBody->stackSize);
-			fprintf(out, "\n");
+			Emit(out, context, STR_FMT ":", STR_ARG(node->name));
+			Emit(out, context, "    push rbp");
+			context->stackDepth--;
+			Emit(out, context, "    mov rbp, rsp");
+			Emit(out, context, "    sub rsp, %d", functionBody->stackSize);
+			Emit(out, context, "");
 
 			const char *paramRegs[] =
 			{
@@ -866,7 +955,7 @@ GenerateTopLevelStatement(Node *baseNode,
 			{
 				ParamNode *param = As<ParamNode>(node->params[i]);
 
-				fprintf(out, "    mov [rbp - %d], %s\t\t; unpack argument\n", param->stackOffset, paramRegs[i]);
+				Emit(out, context, "    mov [rbp - %d], %s\t\t; unpack argument", param->stackOffset, paramRegs[i]);
 			}
 
 			for (int i = numParamsInRegs;
@@ -876,46 +965,47 @@ GenerateTopLevelStatement(Node *baseNode,
 				ParamNode *param = As<ParamNode>(node->params[i]);
 
 				int callerOffset = 48 + (i - numParamsInRegs)*8;
-				fprintf(out, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d\n", callerOffset, i+1);
-				fprintf(out, "    mov [rbp - %d], rax\n", param->stackOffset);
+				Emit(out, context, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d", callerOffset, i+1);
+				Emit(out, context, "    mov [rbp - %d], rax", param->stackOffset);
 			}
-			fprintf(out, "\n");
+			Emit(out, context, "");
 
 			if (node->isCoroutine)
 			{
-				fprintf(out, "    mov rax, [rbp - 8]\n");
-				fprintf(out, "    mov rax, [rax]\n");
-				fprintf(out, "\n");
-				
+				Emit(out, context, "    mov rax, [rbp - 8]");
+				Emit(out, context, "    mov rax, [rax]");
+				Emit(out, context, "");
+
 				for (int i = 0;
 					 i <= node->yieldIndex;
 					 i++)
 				{
-					fprintf(out, "    cmp rax, %d\n", i);
-					fprintf(out, "    je .coroutine_state_%d\n", i);
+					Emit(out, context, "    cmp rax, %d", i);
+					Emit(out, context, "    je .coroutine_state_%d", i);
 				}
-				fprintf(out, "\n");
+				Emit(out, context, "");
 
-				fprintf(out, "    jmp .epilogue\n");
-				fprintf(out, "\n");
+				Emit(out, context, "    jmp .epilogue");
+				Emit(out, context, "");
 
-				fprintf(out, ".coroutine_state_0:\n");
+				Emit(out, context, ".coroutine_state_0:");
 			}
 
 			GenerateBlock(node->body, out, context);
 
 			if (node->isCoroutine)
 			{
-				fprintf(out, "    mov rax, qword [rbp - 8]\n");
-				fprintf(out, "    mov qword [rax], -1\n");
-				fprintf(out, "\n");
+				Emit(out, context, "    mov rax, qword [rbp - 8]");
+				Emit(out, context, "    mov qword [rax], -1");
+				Emit(out, context, "");
 			}
 
-			fprintf(out, ".epilogue:\n");
-			fprintf(out, "    mov rsp, rbp\n");
-			fprintf(out, "    pop rbp\n"); // does not affect context->stackDepth
-			fprintf(out, "    ret\n");
-			fprintf(out, "\n");
+			Emit(out, context, ".epilogue:");
+			Emit(out, context, "    mov rsp, rbp");
+			Emit(out, context, "    pop rbp");
+			context->stackDepth++;
+			Emit(out, context, "    ret");
+			Emit(out, context, "");
 
 			Assert(context->stackDepth == 0);
 		} break;
@@ -1052,7 +1142,7 @@ Generate_x86_64(Node *_program,
 	for (auto &literal : context->cstringLiterals)
 	{
 		fprintf(out, "cstring_literal_%d: db ", literal.uniqueLabelId);
-		
+
 		WriteStringBytes(literal.value, out);
 
 		fprintf(out, ",0\n");

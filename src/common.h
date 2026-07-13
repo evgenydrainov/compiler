@@ -327,3 +327,38 @@ ArrayAdd(StaticBumpArray<T, capacity> *array, const T &value)
 
 	return result;
 }
+
+inline bool
+IsSpace(char c)
+{
+	bool result = (c == ' '
+				   || c == '\n'
+				   || c == '\r'
+				   || c == '\t');
+	return result;
+}
+
+inline void
+TrimLeft(string *str)
+{
+	while (str->count > 0
+		   && IsSpace(str->data[0]))
+	{
+		str->data++;
+		str->count--;
+	}
+}
+
+inline bool
+StartsWith(string str, string prefix)
+{
+	bool result = false;
+
+	if (str.count >= prefix.count)
+	{
+		str.count = prefix.count;
+		result = (str == prefix);
+	}
+
+	return result;
+}

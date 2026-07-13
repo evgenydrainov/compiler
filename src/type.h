@@ -10,11 +10,15 @@
 	X(TypeKind_Int16,       4,    "i16"              ) \
 	X(TypeKind_Int32,       5,    "i32"              ) \
 	X(TypeKind_Int64,       6,    "i64"              ) \
-	X(TypeKind_Bool,        7,    "bool"             ) \
-	X(TypeKind_Pointer,     8,    "pointer"          ) \
-	X(TypeKind_Struct,      9,    "struct"           ) \
-	X(TypeKind_Enum,       11,    "enum"             ) \
-	X(TypeKind_Array,      12,    "array"            )
+	X(TypeKind_UInt8,       7,    "u8"               ) \
+	X(TypeKind_UInt16,      8,    "u16"              ) \
+	X(TypeKind_UInt32,      9,    "u32"              ) \
+	X(TypeKind_UInt64,     10,    "u64"              ) \
+	X(TypeKind_Bool,       11,    "bool"             ) \
+	X(TypeKind_Pointer,    12,    "pointer"          ) \
+	X(TypeKind_Struct,     13,    "struct"           ) \
+	X(TypeKind_Enum,       14,    "enum"             ) \
+	X(TypeKind_Array,      15,    "array"            )
 
 DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
 
@@ -91,6 +95,12 @@ SizeOfType(Type type)
 		case TypeKind_Int16:   {result = 2;} break;
 		case TypeKind_Int32:   {result = 4;} break;
 		case TypeKind_Int64:   {result = 8;} break;
+
+		case TypeKind_UInt8:   {result = 1;} break;
+		case TypeKind_UInt16:  {result = 2;} break;
+		case TypeKind_UInt32:  {result = 4;} break;
+		case TypeKind_UInt64:  {result = 8;} break;
+
 		case TypeKind_Pointer: {result = 8;} break;
 		case TypeKind_Bool:    {result = 8;} break;
 		case TypeKind_Enum:    {result = 8;} break;
@@ -161,4 +171,29 @@ FindEnumerator(EnumInfo *info, string name)
 	}
 
 	return result;
+}
+
+inline bool
+IsSignedInteger(Type type)
+{
+	return (type.kind == TypeKind_Int64
+			|| type.kind == TypeKind_Int32
+			|| type.kind == TypeKind_Int16
+			|| type.kind == TypeKind_Int8);
+}
+
+inline bool
+IsUnsignedInteger(Type type)
+{
+	return (type.kind == TypeKind_UInt64
+			|| type.kind == TypeKind_UInt32
+			|| type.kind == TypeKind_UInt16
+			|| type.kind == TypeKind_UInt8);
+}
+
+inline bool
+IsInteger(Type type)
+{
+	return (IsSignedInteger(type)
+			|| IsUnsignedInteger(type));
 }
