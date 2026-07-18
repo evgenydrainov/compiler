@@ -59,11 +59,13 @@
 	X(TokenKind_Enum,             152,       "enum"           ) \
 	X(TokenKind_Cast,             153,       "cast"           ) \
 	X(TokenKind_Yield,            154,       "yield"          ) \
+	X(TokenKind_Break,            155,       "break"          ) \
+	X(TokenKind_Continue,         156,       "continue"       ) \
 	/* other */ \
-	X(TokenKind_Identifier,       155,       "identifier"     ) \
-	X(TokenKind_Number,           156,       "number"         ) \
-	X(TokenKind_String,           157,       "string"         ) \
-	X(TokenKind_CString,          158,       "cstring"        )
+	X(TokenKind_Identifier,       157,       "identifier"     ) \
+	X(TokenKind_Number,           158,       "number"         ) \
+	X(TokenKind_String,           159,       "string"         ) \
+	X(TokenKind_CString,          160,       "cstring"        )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 

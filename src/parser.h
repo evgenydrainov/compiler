@@ -33,7 +33,10 @@
 	X(NodeKind_EnumeratorDecl,    25,    ""   ) \
 	X(NodeKind_Cast,              26,    ""   ) \
 	X(NodeKind_ConstantDecl,      27,    ""   ) \
-	X(NodeKind_Yield,             28,    ""   )
+	X(NodeKind_Yield,             28,    ""   ) \
+	X(NodeKind_Break,             29,    ""   ) \
+	X(NodeKind_Continue,          30,    ""   ) \
+	X(NodeKind_For,               31,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -315,6 +318,26 @@ struct YieldNode : public Node
 	static constexpr NodeKind KIND = NodeKind_Yield;
 
 	int yieldIndex;
+};
+
+struct BreakNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Break;
+};
+
+struct ContinueNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Continue;
+};
+
+struct ForNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_For;
+
+	Node *init;
+	Node *cond;
+	Node *incr;
+	Node *body;
 };
 
 template <typename T>

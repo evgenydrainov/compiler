@@ -824,6 +824,9 @@ GenerateStatement(Node *baseNode,
 
 			int uniqueId = context->uniqueLabelId++;
 
+			int saveCurrentLoopUniqueId = context->currentLoopUniqueId;
+			context->currentLoopUniqueId = uniqueId;
+
 			Emit(out, context, ".loop_%d:", uniqueId);
 
 			GenerateExpression(node->condition, out, context);
@@ -835,9 +838,44 @@ GenerateStatement(Node *baseNode,
 
 			GenerateBlock(node->body, out, context);
 
+			Emit(out, context, ".continue_%d:", uniqueId);
 			Emit(out, context, "    jmp .loop_%d", uniqueId);
 			Emit(out, context, ".end_%d:", uniqueId);
 			Emit(out, context, "");
+
+			context->currentLoopUniqueId = saveCurrentLoopUniqueId;
+		} break;
+
+		case NodeKind_For:
+		{
+			ForNode *node = As<ForNode>(baseNode);
+
+			int uniqueId = context->uniqueLabelId++;
+
+			int saveCurrentLoopUniqueId = context->currentLoopUniqueId;
+			context->currentLoopUniqueId = uniqueId;
+
+			GenerateStatement(node->init, out, context);
+
+			Emit(out, context, ".loop_%d:", uniqueId);
+
+			GenerateExpression(node->cond, out, context);
+
+			Emit(out, context, "    pop rax\t\t; load the comparison result");
+			Emit(out, context, "    cmp rax, 0");
+			Emit(out, context, "    je .end_%d", uniqueId);
+			Emit(out, context, "");
+
+			GenerateBlock(node->body, out, context);
+
+			Emit(out, context, ".continue_%d:", uniqueId);
+			GenerateStatement(node->incr, out, context);
+
+			Emit(out, context, "    jmp .loop_%d", uniqueId);
+			Emit(out, context, ".end_%d:", uniqueId);
+			Emit(out, context, "");
+
+			context->currentLoopUniqueId = saveCurrentLoopUniqueId;
 		} break;
 
 		case NodeKind_Print:
@@ -902,6 +940,18 @@ GenerateStatement(Node *baseNode,
 			Emit(out, context, "    mov [rax], %d", node->yieldIndex);
 			Emit(out, context, "    jmp .epilogue");
 			Emit(out, context, ".coroutine_state_%d:", node->yieldIndex);
+			Emit(out, context, "");
+		} break;
+
+		case NodeKind_Break:
+		{
+			Emit(out, context, "    jmp .end_%d\t; 'break'", context->currentLoopUniqueId);
+			Emit(out, context, "");
+		} break;
+
+		case NodeKind_Continue:
+		{
+			Emit(out, context, "    jmp .continue_%d\t; 'continue'", context->currentLoopUniqueId);
 			Emit(out, context, "");
 		} break;
 

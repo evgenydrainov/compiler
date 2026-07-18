@@ -9,6 +9,8 @@ struct CodegenContext
 	int uniqueLabelId;
 	int stackDepth;
 
+	int currentLoopUniqueId;
+
 	BumpArray<GenerateCStringLiteral> cstringLiterals;
 	BumpArray<GenerateStringLiteral> stringLiterals;
 };

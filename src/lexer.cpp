@@ -95,11 +95,23 @@ IdentifierType(string str)
 			}
 		} break;
 
+		case 'b':
+		{
+			if (str == "break")
+			{
+				result = TokenKind_Break;
+			}
+		} break;
+
 		case 'c':
 		{
 			if (str == "cast")
 			{
 				result = TokenKind_Cast;
+			}
+			if (str == "continue")
+			{
+				result = TokenKind_Continue;
 			}
 		} break;
 

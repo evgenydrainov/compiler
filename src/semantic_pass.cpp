@@ -895,6 +895,16 @@ AnalyzeExpression(Node *baseNode,
 				Error(context, node, "cannot cast");
 			}
 		} break;
+
+		case NodeKind_Break:
+		{
+			// TODO
+		} break;
+
+		case NodeKind_Continue:
+		{
+			// TODO
+		} break;
 	}
 }
 
@@ -1002,6 +1012,28 @@ AnalyzeStatement(Node *baseNode,
 				Error(context, node->condition,
 					  "'while' condition must be boolean, it is of type '%s'",
 					  GetTypeKindPrettyName(node->condition->inferredType.kind));
+			}
+		} break;
+
+		case NodeKind_For:
+		{
+			ForNode *node = As<ForNode>(baseNode);
+
+			Scope scope = EnterScope(symTable);
+
+			AnalyzeStatement(node->init, context);
+			AnalyzeExpression(node->cond, context);
+			AnalyzeStatement(node->incr, context);
+
+			AnalyzeBlock(node->body, context);
+
+			LeaveScope(symTable, scope);
+
+			if (node->cond->inferredType.kind != TypeKind_Bool)
+			{
+				Error(context, node->cond,
+					  "'for' condition must be boolean, it is of type '%s'",
+					  GetTypeKindPrettyName(node->cond->inferredType.kind));
 			}
 		} break;
 

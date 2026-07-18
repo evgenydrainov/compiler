@@ -771,49 +771,22 @@ ParseForStatement(Parser *parser,
 {
 	// for init; cond; incr { statements; }
 
-	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
-	block->statements = PushBumpArray<Node *>(arena, 2);
+	ForNode *node = MakeNode<ForNode>(parser->current.location, arena);
 
 	// eat the 'for'
 	AdvanceToken(parser, lexer);
 
-	{
-		Node *init = ParseStatement(parser, lexer, arena);
-		ArrayAdd(&block->statements, init);
-	}
+	node->init = ParseStatement(parser, lexer, arena);
 
-	WhileNode *whileNode = MakeNode<WhileNode>(parser->current.location, arena);
-
-	{
-		Node *cond = ParseExpression(parser, lexer, 0, arena);
-		ExpectToken(parser, lexer, TokenKind_Semicolon);
-
-		whileNode->condition = cond;
-	}
+	node->cond = ParseExpression(parser, lexer, 0, arena);
+	ExpectToken(parser, lexer, TokenKind_Semicolon);
 
 	parser->numInsertSemicolons++;
-	Node *incr = ParseStatement(parser, lexer, arena);
+	node->incr = ParseStatement(parser, lexer, arena);
 
-	{
-		BlockNode *loopBodyBlock = MakeNode<BlockNode>(parser->current.location, arena);
-		loopBodyBlock->statements = PushBumpArray<Node *>(arena, 2);
+	node->body = ParseBlock(parser, lexer, arena);
 
-		{
-			Node *loopBody = ParseBlock(parser, lexer, arena);
-			ArrayAdd(&loopBodyBlock->statements, loopBody);
-		}
-
-		if (incr)
-		{
-			ArrayAdd(&loopBodyBlock->statements, incr);
-		}
-
-		whileNode->body = loopBodyBlock;
-	}
-
-	ArrayAdd(&block->statements, (Node *)whileNode);
-
-	return block;
+	return node;
 }
 
 internal Node *
@@ -958,6 +931,22 @@ ParseStatement(Parser *parser,
 	if (parser->current.kind == TokenKind_Return)
 	{
 		return ParseReturnStatement(parser, lexer, arena);
+	}
+
+	if (parser->current.kind == TokenKind_Break)
+	{
+		BreakNode *node = MakeNode<BreakNode>(parser->current.location, arena);
+		AdvanceToken(parser, lexer); // eat the 'break'
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_Continue)
+	{
+		ContinueNode *node = MakeNode<ContinueNode>(parser->current.location, arena);
+		AdvanceToken(parser, lexer); // eat the 'continue'
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+		return node;
 	}
 
 	if (parser->current.kind == TokenKind_Identifier)
