@@ -120,7 +120,7 @@ SizeOfType(Type type)
 			result = type.arrayLength * elementSize;
 		} break;
 
-		case TypeKind_Unknown: {} break;
+		//case TypeKind_Unknown: {} break;
 
 		default:
 		{

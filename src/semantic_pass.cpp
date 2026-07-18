@@ -635,28 +635,37 @@ AnalyzeExpression(Node *baseNode,
 			{
 				node->stackOffset = symbol->stackOffset;
 				node->inferredType = symbol->type;
+
+				break;
 			}
-			else
+
+			Constant *constant = LookupConstant(constTable, node->name);
+			if (constant)
 			{
-				Constant *constant = LookupConstant(constTable, node->name);
-				if (constant)
-				{
-					static_assert(sizeof(NumberNode) <= sizeof(VarNode));
+				static_assert(sizeof(NumberNode) <= sizeof(VarNode));
 
-					SourceLocation location = node->location;
+				SourceLocation location = node->location;
 
-					NumberNode *newNode = (NumberNode *)node;
-					*newNode = {};
-					newNode->kind = NodeKind_Number;
-					newNode->location = location;
-					newNode->inferredType.kind = TypeKind_Int64;
-					newNode->int64Value = constant->value;
-				}
-				else
-				{
-					Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
-				}
+				NumberNode *newNode = (NumberNode *)node;
+				*newNode = {};
+				newNode->kind = NodeKind_Number;
+				newNode->location = location;
+				newNode->inferredType.kind = TypeKind_Int64;
+				newNode->int64Value = constant->value;
+
+				break;
 			}
+
+			symbol = LookupSymbol(context->globalTable, node->name, 0);
+			if (symbol)
+			{
+				node->inferredType = symbol->type;
+				node->isGlobal = true;
+
+				break;
+			}
+
+			Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
 		} break;
 
 		case NodeKind_Call:
@@ -1167,68 +1176,59 @@ AnalyzeTopLevelStatement(Node *baseNode,
 	}
 }
 
-void
-SemanticPass(Node *_program,
+internal void
+EarlyAnalyze(Node *baseNode,
 			 SemanticContext *context,
 			 Arena *arena)
 {
-	context->cstringLiterals = PushBumpArray<GenerateCStringLiteral>(arena, 32);
-	context->stringLiterals = PushBumpArray<GenerateStringLiteral>(arena, 32);
-
-	FunctionTable  *funcTable  = PushStruct<FunctionTable>(arena);
-	SymbolTable    *symTable   = PushStruct<SymbolTable>(arena);
-	TypeTable      *typeTable  = PushStruct<TypeTable>(arena);
-	ConstantsTable *constTable = PushStruct<ConstantsTable>(arena);
-
-	context->funcTable  = funcTable;
-	context->symTable   = symTable;
-	context->typeTable  = typeTable;
-	context->constTable = constTable;
-
-	BlockNode *program = As<BlockNode>(_program);
-
-	for (Node *it : program->statements)
+	switch (baseNode->kind)
 	{
-		if (it->kind == NodeKind_Func)
+		default:
 		{
-			FuncNode *functionDef = As<FuncNode>(it);
+			Assert(false);
+		} break;
 
-			if (!LookupFunction(funcTable, functionDef->name))
+		case NodeKind_Func:
+		{
+			FuncNode *node = As<FuncNode>(baseNode);
+
+			if (!LookupFunction(context->funcTable, node->name))
 			{
-				Function *func = DeclareFunction(funcTable, functionDef->name);
-				func->numParams = functionDef->numParams;
-				func->returnType = functionDef->returnType;
-				func->linkName = functionDef->name;
+				Function *func = DeclareFunction(context->funcTable, node->name);
+				func->numParams = node->numParams;
+				func->returnType = node->returnType;
+				func->linkName = node->name;
 
-				if (functionDef->isForeign)
+				if (node->isForeign)
 				{
-					if (functionDef->foreignLinkName.count > 0)
+					if (node->foreignLinkName.count > 0)
 					{
-						func->linkName = functionDef->foreignLinkName;
+						func->linkName = node->foreignLinkName;
 					}
 				}
 
 				for (int paramIndex = 0;
-					 paramIndex < functionDef->numParams;
+					 paramIndex < node->numParams;
 					 paramIndex++)
 				{
-					ParamNode *paramNode = As<ParamNode>(functionDef->params[paramIndex]);
+					ParamNode *paramNode = As<ParamNode>(node->params[paramIndex]);
 
 					func->params[paramIndex].type = paramNode->type;
 				}
 			}
 			else
 			{
-				Error(context, functionDef, "function " STR_FMT_QUOTED " was already defined", STR_ARG(functionDef->name));
+				Error(context, node, "function " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
 			}
-		}
-		else if (it->kind == NodeKind_StructDecl)
-		{
-			StructDeclNode *node = As<StructDeclNode>(it);
+		} break;
 
-			if (!LookupType(typeTable, node->name))
+		case NodeKind_StructDecl:
+		{
+			StructDeclNode *node = As<StructDeclNode>(baseNode);
+
+			if (!LookupType(context->typeTable, node->name))
 			{
-				Type *type = DeclareType(typeTable, node->name);
+				Type *type = DeclareType(context->typeTable, node->name);
 
 				type->kind = TypeKind_Struct;
 				type->structInfo = PushStruct<StructInfo>(arena);
@@ -1261,14 +1261,15 @@ SemanticPass(Node *_program,
 			{
 				Error(context, node, "struct " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
 			}
-		}
-		else if (it->kind == NodeKind_EnumDecl)
-		{
-			EnumDeclNode *node = As<EnumDeclNode>(it);
+		} break;
 
-			if (!LookupType(typeTable, node->name))
+		case NodeKind_EnumDecl:
+		{
+			EnumDeclNode *node = As<EnumDeclNode>(baseNode);
+
+			if (!LookupType(context->typeTable, node->name))
 			{
-				Type *type = DeclareType(typeTable, node->name);
+				Type *type = DeclareType(context->typeTable, node->name);
 
 				type->kind = TypeKind_Enum;
 				type->enumInfo = PushStruct<EnumInfo>(arena);
@@ -1296,14 +1297,15 @@ SemanticPass(Node *_program,
 			{
 				Error(context, node, "enum " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
 			}
-		}
-		else if (it->kind == NodeKind_ConstantDecl)
-		{
-			ConstantDeclNode *node = As<ConstantDeclNode>(it);
+		} break;
 
-			if (!LookupConstant(constTable, node->name))
+		case NodeKind_ConstantDecl:
+		{
+			ConstantDeclNode *node = As<ConstantDeclNode>(baseNode);
+
+			if (!LookupConstant(context->constTable, node->name))
 			{
-				Constant *constant = DeclareConstant(constTable, node->name);
+				Constant *constant = DeclareConstant(context->constTable, node->name);
 
 				constant->value = EvaluateConstantExpression(node->expr, context);
 			}
@@ -1311,7 +1313,47 @@ SemanticPass(Node *_program,
 			{
 				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->name));
 			}
-		}
+		} break;
+
+		case NodeKind_VarDecl:
+		{
+			VarDeclNode *node = As<VarDeclNode>(baseNode);
+
+			if (!LookupSymbol(context->globalTable, node->name, 0))
+			{
+				DeclareSymbol(context->globalTable, node->name, node->type);
+
+				if (node->expr)
+				{
+					Error(context, node, "global variable assignment not allowed");
+				}
+			}
+			else
+			{
+				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->name));
+			}
+		} break;
+	}
+}
+
+void
+SemanticPass(Node *_program,
+			 SemanticContext *context,
+			 Arena *arena)
+{
+	context->cstringLiterals = PushBumpArray<GenerateCStringLiteral>(arena, 32);
+	context->stringLiterals  = PushBumpArray<GenerateStringLiteral>(arena, 32);
+
+	context->funcTable   = PushStruct<FunctionTable>(arena);
+	context->symTable    = PushStruct<SymbolTable>(arena);
+	context->globalTable = PushStruct<SymbolTable>(arena);
+	context->typeTable   = PushStruct<TypeTable>(arena);
+	context->constTable  = PushStruct<ConstantsTable>(arena);
+
+	BlockNode *program = As<BlockNode>(_program);
+	for (Node *it : program->statements)
+	{
+		EarlyAnalyze(it, context, arena);
 	}
 
 	if (context->hadError)
@@ -1326,7 +1368,7 @@ SemanticPass(Node *_program,
 			FuncNode *functionDef = As<FuncNode>(it);
 
 			// clear the symbol table for every function
-			memset(symTable, 0, sizeof(*symTable));
+			memset(context->symTable, 0, sizeof(*context->symTable));
 
 			AnalyzeTopLevelStatement(functionDef, context);
 
@@ -1334,7 +1376,7 @@ SemanticPass(Node *_program,
 			{
 				BlockNode *functionBody = As<BlockNode>(functionDef->body);
 
-				int stackSize = (symTable->maxStackSize + 15) & ~15;
+				int stackSize = (context->symTable->maxStackSize + 15) & ~15;
 				functionBody->stackSize = stackSize;
 			}
 		}

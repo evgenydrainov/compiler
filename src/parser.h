@@ -110,6 +110,7 @@ struct VarNode : public Node
 
 	string name;
 	int stackOffset;
+	bool isGlobal;
 };
 
 struct NumberNode : public Node

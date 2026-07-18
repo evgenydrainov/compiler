@@ -1248,27 +1248,33 @@ ParseTopLevelStatement(Parser *parser,
 		Token peekToken1 = PeekToken(lexer, 2);
 		Token peekToken2 = PeekToken(lexer, 3);
 
-		if (peekToken0.kind == TokenKind_Colon
-			&& peekToken1.kind == TokenKind_Colon)
+		if (peekToken0.kind == TokenKind_Colon)
 		{
-			if (peekToken2.kind == TokenKind_Proc)
+			if (peekToken1.kind == TokenKind_Colon)
 			{
-				return ParseFunctionDefinition(parser, lexer, arena);
+				if (peekToken2.kind == TokenKind_Proc)
+				{
+					return ParseFunctionDefinition(parser, lexer, arena);
+				}
+
+				if (peekToken2.kind == TokenKind_Struct)
+				{
+					return ParseStructDefinition(parser, lexer, arena);
+				}
+
+				if (peekToken2.kind == TokenKind_Enum)
+				{
+					return ParseEnumDefinition(parser, lexer, arena);
+				}
+
+				// compile-time constant
+				// FOO :: 123;
+				return ParseConstantDefinition(parser, lexer, arena);
 			}
 
-			if (peekToken2.kind == TokenKind_Struct)
-			{
-				return ParseStructDefinition(parser, lexer, arena);
-			}
-
-			if (peekToken2.kind == TokenKind_Enum)
-			{
-				return ParseEnumDefinition(parser, lexer, arena);
-			}
-
-			// compile-time constant
-			// FOO :: 123;
-			return ParseConstantDefinition(parser, lexer, arena);
+			// global variable declaration
+			// foo: int;
+			return ParseVariableDeclaration(parser, lexer, arena);
 		}
 	}
 

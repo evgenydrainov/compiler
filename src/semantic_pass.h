@@ -15,6 +15,7 @@ struct SemanticContext
 	bool suppressErrors;
 
 	SymbolTable    *symTable;
+	SymbolTable    *globalTable;
 	FunctionTable  *funcTable;
 	TypeTable      *typeTable;
 	ConstantsTable *constTable;

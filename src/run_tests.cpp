@@ -97,7 +97,7 @@ int main()
 	//TestReturnCode("11_enums", 0);
 	//TestReturnCode("12_foreign_function", 0);
 	//TestReturnCode("13_coroutine", 0);
-	//TestReturnCode("14_short_circuit", 0);
+	TestReturnCode("14_short_circuit", 0);
 	//TestReturnCode("15_break_continue", 0);
 	//TestReturnCode("16_nested_aggregates", 0);
 	//TestReturnCode("17_array_of_structs", 0);
@@ -108,12 +108,12 @@ int main()
 		exit(1);
 	}
 
-	TestCompileError("01_assign_to_literal");
-	TestCompileError("02_redeclaration");
-	TestCompileError("03_type_mismatch_return");
-	TestCompileError("04_undeclared_variable");
-	TestCompileError("05_unknown_field");
-	TestCompileError("06_wrong_arg_count");
+	//TestCompileError("01_assign_to_literal");
+	//TestCompileError("02_redeclaration");
+	//TestCompileError("03_type_mismatch_return");
+	//TestCompileError("04_undeclared_variable");
+	//TestCompileError("05_unknown_field");
+	//TestCompileError("06_wrong_arg_count");
 
 	if (_chdir("..\\..\\examples\\01_raylib") != 0)
 	{

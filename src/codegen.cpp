@@ -90,9 +90,18 @@ GenerateLValueAddress(Node *baseNode,
 		{
 			VarNode *node = As<VarNode>(baseNode);
 
-			Emit(out, context, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED,
-				 node->stackOffset,
-				 STR_ARG(node->name));
+			if (node->isGlobal)
+			{
+				Emit(out, context, "    lea rax, [rel " STR_FMT "]\t; load address of variable " STR_FMT_QUOTED,
+					 STR_ARG(node->name),
+					 STR_ARG(node->name));
+			}
+			else
+			{
+				Emit(out, context, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED,
+					 node->stackOffset,
+					 STR_ARG(node->name));
+			}
 			Emit(out, context, "    push rax");
 			Emit(out, context, "");
 		} break;
@@ -1063,6 +1072,7 @@ GenerateTopLevelStatement(Node *baseNode,
 		case NodeKind_StructDecl:
 		case NodeKind_EnumDecl:
 		case NodeKind_ConstantDecl:
+		case NodeKind_VarDecl:
 		{
 			// do nothing
 		} break;
@@ -1214,8 +1224,23 @@ Generate_x86_64(Node *_program,
 	}
 	fprintf(out, "\n");
 
-	fprintf(out, "section .text\n");
+	fprintf(out, "section .bss\n");
+	for (Node *it : program->statements)
+	{
+		if (it->kind == NodeKind_VarDecl)
+		{
+			VarDeclNode *node = As<VarDeclNode>(it);
 
+			int size = SizeOfType(node->type);
+
+			fprintf(out, "    " STR_FMT " resb %d\n",
+					STR_ARG(node->name),
+					size);
+		}
+	}
+	fprintf(out, "\n");
+
+	fprintf(out, "section .text\n");
 	for (Node *it : program->statements)
 	{
 		GenerateTopLevelStatement(it, out, context);
