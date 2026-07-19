@@ -161,9 +161,9 @@ ExpectToken(Parser *parser,
 			else
 			{
 				ErrorAtCurrent(parser,
-								"expected '%s', but got '%s'",
-								GetTokenKindPrettyName(kind),
-								GetTokenKindPrettyName(parser->current.kind));
+							   "expected '%s', but got '%s'",
+							   GetTokenKindPrettyName(kind),
+							   GetTokenKindPrettyName(parser->current.kind));
 			}
 		}
 	}
@@ -790,6 +790,81 @@ ParseForStatement(Parser *parser,
 }
 
 internal Node *
+ParseForeachStatement(Parser *parser,
+					  Lexer *lexer,
+					  Arena *arena)
+{
+	// foreach foo: a..<b { statements; }
+
+	ForNode *node = MakeNode<ForNode>(parser->current.location, arena);
+	AdvanceToken(parser, lexer); // eat the 'foreach'
+
+	Node *_iterator = ParseExpression(parser, lexer, 0, arena);
+	if (_iterator->kind != NodeKind_Var)
+	{
+		ErrorAtCurrent(parser, "foreach iterator must be an identifier");
+		return nullptr;
+	}
+
+	VarNode *iterator = As<VarNode>(_iterator);
+
+	ExpectToken(parser, lexer, TokenKind_Colon);
+
+	Node *from = ParseExpression(parser, lexer, 0, arena);
+
+	ExpectToken(parser, lexer, TokenKind_DotDotLess);
+
+	Node *to = ParseExpression(parser, lexer, 0, arena);
+
+	{
+		VarDeclNode *varDeclNode = MakeNode<VarDeclNode>(parser->current.location, arena);
+		varDeclNode->name = iterator->name;
+		varDeclNode->expr = from;
+		varDeclNode->type.kind = TypeKind_InferMe;
+
+		node->init = varDeclNode;
+	}
+
+	{
+		VarNode *comparisonLhs = MakeNode<VarNode>(parser->current.location, arena);
+		comparisonLhs->name = iterator->name;
+
+		BinaryNode *comparisonNode = MakeNode<BinaryNode>(parser->current.location, arena);
+		comparisonNode->op = BinaryOp_Less;
+		comparisonNode->lhs = comparisonLhs;
+		comparisonNode->rhs = to;
+
+		node->cond = comparisonNode;
+	}
+	
+	{
+		VarNode *additionLhs = MakeNode<VarNode>(parser->current.location, arena);
+		additionLhs->name = iterator->name;
+
+		NumberNode *additionRhs = MakeNode<NumberNode>(parser->current.location, arena);
+		additionRhs->int64Value = 1;
+
+		BinaryNode *assignRhs = MakeNode<BinaryNode>(parser->current.location, arena);
+		assignRhs->op = BinaryOp_Add;
+		assignRhs->rhs = additionLhs;
+		assignRhs->lhs = additionRhs;
+
+		VarNode *assignLhs = MakeNode<VarNode>(parser->current.location, arena);
+		assignLhs->name = iterator->name;
+
+		AssignNode *assignNode = MakeNode<AssignNode>(parser->current.location, arena);
+		assignNode->lhs = assignLhs;
+		assignNode->rhs = assignRhs;
+
+		node->incr = assignNode;
+	}
+
+	node->body = ParseBlock(parser, lexer, arena);
+
+	return node;
+}
+
+internal Node *
 ParsePrintStatement(Parser *parser,
 					Lexer *lexer,
 					Arena *arena)
@@ -905,6 +980,11 @@ ParseStatement(Parser *parser,
 	if (parser->current.kind == TokenKind_For)
 	{
 		return ParseForStatement(parser, lexer, arena);
+	}
+
+	if (parser->current.kind == TokenKind_Foreach)
+	{
+		return ParseForeachStatement(parser, lexer, arena);
 	}
 
 	if (parser->current.kind == TokenKind_Print)

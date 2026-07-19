@@ -38,28 +38,38 @@ PrintTree(Node *baseNode,
 
 	if (baseNode->kind == NodeKind_Number)
 	{
-		NumberNode *n = As<NumberNode>(baseNode);
-		printf(" (%lld)", n->int64Value);
+		NumberNode *node = As<NumberNode>(baseNode);
+		printf(" (%lld)", node->int64Value);
 	}
 	else if (baseNode->kind == NodeKind_VarDecl)
 	{
-		VarDeclNode *n = As<VarDeclNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(n->name));
+		VarDeclNode *node = As<VarDeclNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(node->name));
 	}
 	else if (baseNode->kind == NodeKind_Var)
 	{
-		VarNode *n = As<VarNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(n->name));
+		VarNode *node = As<VarNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(node->name));
 	}
 	else if (baseNode->kind == NodeKind_Func)
 	{
-		FuncNode *n = As<FuncNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(n->name));
+		FuncNode *node = As<FuncNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(node->name));
 	}
 	else if (baseNode->kind == NodeKind_Call)
 	{
-		CallNode *n = As<CallNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(n->name));
+		CallNode *node = As<CallNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(node->name));
+	}
+	else if (baseNode->kind == NodeKind_StructDecl)
+	{
+		StructDeclNode *node = As<StructDeclNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(node->name));
+	}
+	else if (baseNode->kind == NodeKind_ConstantDecl)
+	{
+		ConstantDeclNode *node = As<ConstantDeclNode>(baseNode);
+		printf(" (" STR_FMT ")", STR_ARG(node->name));
 	}
 
 	printf("\n");
@@ -71,13 +81,13 @@ PrintTree(Node *baseNode,
 	{
 		case NodeKind_Block:
 		{
-			BlockNode *n = As<BlockNode>(baseNode);
+			BlockNode *node = As<BlockNode>(baseNode);
 			for (int i = 0;
-				 i < n->statements.count;
+				 i < node->statements.count;
 				 i++)
 			{
-				Node *statement = n->statements[i];
-				PrintTree(statement, childPrefix, i != n->statements.count-1);
+				Node *statement = node->statements[i];
+				PrintTree(statement, childPrefix, i != node->statements.count-1);
 			}
 		} break;
 
@@ -151,6 +161,15 @@ PrintTree(Node *baseNode,
 		{
 			ReturnNode *node = As<ReturnNode>(baseNode);
 			PrintTree(node->expr, childPrefix, false);
+		} break;
+
+		case NodeKind_For:
+		{
+			ForNode *node = As<ForNode>(baseNode);
+			PrintTree(node->init, childPrefix, true);
+			PrintTree(node->cond, childPrefix, true);
+			PrintTree(node->incr, childPrefix, true);
+			PrintTree(node->body, childPrefix, false);
 		} break;
 
 		default: {} break;

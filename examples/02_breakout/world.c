@@ -36,7 +36,7 @@ WorldInit :: proc(world: *World)
 
 	world.numBricks = 12;
 
-	for brickIndex := 0; brickIndex < world.numBricks; brickIndex += 1
+	foreach brickIndex : 0..<world.numBricks
 	{
 		brick := &world.bricks[brickIndex];
 
@@ -98,7 +98,7 @@ WorldUpdate :: proc(world: *World)
 			world.ball.vspeed = -world.ball.vspeed;
 		}
 
-		for brickIndex := 0; brickIndex < world.numBricks; brickIndex += 1
+		foreach brickIndex : 0..<world.numBricks
 		{
 			brick := &world.bricks[brickIndex];
 
@@ -125,7 +125,7 @@ WorldDraw :: proc(world: *World)
 {
 	DrawEntity(&world.paddle, 0xffffffff);
 
-	for brickIndex := 0; brickIndex < world.numBricks; brickIndex += 1
+	foreach brickIndex : 0..<world.numBricks
 	{
 		brick := &world.bricks[brickIndex];
 		DrawEntity(brick, 0xffffffff);

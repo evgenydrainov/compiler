@@ -43,9 +43,21 @@ internal char
 PeekNextChar(Lexer *lexer)
 {
 	char result = 0;
-	if (!IsAtEnd(lexer))
+	if (lexer->current[0] != 0)
 	{
-		result = *(lexer->current + 1);
+		result = lexer->current[1];
+	}
+	return result;
+}
+
+internal char
+PeekNextNextChar(Lexer *lexer)
+{
+	char result = 0;
+	if (lexer->current[0] != 0
+		&& lexer->current[1] != 0)
+	{
+		result = lexer->current[2];
 	}
 	return result;
 }
@@ -145,6 +157,10 @@ IdentifierType(string str)
 			{
 				result = TokenKind_For;
 			}
+			else if (str == "foreach")
+			{
+				result = TokenKind_Foreach;
+			}
 		} break;
 
 		case 'i':
@@ -152,6 +168,10 @@ IdentifierType(string str)
 			if (str == "if")
 			{
 				result = TokenKind_If;
+			}
+			else if (str == "in")
+			{
+				result = TokenKind_In;
 			}
 		} break;
 
@@ -509,42 +529,108 @@ GetToken(Lexer *lexer)
 		return ParseNumber(lexer, location);
 	}
 
-	// handle two-character tokens
+	auto AdvanceAndMakeToken = [](Lexer *lexer, TokenKind kind, SourceLocation location, u32 count)
 	{
-		struct TwoCharacterTokenInfo
-		{
-			char str[3];
-			TokenKind type;
-		};
+		string str = {lexer->current, count};
+		AdvanceChar(lexer, count);
 
-		TwoCharacterTokenInfo tokenInfos[] =
-		{
-			{"!=", TokenKind_BangEqual},
-			{"==", TokenKind_EqualEqual},
-			{">=", TokenKind_GreaterEqual},
-			{"<=", TokenKind_LessEqual},
-			{"->", TokenKind_Arrow},
-			{"&&", TokenKind_AmpAmp},
-			{"||", TokenKind_PipePipe},
-			{">>", TokenKind_GreaterGreater},
-			{"<<", TokenKind_LessLess},
-			{"+=", TokenKind_PlusEqual},
-			{"-=", TokenKind_MinusEqual},
-			{"%=", TokenKind_PercentEqual},
-		};
+		return MakeToken(lexer, kind, str, location);
+	};
 
-		for (auto &tokenInfo : tokenInfos)
+	switch (c)
+	{
+		case '!':
 		{
-			if (c == tokenInfo.str[0]
-				&& PeekNextChar(lexer) == tokenInfo.str[1])
+			if (PeekNextChar(lexer) == '=')
 			{
-				string str = {lexer->current, 2};
-				TokenKind type = tokenInfo.type;
-				AdvanceChar(lexer, 2);
-
-				return MakeToken(lexer, type, str, location);
+				return AdvanceAndMakeToken(lexer, TokenKind_BangEqual, location, 2);
 			}
-		}
+		} break;
+
+		case '=':
+		{
+			if (PeekNextChar(lexer) == '=')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_EqualEqual, location, 2);
+			}
+		} break;
+
+		case '>':
+		{
+			if (PeekNextChar(lexer) == '=')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_GreaterEqual, location, 2);
+			}
+			if (PeekNextChar(lexer) == '>')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_GreaterGreater, location, 2);
+			}
+		} break;
+
+		case '<':
+		{
+			if (PeekNextChar(lexer) == '=')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_LessEqual, location, 2);
+			}
+			if (PeekNextChar(lexer) == '<')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_LessLess, location, 2);
+			}
+		} break;
+
+		case '-':
+		{
+			if (PeekNextChar(lexer) == '>')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_Arrow, location, 2);
+			}
+			if (PeekNextChar(lexer) == '=')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_MinusEqual, location, 2);
+			}
+		} break;
+
+		case '&':
+		{
+			if (PeekNextChar(lexer) == '&')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_AmpAmp, location, 2);
+			}
+		} break;
+
+		case '|':
+		{
+			if (PeekNextChar(lexer) == '|')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_PipePipe, location, 2);
+			}
+		} break;
+
+		case '+':
+		{
+			if (PeekNextChar(lexer) == '=')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_PlusEqual, location, 2);
+			}
+		} break;
+
+		case '%':
+		{
+			if (PeekNextChar(lexer) == '=')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_PercentEqual, location, 2);
+			}
+		} break;
+
+		case '.':
+		{
+			if (PeekNextChar(lexer) == '.'
+				&& PeekNextNextChar(lexer) == '<')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_DotDotLess, location, 3);
+			}
+		} break;
 	}
 
 	if (c == '#'
@@ -597,40 +683,17 @@ GetToken(Lexer *lexer)
 		*lexer = saveLexer;
 	}
 
-	// handle single-character tokens
-	if (c == '!'
-		|| c == '#'
-		|| c == '%'
-		|| c == '&'
-		|| c == '('
-		|| c == ')'
-		|| c == '*'
-		|| c == '+'
-		|| c == ','
-		|| c == '-'
-		|| c == '.'
-		|| c == '/'
-		|| c == ':'
-		|| c == ';'
-		|| c == '<'
-		|| c == '='
-		|| c == '>'
-		|| c == '['
-		|| c == ']'
-		|| c == '^'
-		|| c == '{'
-		|| c == '|'
-		|| c == '}'
-		|| c == '~')
-	{
-		string str = {lexer->current, 1};
-		AdvanceChar(lexer);
-		return MakeToken(lexer, (TokenKind)c, str, location);
-	}
-
 	if (c == '"')
 	{
 		return ParseString(lexer, location);
+	}
+
+	if ((c >= '!' && c <= '/')
+		|| (c >= ':' && c <= '@')
+		|| (c >= '[' && c <= '`')
+		|| (c >= '{' && c <= '~'))
+	{
+		return AdvanceAndMakeToken(lexer, (TokenKind)c, location, 1);
 	}
 
 	return ErrorToken(lexer, "unexpected character", location);

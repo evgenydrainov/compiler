@@ -19,7 +19,7 @@
 		{                                               \
 			List(GENERATE_ENUM_NAME)                    \
 		}                                               \
-		return "unknown";                               \
+		return "INVALID ENUM VALUE";                    \
 	}                                                   \
 	inline char *                                       \
 	Get##Type##PrettyName(Type value)                   \
@@ -28,7 +28,7 @@
 		{                                               \
 			List(GENERATE_ENUM_PRETTY_NAME)             \
 		}                                               \
-		return "unknown";                               \
+		return "INVALID ENUM VALUE";                    \
 	}
 
 #define GENERATE_ENUM(Name, Value, PrettyName) Name=Value,
