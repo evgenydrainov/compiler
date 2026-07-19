@@ -4,8 +4,8 @@
 
 struct CompileOptions
 {
-	const char *inputFilePath;
-	const char *outputFilePath;
+	string inputFilePath;
+	string outputFilePath;
 };
 
 enum CompileResult : u32
@@ -19,4 +19,4 @@ enum CompileResult : u32
 	CompileResult_LinkerError,
 };
 
-CompileResult Compile(CompileOptions options);
+CompileResult Compile(CompileOptions *options);

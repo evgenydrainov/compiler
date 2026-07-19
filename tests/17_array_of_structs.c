@@ -18,6 +18,9 @@ main :: proc() -> i64
 	(*p).x = 100;
 	if pts[1].x != 100 { return 2; }
 
+	p.x = 200;
+	if pts[1].x != 200 { return 3; }
+
 	return 0;
 }
 

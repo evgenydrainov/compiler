@@ -4,12 +4,12 @@
 #include <stdio.h>
 
 string
-LoadFile(const char *fileName)
+read_entire_file(char *filepath)
 {
 	string result = {};
 	
 	FILE *file;
-	fopen_s(&file, fileName, "rb");
+	fopen_s(&file, filepath, "rb");
 	if (file)
 	{
 		fseek(file, 0, SEEK_END);
@@ -33,10 +33,9 @@ LoadFile(const char *fileName)
 }
 
 string
-LoadFile(string fileName)
+read_entire_file(string filepath)
 {
-	char buf[1024];
-	sprintf_s(buf, STR_FMT, STR_ARG(fileName));
+	char *cstr = to_cstring(filepath);
 
-	return LoadFile(buf);
+	return read_entire_file(cstr);
 }

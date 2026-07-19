@@ -23,7 +23,6 @@ asm
 	section .text
 }
 
-#include "../../modules/builtin.c"
 #include "../../modules/raylib/raylib.c"
 
 Player :: struct

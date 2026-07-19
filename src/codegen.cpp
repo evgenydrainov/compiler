@@ -23,7 +23,7 @@ GenerateBlock(Node *baseNode,
 internal void
 Emit(FILE *out,
 	 CodegenContext *context,
-	 const char *format,
+	 char *format,
 	 ...)
 {
 	va_list args;
@@ -34,15 +34,15 @@ Emit(FILE *out,
 
 	va_end(args);
 
-	string formatStr = { (char *)format, strlen(format) };
-	TrimLeft(&formatStr);
+	string formatStr = { format, StrLen(format) };
+	formatStr = trim_left(formatStr);
 
-	if (StartsWith(formatStr, "push "))
+	if (starts_with(formatStr, "push "))
 	{
 		context->stackDepth++;
 	}
 
-	if (StartsWith(formatStr, "pop "))
+	if (starts_with(formatStr, "pop "))
 	{
 		context->stackDepth--;
 	}
@@ -326,7 +326,7 @@ GenerateBinaryExpression(Node *baseNode,
 			GenerateExpression(node->lhs, out, context);
 			GenerateExpression(node->rhs, out, context);
 
-			const char *setccInstruction = "";
+			char *setccInstruction = "";
 
 			if (node->op == BinaryOp_EqualEqual)
 			{
@@ -605,7 +605,7 @@ GenerateExpression(Node *baseNode,
 		{
 			CallNode *node = As<CallNode>(baseNode);
 
-			const char *paramRegs[] =
+			char *paramRegs[] =
 			{
 				"rcx",
 				"rdx",
@@ -660,7 +660,7 @@ GenerateExpression(Node *baseNode,
 	}
 }
 
-internal const char *
+internal char *
 GetRegisterForTypeSize(Type type)
 {
 	int size = SizeOfType(type);
@@ -738,7 +738,7 @@ GenerateStatement(Node *baseNode,
 					Emit(out, context, "    pop rcx");
 					Emit(out, context, "    mov rax, 0");
 
-					const char *reg = GetRegisterForTypeSize(varNode.inferredType);
+					char *reg = GetRegisterForTypeSize(varNode.inferredType);
 
 					Emit(out, context, "    mov [rcx], %s", reg);
 					Emit(out, context, "");
@@ -779,7 +779,7 @@ GenerateStatement(Node *baseNode,
 				Emit(out, context, "    pop rcx");
 				Emit(out, context, "    pop rax");
 
-				const char *reg = GetRegisterForTypeSize(node->lhs->inferredType);
+				char *reg = GetRegisterForTypeSize(node->lhs->inferredType);
 
 				Emit(out, context, "    mov [rcx], %s", reg);
 				Emit(out, context, "");
@@ -998,7 +998,7 @@ GenerateTopLevelStatement(Node *baseNode,
 			Emit(out, context, "    sub rsp, %d", functionBody->stackSize);
 			Emit(out, context, "");
 
-			const char *paramRegs[] =
+			char *paramRegs[] =
 			{
 				"rcx",
 				"rdx",

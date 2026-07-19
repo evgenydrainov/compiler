@@ -38,7 +38,7 @@ inline Constant *
 DeclareConstant(ConstantsTable *table,
 				string name)
 {
-	Constant *result = ArrayAdd(&table->constants, {});
+	Constant *result = array_add(&table->constants, {});
 	result->name = name;
 
 	return result;

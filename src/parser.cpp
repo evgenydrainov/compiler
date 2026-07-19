@@ -91,7 +91,7 @@ MakeNumberNode(SourceLocation location,
 internal void
 ErrorAtTokenVA(Parser *parser,
 			   Token token,
-			   const char *format,
+			   char *format,
 			   va_list args)
 {
 	fprintf(stderr, STR_FMT "(%d, %d): ",
@@ -105,7 +105,7 @@ ErrorAtTokenVA(Parser *parser,
 internal void
 ErrorAtToken(Parser *parser,
 			 Token token,
-			 const char *format,
+			 char *format,
 			 ...)
 {
 	va_list args;
@@ -116,7 +116,7 @@ ErrorAtToken(Parser *parser,
 
 internal void
 ErrorAtCurrent(Parser *parser,
-			   const char *format,
+			   char *format,
 			   ...)
 {
 	va_list args;
@@ -666,7 +666,7 @@ ParseBlock(Parser *parser,
 
 		if (statement)
 		{
-			ArrayAdd(&block->statements, statement);
+			array_add(&block->statements, statement);
 		}
 		else
 		{
@@ -1171,7 +1171,7 @@ ParseStructDefinition(Parser *parser,
 
 		ExpectToken(parser, lexer, TokenKind_Semicolon);
 
-		ArrayAdd(&node->fields, field);
+		array_add(&node->fields, field);
 	}
 
 	ExpectToken(parser, lexer, TokenKind_CloseBrace);
@@ -1209,7 +1209,7 @@ ParseEnumDefinition(Parser *parser,
 
 		ExpectToken(parser, lexer, TokenKind_Semicolon);
 
-		ArrayAdd(&node->enumerators, enumerator);
+		array_add(&node->enumerators, enumerator);
 	}
 
 	ExpectToken(parser, lexer, TokenKind_CloseBrace);
@@ -1316,7 +1316,7 @@ ParseProgram(Parser *parser,
 
 		if (statement)
 		{
-			ArrayAdd(&block->statements, statement);
+			array_add(&block->statements, statement);
 		}
 		else
 		{

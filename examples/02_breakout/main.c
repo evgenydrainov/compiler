@@ -1,5 +1,4 @@
-#include "../../modules/builtin.c"
-#include "../../modules/raylib/raylib.c"
+#import "raylib/raylib.c"
 
 #include "title.c"
 #include "world.c"

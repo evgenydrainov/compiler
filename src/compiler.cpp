@@ -16,7 +16,7 @@
 #if 0
 internal void
 PrintTree(Node *baseNode,
-		  const char *prefix,
+		  char *prefix,
 		  bool isLeft)
 {
 	if (!baseNode)
@@ -25,7 +25,7 @@ PrintTree(Node *baseNode,
 	}
 
 	{
-		const char *name = GetNodeKindName(baseNode->kind);
+		char *name = GetNodeKindName(baseNode->kind);
 		if (baseNode->kind == NodeKind_Binary)
 		{
 			name = GetBinaryOpName(As<BinaryNode>(baseNode)->op);
@@ -160,20 +160,20 @@ PrintTree(Node *baseNode,
 
 struct FindLinkerResult
 {
-	const char *linkExePath;
-	const char *libraryPath;
+	char *linkExePath;
+	char *libraryPath;
 };
 
 internal FindLinkerResult
 FindLinkerPath()
 {
-	const char *versionsToTry[] =
+	char *versionsToTry[] =
 	{
 		"14.44.35207",
 		"14.42.34433",
 	};
 
-	for (const char *version : versionsToTry)
+	for (char *version : versionsToTry)
 	{
 		char linkExePath[1024];
 		sprintf_s(linkExePath,
@@ -201,22 +201,50 @@ FindLinkerPath()
 }
 
 CompileResult
-Compile(CompileOptions options)
+Compile(CompileOptions *options)
 {
-	string sourceCode = LoadFile(options.inputFilePath);
-	if (sourceCode.count == 0)
-	{
-		fprintf(stderr, "cannot open file '%s' for reading\n", options.inputFilePath);
-		return CompileResult_CannotReadFile;
-	}
+	string compilerExeFileDir = get_executable_dir();
+	string modulesDir = string_concat(compilerExeFileDir, "modules/");
 
-	defer { free(sourceCode.data); };
+	LexerContext lexerContext = {};
+	lexerContext.compilerExeFileDir = compilerExeFileDir;
+	lexerContext.modulesDir = modulesDir;
 
 	Lexer lexer = {};
-	lexer.line = 1;
-	lexer.current = sourceCode.data;
-	lexer.fileName = { (char *)options.inputFilePath, strlen(options.inputFilePath) };
-	lexer.lineStart = lexer.current;
+	lexer.context = &lexerContext;
+
+	{
+		string builtinFilePath = string_concat(compilerExeFileDir, "modules/builtin.c");
+
+		string builtinFileSrc = read_entire_file(builtinFilePath);
+		if (builtinFileSrc.count == 0)
+		{
+			fprintf(stderr, "cannot open file " STR_FMT_QUOTED " for reading\n", STR_ARG(builtinFilePath));
+			return CompileResult_CannotReadFile;
+		}
+
+		lexer.line = 1;
+		lexer.current = builtinFileSrc.data;
+		lexer.fileName = builtinFilePath;
+		lexer.lineStart = lexer.current;
+	}
+
+	{
+		string sourceCode = read_entire_file(options->inputFilePath);
+		if (sourceCode.count == 0)
+		{
+			fprintf(stderr, "cannot open file " STR_FMT_QUOTED " for reading\n", STR_ARG(options->inputFilePath));
+			return CompileResult_CannotReadFile;
+		}
+
+		LexerFrame frame = {};
+		frame.current = sourceCode.data;
+		frame.line = 1;
+		frame.fileName = options->inputFilePath;
+		frame.lineStart = frame.current;
+
+		array_add(&lexer.includeStack, frame);
+	}
 
 	Arena arena = {};
 	arena.capacity = Megabytes(1);
@@ -249,36 +277,35 @@ Compile(CompileOptions options)
 	codegenContext.cstringLiterals = semanticContext.cstringLiterals;
 	codegenContext.stringLiterals = semanticContext.stringLiterals;
 
-	{
-		char fileName[1024];
-		sprintf_s(fileName, "%s.asm", options.outputFilePath);
+	string asmFilePath = string_concat(options->outputFilePath, ".asm");
+	string objFilePath = string_concat(options->outputFilePath, ".obj");
 
+	char *asmFilePathCStr = to_cstring(asmFilePath);
+	char *objFilePathCStr = to_cstring(objFilePath);
+
+	{
 		FILE *out;
-		fopen_s(&out, fileName, "wb");
+		fopen_s(&out, asmFilePathCStr, "wb");
+
 		if (!out)
 		{
-			fprintf(stderr, "cannot open file '%s' for writing\n", fileName);
+			fprintf(stderr, "cannot open file '%s' for writing\n", asmFilePathCStr);
 			return CompileResult_CannotWriteFile;
 		}
 
 		Generate_x86_64(program, out, &codegenContext);
+
 		fclose(out);
 	}
 
 	{
-		char outputPath[1024];
-		sprintf_s(outputPath, "%s.obj", options.outputFilePath);
-
-		char inputPath[1024];
-		sprintf_s(inputPath, "%s.asm", options.outputFilePath);
-
 		if (_spawnl(_P_WAIT,
 					"C:\\Users\\Username\\AppData\\Local\\bin\\NASM\\nasm.exe",
 					"nasm",
 					"-g",
 					"-f", "win64",
-					"-o", outputPath,
-					inputPath,
+					"-o", objFilePathCStr,
+					asmFilePathCStr,
 					nullptr) != 0)
 		{
 			return CompileResult_NasmError;
@@ -288,21 +315,19 @@ Compile(CompileOptions options)
 	{
 		FindLinkerResult findResult = FindLinkerPath();
 
-		char inputPath[1024];
-		sprintf_s(inputPath, "%s.obj", options.outputFilePath);
-
 		char libraryArg[1024];
 		sprintf_s(libraryArg, "/LIBPATH:\"%s\"", findResult.libraryPath);
 
 		if (_spawnl(_P_WAIT,
 					findResult.linkExePath,
 					"link",
-					"/nologo", "/DEBUG", "/INCREMENTAL:NO",
-					inputPath,
+					"/nologo", "/DEBUG", "/INCREMENTAL:NO", "/OPT:REF", "/OPT:ICF",
+					"/SUBSYSTEM:CONSOLE",
+					objFilePathCStr,
 					"raylib.lib",
 					"msvcrt.lib",
 					"legacy_stdio_definitions.lib",
-					"user32.lib", "gdi32.lib", "shell32.lib", "winmm.lib",
+					"kernel32.lib", "user32.lib", "gdi32.lib", "shell32.lib", "winmm.lib",
 					libraryArg,
 					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\"",
 					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"",

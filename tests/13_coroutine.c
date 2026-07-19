@@ -1,5 +1,3 @@
-#include "../modules/builtin.c"
-
 foo :: proc(state: *CoroutineState) #coroutine
 {
 	print 1;

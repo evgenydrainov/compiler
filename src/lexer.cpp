@@ -435,6 +435,38 @@ SkipWhitespace(Lexer *lexer)
 	}
 }
 
+internal Token
+IncludeFile(Lexer *lexer,
+			SourceLocation location,
+			string filePath)
+{
+	if (lexer->includeStack.count >= MAX_INCLUDE_DEPTH)
+	{
+		return ErrorToken(lexer, "#include nesting too deep (circular include?)", location);
+	}
+
+	string fileData = read_entire_file(filePath);
+	if (fileData.count == 0)
+	{
+		return ErrorToken(lexer, "cannot open included file", location);
+	}
+
+	LexerFrame frame = {};
+	frame.current = lexer->current;
+	frame.line = lexer->line;
+	frame.fileName = lexer->fileName;
+	frame.lineStart = lexer->lineStart;
+
+	array_add(&lexer->includeStack, frame);
+
+	lexer->current = fileData.data;
+	lexer->line = 1;
+	lexer->fileName = filePath;
+	lexer->lineStart = lexer->current;
+
+	return GetToken(lexer);
+}
+
 Token
 GetToken(Lexer *lexer)
 {
@@ -529,39 +561,37 @@ GetToken(Lexer *lexer)
 
 			if (PeekChar(lexer) != '"')
 			{
-				return ErrorToken(lexer, "expected \"filename\" after #include", location);
+				return ErrorToken(lexer, "expected \"filepath\" after #include", location);
 			}
 
-			Token pathToken = ParseString(lexer, {});
+			Token filePathToken = ParseString(lexer, {});
 
-			Assert(pathToken.str.count >= 2);
-			string path = { pathToken.str.data + 1, pathToken.str.count - 2};
+			Assert(filePathToken.str.count >= 2);
+			string filePath = { filePathToken.str.data + 1, filePathToken.str.count - 2};
 
-			if (lexer->includeStack.count >= MAX_INCLUDE_DEPTH)
+			string searchDir = strip_filename(lexer->fileName);
+			string fullFilePath = string_concat(searchDir, filePath);
+
+			return IncludeFile(lexer, location, filePath);
+		}
+
+		if (identifier.str == "import")
+		{
+			SkipWhitespace(lexer);
+
+			if (PeekChar(lexer) != '"')
 			{
-				return ErrorToken(lexer, "#include nesting too deep (circular include?)", location);
+				return ErrorToken(lexer, "expected \"filepath\" after #import", location);
 			}
 
-			string fileData = LoadFile(path);
-			if (fileData.count == 0)
-			{
-				return ErrorToken(lexer, "cannot open included file", location);
-			}
+			Token filePathToken = ParseString(lexer, {});
 
-			LexerFrame frame = {};
-			frame.current = lexer->current;
-			frame.line = lexer->line;
-			frame.fileName = lexer->fileName;
-			frame.lineStart = lexer->lineStart;
+			Assert(filePathToken.str.count >= 2);
+			string filePath = { filePathToken.str.data + 1, filePathToken.str.count - 2};
 
-			ArrayAdd(&lexer->includeStack, frame);
+			string fullFilePath = string_concat(lexer->context->modulesDir, filePath);
 
-			lexer->current = fileData.data;
-			lexer->line = 1;
-			lexer->fileName = path;
-			lexer->lineStart = lexer->current;
-
-			return GetToken(lexer);
+			return IncludeFile(lexer, location, fullFilePath);
 		}
 
 		*lexer = saveLexer;

@@ -11,8 +11,14 @@ add_executable(
     compiler
     src/codegen.cpp
     src/codegen.h
-    src/common.cpp
     src/common.h
+    src/common_arena.h
+    src/common_array.h
+    src/common_defer.h
+    src/common_file.cpp
+    src/common_file.h
+    src/common_string.h
+    src/common_types.h
     src/compiler.cpp
     src/compiler.h
     src/constants_table.h
@@ -49,11 +55,16 @@ set_property(TARGET run_tests PROPERTY
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
+set_target_properties(compiler PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
+)
+
 if(MSVC)
     set(FLAGS
         /fp:fast /Oi /W4 /WX
         /wd4201 /wd4100 /wd4189 /wd4127 /wd4505 /wd4200
         /we4062 /we5262
+        /Zc:strictStrings-
     )
     target_compile_options(compiler PRIVATE ${FLAGS})
     target_compile_options(run_tests PRIVATE ${FLAGS})

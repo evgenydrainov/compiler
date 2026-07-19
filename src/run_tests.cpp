@@ -10,7 +10,7 @@
 global_variable char compilerPath[1024];
 
 internal void
-TestReturnCode(const char *testName, int expectedCode)
+TestReturnCode(char *testName, int expectedCode)
 {
 	//clock_t start = clock();
 
@@ -49,7 +49,7 @@ TestReturnCode(const char *testName, int expectedCode)
 }
 
 internal void
-TestCompileError(const char *testName)
+TestCompileError(char *testName)
 {
 	char inputPath[1024];
 	sprintf_s(inputPath, "%s.c", testName);
@@ -76,7 +76,7 @@ int main()
 		exit(1);
 	}
 
-	sprintf_s(compilerPath, "%s\\build\\Debug\\compiler.exe", currentDir);
+	sprintf_s(compilerPath, "%s\\compiler.exe", currentDir);
 
 	if (_chdir("tests") != 0)
 	{
@@ -84,23 +84,23 @@ int main()
 		exit(1);
 	}
 	
-	//TestReturnCode("01_arithmetic", 0);
-	//TestReturnCode("02_variables_scope", 0);
-	//TestReturnCode("03_control_flow", 0);
-	//TestReturnCode("04_functions", 0);
-	//TestReturnCode("05_pointers", 0);
-	//TestReturnCode("06_structs", 0);
-	//TestReturnCode("07_logical_comparison", 0);
-	//TestReturnCode("08_bitwise", 0);
-	//TestReturnCode("09_casts_and_unsigned", 0);
-	//TestReturnCode("10_arrays", 0);
-	//TestReturnCode("11_enums", 0);
-	//TestReturnCode("12_foreign_function", 0);
-	//TestReturnCode("13_coroutine", 0);
+	TestReturnCode("01_arithmetic", 0);
+	TestReturnCode("02_variables_scope", 0);
+	TestReturnCode("03_control_flow", 0);
+	TestReturnCode("04_functions", 0);
+	TestReturnCode("05_pointers", 0);
+	TestReturnCode("06_structs", 0);
+	TestReturnCode("07_logical_comparison", 0);
+	TestReturnCode("08_bitwise", 0);
+	TestReturnCode("09_casts_and_unsigned", 0);
+	TestReturnCode("10_arrays", 0);
+	TestReturnCode("11_enums", 0);
+	TestReturnCode("12_foreign_function", 0);
+	TestReturnCode("13_coroutine", 0);
 	TestReturnCode("14_short_circuit", 0);
-	//TestReturnCode("15_break_continue", 0);
-	//TestReturnCode("16_nested_aggregates", 0);
-	//TestReturnCode("17_array_of_structs", 0);
+	TestReturnCode("15_break_continue", 0);
+	TestReturnCode("16_nested_aggregates", 0);
+	TestReturnCode("17_array_of_structs", 0);
 
 	if (_chdir("should_fail") != 0)
 	{

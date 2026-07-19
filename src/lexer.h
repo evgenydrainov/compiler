@@ -92,7 +92,13 @@ struct LexerFrame
 	int line;
 };
 
-#define MAX_INCLUDE_DEPTH 32
+constexpr usize MAX_INCLUDE_DEPTH = 32;
+
+struct LexerContext
+{
+	string compilerExeFileDir;
+	string modulesDir;
+};
 
 struct Lexer
 {
@@ -102,6 +108,8 @@ struct Lexer
 	int line;
 
 	StaticBumpArray<LexerFrame, MAX_INCLUDE_DEPTH> includeStack;
+
+	LexerContext *context;
 };
 
 Token GetToken(Lexer *lexer);

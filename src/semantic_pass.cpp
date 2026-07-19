@@ -12,7 +12,7 @@
 internal void
 Error(SemanticContext *context,
 	  Node *node,
-	  const char *format,
+	  char *format,
 	  ...)
 {
 	va_list args;
@@ -452,7 +452,7 @@ AnalyzeBinaryExpression(Node *baseNode,
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
 
-			const char *opName = GetBinaryOpPrettyName(node->op);
+			char *opName = GetBinaryOpPrettyName(node->op);
 
 			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
 				&& IsInteger(node->lhs->inferredType))
@@ -560,7 +560,7 @@ AnalyzeExpression(Node *baseNode,
 			literal.value = node->value;
 			literal.uniqueLabelId = node->uniqueId;
 
-			ArrayAdd(&context->stringLiterals, literal);
+			array_add(&context->stringLiterals, literal);
 		} break;
 
 		case NodeKind_CString:
@@ -576,7 +576,7 @@ AnalyzeExpression(Node *baseNode,
 			literal.value = node->value;
 			literal.uniqueLabelId = node->uniqueId;
 
-			ArrayAdd(&context->cstringLiterals, literal);
+			array_add(&context->cstringLiterals, literal);
 		} break;
 
 		case NodeKind_Bool:
@@ -1285,7 +1285,7 @@ EarlyAnalyze(Node *baseNode,
 						info.name = enumerator->name;
 						info.value = enumeratorValue++;
 
-						ArrayAdd(&type->enumInfo->enumerators, info);
+						array_add(&type->enumInfo->enumerators, info);
 					}
 					else
 					{
