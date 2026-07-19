@@ -228,88 +228,147 @@ GenerateBinaryExpression(Node *baseNode,
 			Emit(out, context, "    pop rcx");
 			Emit(out, context, "    pop rax");
 
-			if (node->op == BinaryOp_Add)
+			if (node->inferredType.kind == TypeKind_Float32)
 			{
-				Emit(out, context, "    add rax, rcx\t; perform addition");
-			}
-			else if (node->op == BinaryOp_Subtract)
-			{
-				Emit(out, context, "    sub rax, rcx\t; perform subtraction");
-			}
-			else if (node->op == BinaryOp_Multiply)
-			{
-				Emit(out, context, "    imul rax, rcx\t; perform multiplication");
-			}
-			else if (node->op == BinaryOp_Divide)
-			{
-				Emit(out, context, "    cqo     \t\t;");
+				Emit(out, context, "    movq xmm1, rcx");
+				Emit(out, context, "    movq xmm0, rax");
 
-				if (IsSignedInteger(node->inferredType))
+				if (node->op == BinaryOp_Add)
 				{
-					Emit(out, context, "    idiv rcx\t\t; perform division");
+					Emit(out, context, "    addss xmm0, xmm1\t; perform addition");
 				}
-				else if (IsUnsignedInteger(node->inferredType))
+				else if (node->op == BinaryOp_Subtract)
 				{
-					Emit(out, context, "    div rcx\t\t; perform division");
+					Emit(out, context, "    subss xmm0, xmm1\t; perform subtraction");
 				}
-				else
+				else if (node->op == BinaryOp_Multiply)
 				{
-					Assert(false);
+					Emit(out, context, "    mulss xmm0, xmm1\t; perform multiplication");
 				}
-			}
-			else if (node->op == BinaryOp_Modulo)
-			{
-				Emit(out, context, "    cqo");
-
-				if (IsSignedInteger(node->inferredType))
+				else if (node->op == BinaryOp_Divide)
 				{
-					Emit(out, context, "    idiv rcx\t\t; perform division");
-				}
-				else if (IsUnsignedInteger(node->inferredType))
-				{
-					Emit(out, context, "    div rcx\t\t; perform division");
+					Emit(out, context, "    divss xmm0, xmm1\t; perform multiplication");
 				}
 				else
 				{
 					Assert(false);
 				}
 
-				Emit(out, context, "    mov rax, rdx");
+				Emit(out, context, "    movq rax, xmm0");
 			}
-			else if (node->op == BinaryOp_ShiftLeft)
+			else if (node->inferredType.kind == TypeKind_Float64)
 			{
-				Emit(out, context, "    shl rax, cl");
-			}
-			else if (node->op == BinaryOp_ShiftRight)
-			{
-				if (IsSignedInteger(node->inferredType))
+				Emit(out, context, "    movq xmm1, rcx");
+				Emit(out, context, "    movq xmm0, rax");
+
+				if (node->op == BinaryOp_Add)
 				{
-					Emit(out, context, "    sar rax, cl");
+					Emit(out, context, "    addsd xmm0, xmm1\t; perform addition");
 				}
-				else if (IsUnsignedInteger(node->inferredType))
+				else if (node->op == BinaryOp_Subtract)
 				{
-					Emit(out, context, "    shr rax, cl");
+					Emit(out, context, "    subsd xmm0, xmm1\t; perform subtraction");
+				}
+				else if (node->op == BinaryOp_Multiply)
+				{
+					Emit(out, context, "    mulsd xmm0, xmm1\t; perform multiplication");
+				}
+				else if (node->op == BinaryOp_Divide)
+				{
+					Emit(out, context, "    divsd xmm0, xmm1\t; perform multiplication");
 				}
 				else
 				{
 					Assert(false);
 				}
-			}
-			else if (node->op == BinaryOp_BitAnd)
-			{
-				Emit(out, context, "    and rax, rcx");
-			}
-			else if (node->op == BinaryOp_BitOr)
-			{
-				Emit(out, context, "    or rax, rcx");
-			}
-			else if (node->op == BinaryOp_BitXor)
-			{
-				Emit(out, context, "    xor rax, rcx");
+
+				Emit(out, context, "    movq rax, xmm0");
 			}
 			else
 			{
-				Assert(false);
+				if (node->op == BinaryOp_Add)
+				{
+					Emit(out, context, "    add rax, rcx\t; perform addition");
+				}
+				else if (node->op == BinaryOp_Subtract)
+				{
+					Emit(out, context, "    sub rax, rcx\t; perform subtraction");
+				}
+				else if (node->op == BinaryOp_Multiply)
+				{
+					Emit(out, context, "    imul rax, rcx\t; perform multiplication");
+				}
+				else if (node->op == BinaryOp_Divide)
+				{
+					Emit(out, context, "    cqo     \t\t;");
+
+					if (IsSignedInteger(node->inferredType))
+					{
+						Emit(out, context, "    idiv rcx\t\t; perform division");
+					}
+					else if (IsUnsignedInteger(node->inferredType))
+					{
+						Emit(out, context, "    div rcx\t\t; perform division");
+					}
+					else
+					{
+						Assert(false);
+					}
+				}
+				else if (node->op == BinaryOp_Modulo)
+				{
+					Emit(out, context, "    cqo");
+
+					if (IsSignedInteger(node->inferredType))
+					{
+						Emit(out, context, "    idiv rcx\t\t; perform division");
+					}
+					else if (IsUnsignedInteger(node->inferredType))
+					{
+						Emit(out, context, "    div rcx\t\t; perform division");
+					}
+					else
+					{
+						Assert(false);
+					}
+
+					Emit(out, context, "    mov rax, rdx");
+				}
+				else if (node->op == BinaryOp_ShiftLeft)
+				{
+					Emit(out, context, "    shl rax, cl");
+				}
+				else if (node->op == BinaryOp_ShiftRight)
+				{
+					if (IsSignedInteger(node->inferredType))
+					{
+						Emit(out, context, "    sar rax, cl");
+					}
+					else if (IsUnsignedInteger(node->inferredType))
+					{
+						Emit(out, context, "    shr rax, cl");
+					}
+					else
+					{
+						Assert(false);
+					}
+				}
+				else if (node->op == BinaryOp_BitAnd)
+				{
+					Emit(out, context, "    and rax, rcx");
+				}
+				else if (node->op == BinaryOp_BitOr)
+				{
+					Emit(out, context, "    or rax, rcx");
+				}
+				else if (node->op == BinaryOp_BitXor)
+				{
+					Emit(out, context, "    xor rax, rcx");
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
 
 			Emit(out, context, "    push rax");
@@ -361,7 +420,8 @@ GenerateBinaryExpression(Node *baseNode,
 						Assert(false);
 					}
 				}
-				else if (IsUnsignedInteger(node->lhs->inferredType))
+				else if (IsUnsignedInteger(node->lhs->inferredType)
+						 || IsFloatingPoint(node->lhs->inferredType))
 				{
 					if (node->op == BinaryOp_Greater)
 					{
@@ -392,7 +452,24 @@ GenerateBinaryExpression(Node *baseNode,
 
 			Emit(out, context, "    pop rcx");
 			Emit(out, context, "    pop rax");
-			Emit(out, context, "    cmp rax, rcx");
+
+			if (node->lhs->inferredType.kind == TypeKind_Float32)
+			{
+				Emit(out, context, "    movq xmm1, rcx");
+				Emit(out, context, "    movq xmm0, rax");
+				Emit(out, context, "    ucomiss xmm0, xmm1");
+			}
+			else if (node->lhs->inferredType.kind == TypeKind_Float64)
+			{
+				Emit(out, context, "    movq xmm1, rcx");
+				Emit(out, context, "    movq xmm0, rax");
+				Emit(out, context, "    ucomisd xmm0, xmm1");
+			}
+			else
+			{
+				Emit(out, context, "    cmp rax, rcx");
+			}
+
 			Emit(out, context, "    %s al", setccInstruction);
 			Emit(out, context, "    movzx rax, al");
 			Emit(out, context, "    push rax\t\t; push the comparison result");
@@ -467,11 +544,33 @@ GenerateExpression(Node *baseNode,
 			Assert(false);
 		} break;
 
-		case NodeKind_Number:
+		case NodeKind_Int64Literal:
 		{
-			NumberNode *node = As<NumberNode>(baseNode);
+			Int64LiteralNode *node = As<Int64LiteralNode>(baseNode);
 
-			Emit(out, context, "    mov rax, %lld\t\t; load integer literal", node->int64Value);
+			Emit(out, context, "    mov rax, %lld\t\t; load int64 literal", node->value);
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
+		} break;
+
+		case NodeKind_Float32Literal:
+		{
+			Float32LiteralNode *node = As<Float32LiteralNode>(baseNode);
+
+			u32 u32Value = *(u32 *)&node->value;
+
+			Emit(out, context, "    mov rax, 0x%X\t\t; load float32 literal %f", u32Value, node->value);
+			Emit(out, context, "    push rax");
+			Emit(out, context, "");
+		} break;
+
+		case NodeKind_Float64Literal:
+		{
+			Float64LiteralNode *node = As<Float64LiteralNode>(baseNode);
+
+			u64 u64Value = *(u64 *)&node->value;
+
+			Emit(out, context, "    mov rax, 0x%llX\t\t; load float64 literal %f", u64Value, node->value);
 			Emit(out, context, "    push rax");
 			Emit(out, context, "");
 		} break;
@@ -505,29 +604,59 @@ GenerateExpression(Node *baseNode,
 
 			GenerateExpression(node->expr, out, context);
 
-			if (node->op == UnaryOp_Negate)
+			if (node->inferredType.kind == TypeKind_Float32)
 			{
-				Emit(out, context, "    pop rax");
-				Emit(out, context, "    neg rax");
-				Emit(out, context, "    push rax");
+				if (node->op == UnaryOp_Negate)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    xor eax, 0x80000000\t; float32 negate");
+					Emit(out, context, "    push rax");
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
-			else if (node->op == UnaryOp_LogicalNot)
+			else if (node->inferredType.kind == TypeKind_Float64)
 			{
-				Emit(out, context, "    pop rax");
-				Emit(out, context, "    cmp rax, 0");
-				Emit(out, context, "    sete al");
-				Emit(out, context, "    movzx rax, al");
-				Emit(out, context, "    push rax");
-			}
-			else if (node->op == UnaryOp_BitNegate)
-			{
-				Emit(out, context, "    pop rax");
-				Emit(out, context, "    not rax");
-				Emit(out, context, "    push rax");
+				if (node->op == UnaryOp_Negate)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    mov rcx, 0x8000000000000000");
+					Emit(out, context, "    xor rax, rcx\t; float64 negate");
+					Emit(out, context, "    push rax");
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
 			else
 			{
-				Assert(false);
+				if (node->op == UnaryOp_Negate)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    neg rax");
+					Emit(out, context, "    push rax");
+				}
+				else if (node->op == UnaryOp_LogicalNot)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    cmp rax, 0");
+					Emit(out, context, "    sete al");
+					Emit(out, context, "    movzx rax, al");
+					Emit(out, context, "    push rax");
+				}
+				else if (node->op == UnaryOp_BitNegate)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    not rax");
+					Emit(out, context, "    push rax");
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
 
 			Emit(out, context, "");
@@ -599,6 +728,80 @@ GenerateExpression(Node *baseNode,
 			CastNode *node = As<CastNode>(baseNode);
 
 			GenerateExpression(node->what, out, context);
+
+			if (node->targetType.kind == TypeKind_Int32)
+			{
+				if (node->what->inferredType.kind == TypeKind_Int64)
+				{
+					// nothing to do
+				}
+				else
+				{
+					Assert(false);
+				}
+			}
+			else if (node->targetType.kind == TypeKind_Int64)
+			{
+				if (node->what->inferredType.kind == TypeKind_Float64)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    movq xmm0, rax");
+					Emit(out, context, "    cvttsd2si rax, xmm0");
+					Emit(out, context, "    push rax");
+				}
+				else
+				{
+					Assert(false);
+				}
+			}
+			else if (node->targetType.kind == TypeKind_Float32)
+			{
+				if (node->what->inferredType.kind == TypeKind_Int64)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    cvtsi2ss xmm0, rax");
+					Emit(out, context, "    movd eax, xmm0");
+					Emit(out, context, "    push rax");
+				}
+				else if (node->what->inferredType.kind == TypeKind_Float64)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    movq xmm1, rax");
+					Emit(out, context, "    cvtsd2ss xmm0, xmm1");
+					Emit(out, context, "    movd eax, xmm0");
+					Emit(out, context, "    push rax");
+				}
+				else
+				{
+					Assert(false);
+				}
+			}
+			else if (node->targetType.kind == TypeKind_Float64)
+			{
+				if (node->what->inferredType.kind == TypeKind_Int64)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    cvtsi2sd xmm0, rax");
+					Emit(out, context, "    movq rax, xmm0");
+					Emit(out, context, "    push rax");
+				}
+				else if (node->what->inferredType.kind == TypeKind_Float32)
+				{
+					Emit(out, context, "    pop rax");
+					Emit(out, context, "    movd xmm1, eax");
+					Emit(out, context, "    cvtss2sd xmm0, xmm1");
+					Emit(out, context, "    movq rax, xmm0");
+					Emit(out, context, "    push rax");
+				}
+				else
+				{
+					Assert(false);
+				}
+			}
+			else
+			{
+				Assert(false);
+			}
 		} break;
 
 		case NodeKind_Call:

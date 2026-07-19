@@ -67,9 +67,11 @@
 	X(TokenKind_Foreach,          159,       "foreach"        ) \
 	/* other */ \
 	X(TokenKind_Identifier,       160,       "identifier"     ) \
-	X(TokenKind_Number,           161,       "number"         ) \
-	X(TokenKind_String,           162,       "string"         ) \
-	X(TokenKind_CString,          163,       "cstring"        )
+	X(TokenKind_Int64Literal,     161,       "number"         ) \
+	X(TokenKind_Float32Literal,   162,       "number"         ) \
+	X(TokenKind_Float64Literal,   163,       "number"         ) \
+	X(TokenKind_String,           164,       "string"         ) \
+	X(TokenKind_CString,          165,       "cstring"        )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 
@@ -84,8 +86,14 @@ struct Token
 {
 	SourceLocation location;
 	string str;
-	i64 numberValue;
 	TokenKind kind;
+
+	union
+	{
+		i64 int64Value;
+		f32 float32Value;
+		f64 float64Value;
+	};
 };
 
 struct LexerFrame

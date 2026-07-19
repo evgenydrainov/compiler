@@ -9,7 +9,7 @@ CoroutineState :: struct
 	state: i64;
 };
 
-int64_to_float32 :: proc(value: i64) -> i32
+int64_to_float32 :: proc(value: i64) -> f32
 {
 	asm
 	{

@@ -77,13 +77,13 @@ MakeBinaryNode(BinaryOp op,
 	return node;
 }
 
-internal NumberNode *
+internal Int64LiteralNode *
 MakeNumberNode(SourceLocation location,
-			   i64 numberValue,
+			   i64 value,
 			   Arena *arena)
 {
-	NumberNode *node = MakeNode<NumberNode>(location, arena);
-	node->int64Value = numberValue;
+	Int64LiteralNode *node = MakeNode<Int64LiteralNode>(location, arena);
+	node->value = value;
 
 	return node;
 }
@@ -292,13 +292,13 @@ ParseType(Parser *parser,
 			if (parser->current.str == "f32")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int32 }; // TODO: floating point types
+				return { .kind = TypeKind_Float32 };
 			}
 
 			if (parser->current.str == "f64")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int64 }; // TODO: floating point types
+				return { .kind = TypeKind_Float64 };
 			}
 		} break;
 
@@ -337,9 +337,29 @@ ParseAtom_Inner(Parser *parser,
 				Lexer *lexer,
 				Arena *arena)
 {
-	if (parser->current.kind == TokenKind_Number)
+	if (parser->current.kind == TokenKind_Int64Literal)
 	{
-		NumberNode *node = MakeNumberNode(parser->current.location, parser->current.numberValue, arena);
+		Int64LiteralNode *node = MakeNumberNode(parser->current.location, parser->current.int64Value, arena);
+		AdvanceToken(parser, lexer);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_Float32Literal)
+	{
+		Float32LiteralNode *node = MakeNode<Float32LiteralNode>(parser->current.location, arena);
+		node->value = parser->current.float32Value;
+
+		AdvanceToken(parser, lexer);
+
+		return node;
+	}
+
+	if (parser->current.kind == TokenKind_Float64Literal)
+	{
+		Float64LiteralNode *node = MakeNode<Float64LiteralNode>(parser->current.location, arena);
+		node->value = parser->current.float64Value;
+
 		AdvanceToken(parser, lexer);
 
 		return node;
@@ -841,8 +861,8 @@ ParseForeachStatement(Parser *parser,
 		VarNode *additionLhs = MakeNode<VarNode>(parser->current.location, arena);
 		additionLhs->name = iterator->name;
 
-		NumberNode *additionRhs = MakeNode<NumberNode>(parser->current.location, arena);
-		additionRhs->int64Value = 1;
+		Int64LiteralNode *additionRhs = MakeNode<Int64LiteralNode>(parser->current.location, arena);
+		additionRhs->value = 1;
 
 		BinaryNode *assignRhs = MakeNode<BinaryNode>(parser->current.location, arena);
 		assignRhs->op = BinaryOp_Add;

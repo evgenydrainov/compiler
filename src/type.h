@@ -6,19 +6,25 @@
 	X(TypeKind_Unknown,     0,    "unknown type"     ) \
 	X(TypeKind_InferMe,     1,    "not inferred yet" ) \
 	X(TypeKind_Void,        2,    "void"             ) \
+	/* integer types */ \
 	X(TypeKind_Int8,        3,    "i8"               ) \
 	X(TypeKind_Int16,       4,    "i16"              ) \
 	X(TypeKind_Int32,       5,    "i32"              ) \
 	X(TypeKind_Int64,       6,    "i64"              ) \
+	/* unsigned integer types */ \
 	X(TypeKind_UInt8,       7,    "u8"               ) \
 	X(TypeKind_UInt16,      8,    "u16"              ) \
 	X(TypeKind_UInt32,      9,    "u32"              ) \
 	X(TypeKind_UInt64,     10,    "u64"              ) \
-	X(TypeKind_Bool,       11,    "bool"             ) \
-	X(TypeKind_Pointer,    12,    "pointer"          ) \
-	X(TypeKind_Struct,     13,    "struct"           ) \
-	X(TypeKind_Enum,       14,    "enum"             ) \
-	X(TypeKind_Array,      15,    "array"            )
+	/* floating point types */ \
+	X(TypeKind_Float32,    11,    "f32"              ) \
+	X(TypeKind_Float64,    12,    "f64"              ) \
+	/* other */ \
+	X(TypeKind_Bool,       13,    "bool"             ) \
+	X(TypeKind_Pointer,    14,    "pointer"          ) \
+	X(TypeKind_Struct,     15,    "struct"           ) \
+	X(TypeKind_Enum,       16,    "enum"             ) \
+	X(TypeKind_Array,      17,    "array"            )
 
 DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
 
@@ -100,6 +106,9 @@ SizeOfType(Type type)
 		case TypeKind_UInt16:  {result = 2;} break;
 		case TypeKind_UInt32:  {result = 4;} break;
 		case TypeKind_UInt64:  {result = 8;} break;
+
+		case TypeKind_Float32: {result = 4;} break;
+		case TypeKind_Float64: {result = 8;} break;
 
 		case TypeKind_Pointer: {result = 8;} break;
 		case TypeKind_Bool:    {result = 8;} break;
@@ -196,4 +205,11 @@ IsInteger(Type type)
 {
 	return (IsSignedInteger(type)
 			|| IsUnsignedInteger(type));
+}
+
+inline bool
+IsFloatingPoint(Type type)
+{
+	return (type.kind == TypeKind_Float32
+			|| type.kind == TypeKind_Float64);
 }

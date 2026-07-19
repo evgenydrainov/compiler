@@ -102,11 +102,11 @@ internal i64
 EvaluateConstantExpression(Node *baseNode,
 						   SemanticContext *context)
 {
-	if (baseNode->kind == NodeKind_Number)
+	if (baseNode->kind == NodeKind_Int64Literal)
 	{
-		NumberNode *node = As<NumberNode>(baseNode);
+		Int64LiteralNode *node = As<Int64LiteralNode>(baseNode);
 
-		return node->int64Value;
+		return node->value;
 	}
 	else if (baseNode->kind == NodeKind_Binary)
 	{
@@ -454,14 +454,13 @@ AnalyzeBinaryExpression(Node *baseNode,
 
 			char *opName = GetBinaryOpPrettyName(node->op);
 
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
-				&& IsInteger(node->lhs->inferredType))
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 			{
 				node->inferredType = node->lhs->inferredType;
 			}
 			else
 			{
-				Error(context, node, "");
+				Error(context, node, "cannot %s", opName);
 			}
 		} break;
 
@@ -473,8 +472,7 @@ AnalyzeBinaryExpression(Node *baseNode,
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
 
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
-				&& IsInteger(node->lhs->inferredType))
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 			{
 				node->inferredType.kind = TypeKind_Bool;
 			}
@@ -492,9 +490,7 @@ AnalyzeBinaryExpression(Node *baseNode,
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context, node->lhs->inferredType);
 
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
-				&& (IsInteger(node->lhs->inferredType)
-					|| node->lhs->inferredType.kind == TypeKind_Enum))
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 			{
 				node->inferredType.kind = TypeKind_Bool;
 			}
@@ -542,9 +538,19 @@ AnalyzeExpression(Node *baseNode,
 			Assert(false);
 		} break;
 
-		case NodeKind_Number:
+		case NodeKind_Int64Literal:
 		{
 			baseNode->inferredType.kind = TypeKind_Int64;
+		} break;
+
+		case NodeKind_Float32Literal:
+		{
+			baseNode->inferredType.kind = TypeKind_Float32;
+		} break;
+
+		case NodeKind_Float64Literal:
+		{
+			baseNode->inferredType.kind = TypeKind_Float64;
 		} break;
 
 		case NodeKind_String:
@@ -598,7 +604,8 @@ AnalyzeExpression(Node *baseNode,
 			if (node->op == UnaryOp_Negate
 				|| node->op == UnaryOp_BitNegate)
 			{
-				if (IsSignedInteger(node->expr->inferredType))
+				if (IsSignedInteger(node->expr->inferredType)
+					|| IsFloatingPoint(node->expr->inferredType))
 				{
 					node->inferredType = node->expr->inferredType;
 				}
@@ -642,16 +649,16 @@ AnalyzeExpression(Node *baseNode,
 			Constant *constant = LookupConstant(constTable, node->name);
 			if (constant)
 			{
-				static_assert(sizeof(NumberNode) <= sizeof(VarNode));
+				static_assert(sizeof(Int64LiteralNode) <= sizeof(VarNode));
 
 				SourceLocation location = node->location;
 
-				NumberNode *newNode = (NumberNode *)node;
+				Int64LiteralNode *newNode = (Int64LiteralNode *)node;
 				*newNode = {};
-				newNode->kind = NodeKind_Number;
+				newNode->kind = NodeKind_Int64Literal;
 				newNode->location = location;
 				newNode->inferredType.kind = TypeKind_Int64;
-				newNode->int64Value = constant->value;
+				newNode->value = constant->value;
 
 				break;
 			}
@@ -759,16 +766,16 @@ AnalyzeExpression(Node *baseNode,
 					EnumeratorInfo *enumerator = FindEnumerator(expectedType.enumInfo, node->fieldName);
 					if (enumerator)
 					{
-						static_assert(sizeof(NumberNode) <= sizeof(FieldAccessNode));
+						static_assert(sizeof(Int64LiteralNode) <= sizeof(FieldAccessNode));
 
 						SourceLocation location = node->location;
 
-						NumberNode *newNode = (NumberNode *)node;
+						Int64LiteralNode *newNode = (Int64LiteralNode *)node;
 						*newNode = {};
-						newNode->kind = NodeKind_Number;
+						newNode->kind = NodeKind_Int64Literal;
 						newNode->location = location;
 						newNode->inferredType = expectedType;
-						newNode->int64Value = enumerator->value;
+						newNode->value = enumerator->value;
 					}
 					else
 					{
@@ -792,16 +799,16 @@ AnalyzeExpression(Node *baseNode,
 					EnumeratorInfo *enumerator = FindEnumerator(type->enumInfo, node->fieldName);
 					if (enumerator)
 					{
-						static_assert(sizeof(NumberNode) <= sizeof(FieldAccessNode));
+						static_assert(sizeof(Int64LiteralNode) <= sizeof(FieldAccessNode));
 
 						SourceLocation location = node->location;
 
-						NumberNode *newNode = (NumberNode *)node;
+						Int64LiteralNode *newNode = (Int64LiteralNode *)node;
 						*newNode = {};
-						newNode->kind = NodeKind_Number;
+						newNode->kind = NodeKind_Int64Literal;
 						newNode->location = location;
 						newNode->inferredType = *type;
-						newNode->int64Value = enumerator->value;
+						newNode->value = enumerator->value;
 					}
 					else
 					{
@@ -894,15 +901,49 @@ AnalyzeExpression(Node *baseNode,
 
 			AnalyzeExpression(node->what, context);
 
-			if (IsInteger(node->what->inferredType)
-				&& IsInteger(node->targetType))
+			if (IsInteger(node->targetType))
 			{
-				node->inferredType = node->targetType;
+				if (IsInteger(node->what->inferredType))
+				{
+					node->inferredType = node->targetType;
+					break;
+				}
+
+				if (IsFloatingPoint(node->what->inferredType))
+				{
+					node->inferredType = node->targetType;
+					break;
+				}
+
+				if (node->what->inferredType.kind == TypeKind_Enum)
+				{
+					node->inferredType = node->targetType;
+					break;
+				}
+
+				if (node->what->inferredType.kind == TypeKind_Pointer)
+				{
+					node->inferredType = node->targetType;
+					break;
+				}
 			}
-			else
+
+			if (IsFloatingPoint(node->targetType))
 			{
-				Error(context, node, "cannot cast");
+				if (IsInteger(node->what->inferredType))
+				{
+					node->inferredType = node->targetType;
+					break;
+				}
+
+				if (IsFloatingPoint(node->what->inferredType))
+				{
+					node->inferredType = node->targetType;
+					break;
+				}
 			}
+
+			Error(context, node, "cannot cast");
 		} break;
 
 		case NodeKind_Break:

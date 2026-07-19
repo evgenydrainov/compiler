@@ -61,7 +61,7 @@ main :: proc() -> int
 		ClearBackground(0);
 
 		camera: Camera2D;
-		camera.zoom = int64_to_float32(WINDOW_SCALE);
+		camera.zoom = cast(f32)WINDOW_SCALE;
 
 		BeginMode2D(&camera);
 

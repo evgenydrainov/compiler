@@ -1,5 +1,7 @@
 #include "lexer.h"
 
+#include <stdlib.h>
+
 internal bool
 IsAlpha(char c)
 {
@@ -318,7 +320,11 @@ internal Token
 ParseDecimalNumber(Lexer *lexer, SourceLocation location)
 {
 	string str = {lexer->current, 0};
-	i64 value = 0;
+
+	i64 int64Value = 0;
+	f64 float64Value = 0;
+
+	TokenKind kind = TokenKind_Int64Literal;
 
 	while (IsDigit(*lexer->current)
 		   || *lexer->current == '_')
@@ -329,20 +335,22 @@ ParseDecimalNumber(Lexer *lexer, SourceLocation location)
 		}
 		else
 		{
-			value = 10*value + (*lexer->current - '0');
+			int64Value = 10*int64Value + (*lexer->current - '0');
 		}
 
 		AdvanceChar(lexer);
 		str.count++;
 	}
 
-	// look for a fractional part
 	if (*lexer->current == '.'
 		&& IsDigit(PeekNextChar(lexer)))
 	{
-		// consume the dot
-		AdvanceChar(lexer);
+		AdvanceChar(lexer); // eat the '.'
 		str.count++;
+
+		kind = TokenKind_Float32Literal; // f32 is the default
+		//float64Value = (f64)int64Value;
+		//f64 multiplier = 0.1;
 
 		while (IsDigit(*lexer->current)
 			   || *lexer->current == '_')
@@ -353,16 +361,57 @@ ParseDecimalNumber(Lexer *lexer, SourceLocation location)
 			}
 			else
 			{
-				// TODO
+				//float64Value += multiplier * (*lexer->current - '0');
+				//multiplier /= 10.0;
 			}
 
 			AdvanceChar(lexer);
 			str.count++;
 		}
+
+		// hack
+		char saveChar = *lexer->current;
+		*lexer->current = 0;
+		float64Value = strtod(str.data, nullptr);
+		*lexer->current = saveChar;
+		// hack
+
+		if (lexer->current[0] == 'f'
+			&& lexer->current[1] == '6'
+			&& lexer->current[2] == '4')
+		{
+			kind = TokenKind_Float64Literal;
+			AdvanceChar(lexer, 3);
+		}
+
+		if (lexer->current[0] == 'f'
+			&& lexer->current[1] == '3'
+			&& lexer->current[2] == '2')
+		{
+			kind = TokenKind_Float32Literal;
+			AdvanceChar(lexer, 3);
+		}
 	}
 
-	Token result = MakeToken(lexer, TokenKind_Number, str, location);
-	result.numberValue = value;
+	Token result = MakeToken(lexer, kind, str, location);
+
+	if (kind == TokenKind_Int64Literal)
+	{
+		result.int64Value = int64Value;
+	}
+	else if (kind == TokenKind_Float32Literal)
+	{
+		result.float32Value = (f32)float64Value;
+	}
+	else if (kind == TokenKind_Float64Literal)
+	{
+		result.float64Value = float64Value;
+	}
+	else
+	{
+		Assert(false);
+	}
+
 	return result;
 }
 
@@ -398,8 +447,8 @@ ParseHexadecimalNumber(Lexer *lexer, SourceLocation location)
 		str.count++;
 	}
 
-	Token result = MakeToken(lexer, TokenKind_Number, str, location);
-	result.numberValue = value;
+	Token result = MakeToken(lexer, TokenKind_Int64Literal, str, location);
+	result.int64Value = value;
 	return result;
 }
 
