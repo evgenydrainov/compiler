@@ -4,12 +4,18 @@
 #include "parser.h"
 #include <stdio.h>
 
+struct FunctionTable;
+
 struct CodegenContext
 {
 	int uniqueLabelId;
 	int stackDepth;
 
+	FunctionTable *funcTable;
+
 	int currentLoopUniqueId;
+
+	Type currentReturnType;
 
 	BumpArray<GenerateCStringLiteral> cstringLiterals;
 	BumpArray<GenerateStringLiteral> stringLiterals;

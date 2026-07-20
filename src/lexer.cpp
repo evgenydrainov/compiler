@@ -381,7 +381,7 @@ ParseDecimalNumber(Lexer *lexer, SourceLocation location)
 			&& lexer->current[2] == '4')
 		{
 			kind = TokenKind_Float64Literal;
-			AdvanceChar(lexer, 3);
+			AdvanceChar(lexer, 3); // eat the 'f64' postfix
 		}
 
 		if (lexer->current[0] == 'f'
@@ -389,7 +389,7 @@ ParseDecimalNumber(Lexer *lexer, SourceLocation location)
 			&& lexer->current[2] == '2')
 		{
 			kind = TokenKind_Float32Literal;
-			AdvanceChar(lexer, 3);
+			AdvanceChar(lexer, 3); // eat the 'f32' postfix
 		}
 	}
 

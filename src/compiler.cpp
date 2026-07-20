@@ -293,6 +293,7 @@ Compile(CompileOptions *options)
 	// PrintTree(program, "", false);
 
 	CodegenContext codegenContext = {};
+	codegenContext.funcTable = semanticContext.funcTable;
 	codegenContext.cstringLiterals = semanticContext.cstringLiterals;
 	codegenContext.stringLiterals = semanticContext.stringLiterals;
 

@@ -12,8 +12,7 @@ struct Function
 {
 	string name;
 
-	Parameter params[32];
-	int numParams;
+	StaticBumpArray<Parameter, 32> params;
 
 	Type returnType;
 

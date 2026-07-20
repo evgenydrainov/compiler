@@ -1,4 +1,5 @@
 #include "codegen.h"
+#include "function_table.h"
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -729,78 +730,85 @@ GenerateExpression(Node *baseNode,
 
 			GenerateExpression(node->what, out, context);
 
-			if (node->targetType.kind == TypeKind_Int32)
+			if (IsFloatingPoint(node->targetType)
+				|| IsFloatingPoint(node->what->inferredType))
 			{
-				if (node->what->inferredType.kind == TypeKind_Int64)
+				if (node->targetType.kind == TypeKind_Int32)
 				{
-					// nothing to do
+					if (node->what->inferredType.kind == TypeKind_Float32)
+					{
+						Emit(out, context, "    pop rax");
+						Emit(out, context, "    movd xmm0, eax");
+						Emit(out, context, "    cvttss2si rax, xmm0");
+						Emit(out, context, "    push rax");
+					}
+					else
+					{
+						Assert(!"this cast is not implemented");
+					}
+				}
+				else if (node->targetType.kind == TypeKind_Int64)
+				{
+					if (node->what->inferredType.kind == TypeKind_Float64)
+					{
+						Emit(out, context, "    pop rax");
+						Emit(out, context, "    movq xmm0, rax");
+						Emit(out, context, "    cvttsd2si rax, xmm0");
+						Emit(out, context, "    push rax");
+					}
+					else
+					{
+						Assert(!"this cast is not implemented");
+					}
+				}
+				else if (node->targetType.kind == TypeKind_Float32)
+				{
+					if (node->what->inferredType.kind == TypeKind_Int64)
+					{
+						Emit(out, context, "    pop rax");
+						Emit(out, context, "    cvtsi2ss xmm0, rax");
+						Emit(out, context, "    movd eax, xmm0");
+						Emit(out, context, "    push rax");
+					}
+					else if (node->what->inferredType.kind == TypeKind_Float64)
+					{
+						Emit(out, context, "    pop rax");
+						Emit(out, context, "    movq xmm1, rax");
+						Emit(out, context, "    cvtsd2ss xmm0, xmm1");
+						Emit(out, context, "    movd eax, xmm0");
+						Emit(out, context, "    push rax");
+					}
+					else
+					{
+						Assert(!"this cast is not implemented");
+					}
+				}
+				else if (node->targetType.kind == TypeKind_Float64)
+				{
+					if (node->what->inferredType.kind == TypeKind_Int64)
+					{
+						Emit(out, context, "    pop rax");
+						Emit(out, context, "    cvtsi2sd xmm0, rax");
+						Emit(out, context, "    movq rax, xmm0");
+						Emit(out, context, "    push rax");
+					}
+					else if (node->what->inferredType.kind == TypeKind_Float32)
+					{
+						Emit(out, context, "    pop rax");
+						Emit(out, context, "    movd xmm1, eax");
+						Emit(out, context, "    cvtss2sd xmm0, xmm1");
+						Emit(out, context, "    movq rax, xmm0");
+						Emit(out, context, "    push rax");
+					}
+					else
+					{
+						Assert(!"this cast is not implemented");
+					}
 				}
 				else
 				{
-					Assert(false);
+					Assert(!"this cast is not implemented");
 				}
-			}
-			else if (node->targetType.kind == TypeKind_Int64)
-			{
-				if (node->what->inferredType.kind == TypeKind_Float64)
-				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    movq xmm0, rax");
-					Emit(out, context, "    cvttsd2si rax, xmm0");
-					Emit(out, context, "    push rax");
-				}
-				else
-				{
-					Assert(false);
-				}
-			}
-			else if (node->targetType.kind == TypeKind_Float32)
-			{
-				if (node->what->inferredType.kind == TypeKind_Int64)
-				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    cvtsi2ss xmm0, rax");
-					Emit(out, context, "    movd eax, xmm0");
-					Emit(out, context, "    push rax");
-				}
-				else if (node->what->inferredType.kind == TypeKind_Float64)
-				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    movq xmm1, rax");
-					Emit(out, context, "    cvtsd2ss xmm0, xmm1");
-					Emit(out, context, "    movd eax, xmm0");
-					Emit(out, context, "    push rax");
-				}
-				else
-				{
-					Assert(false);
-				}
-			}
-			else if (node->targetType.kind == TypeKind_Float64)
-			{
-				if (node->what->inferredType.kind == TypeKind_Int64)
-				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    cvtsi2sd xmm0, rax");
-					Emit(out, context, "    movq rax, xmm0");
-					Emit(out, context, "    push rax");
-				}
-				else if (node->what->inferredType.kind == TypeKind_Float32)
-				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    movd xmm1, eax");
-					Emit(out, context, "    cvtss2sd xmm0, xmm1");
-					Emit(out, context, "    movq rax, xmm0");
-					Emit(out, context, "    push rax");
-				}
-				else
-				{
-					Assert(false);
-				}
-			}
-			else
-			{
-				Assert(false);
 			}
 		} break;
 
@@ -815,6 +823,9 @@ GenerateExpression(Node *baseNode,
 				"r8",
 				"r9",
 			};
+
+			Function *function = LookupFunction(context->funcTable, node->name);
+			Assert(function);
 
 			int numArgumentsInRegs = Min(node->numExpressions, 4);
 			int numArgumentsOnStack = node->numExpressions - numArgumentsInRegs;
@@ -835,7 +846,22 @@ GenerateExpression(Node *baseNode,
 				 i < numArgumentsInRegs;
 				 i++)
 			{
-				Emit(out, context, "    pop %s\t\t\t; put argument", paramRegs[i]);
+				Type *paramType = &function->params[i].type;
+
+				if (paramType->kind == TypeKind_Float32)
+				{
+					Emit(out, context, "    pop rax\t\t\t; put argument");
+					Emit(out, context, "    movd xmm%d, eax", i);
+				}
+				else if (paramType->kind == TypeKind_Float64)
+				{
+					Emit(out, context, "    pop rax\t\t\t; put argument");
+					Emit(out, context, "    movq xmm%d, rax", i);
+				}
+				else
+				{
+					Emit(out, context, "    pop %s\t\t\t; put argument", paramRegs[i]);
+				}
 			}
 			Emit(out, context, "");
 
@@ -848,6 +874,15 @@ GenerateExpression(Node *baseNode,
 				int cleanup = numArgumentsOnStack*8 + padding;
 				Emit(out, context, "    add rsp, %d\t\t; free stack arguments", cleanup);
 				context->stackDepth -= numArgumentsOnStack;
+			}
+
+			if (node->inferredType.kind == TypeKind_Float32)
+			{
+				Emit(out, context, "    movd eax, xmm0");
+			}
+			else if (node->inferredType.kind == TypeKind_Float64)
+			{
+				Emit(out, context, "    movq rax, xmm0");
 			}
 
 			Emit(out, context, "    push rax\t\t; push the function return value");
@@ -1123,6 +1158,15 @@ GenerateStatement(Node *baseNode,
 				GenerateExpression(node->expr, out, context);
 
 				Emit(out, context, "    pop rax\t\t\t; store expression result into rax");
+
+				if (context->currentReturnType.kind == TypeKind_Float32)
+				{
+					Emit(out, context, "    movd xmm0, eax");
+				}
+				else if (context->currentReturnType.kind == TypeKind_Float64)
+				{
+					Emit(out, context, "    movq xmm0, rax");
+				}
 			}
 			else
 			{
@@ -1194,6 +1238,8 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			BlockNode *functionBody = As<BlockNode>(node->body);
 
+			context->currentReturnType = node->returnType;
+
 			Emit(out, context, STR_FMT ":", STR_ARG(node->name));
 			Emit(out, context, "    push rbp");
 			context->stackDepth--;
@@ -1217,7 +1263,18 @@ GenerateTopLevelStatement(Node *baseNode,
 			{
 				ParamNode *param = As<ParamNode>(node->params[i]);
 
-				Emit(out, context, "    mov [rbp - %d], %s\t\t; unpack argument", param->stackOffset, paramRegs[i]);
+				if (param->type.kind == TypeKind_Float32)
+				{
+					Emit(out, context, "    movss [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
+				}
+				else if (param->type.kind == TypeKind_Float64)
+				{
+					Emit(out, context, "    movsd [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
+				}
+				else
+				{
+					Emit(out, context, "    mov [rbp - %d], %s\t\t; unpack argument", param->stackOffset, paramRegs[i]);
+				}
 			}
 
 			for (int i = numParamsInRegs;

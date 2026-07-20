@@ -682,7 +682,7 @@ AnalyzeExpression(Node *baseNode,
 			Function *function = LookupFunction(funcTable, node->name);
 			if (function)
 			{
-				if (node->numExpressions == function->numParams)
+				if (node->numExpressions == function->params.count)
 				{
 					for (int i = 0;
 						 i < node->numExpressions;
@@ -707,7 +707,7 @@ AnalyzeExpression(Node *baseNode,
 				{
 					Error(context, node, "cannot call " STR_FMT_QUOTED ": expected %d arguments, but got %d",
 						  STR_ARG(function->name),
-						  function->numParams,
+						  function->params.count,
 						  node->numExpressions);
 				}
 			}
@@ -1236,7 +1236,6 @@ EarlyAnalyze(Node *baseNode,
 			if (!LookupFunction(context->funcTable, node->name))
 			{
 				Function *func = DeclareFunction(context->funcTable, node->name);
-				func->numParams = node->numParams;
 				func->returnType = node->returnType;
 				func->linkName = node->name;
 
@@ -1254,7 +1253,10 @@ EarlyAnalyze(Node *baseNode,
 				{
 					ParamNode *paramNode = As<ParamNode>(node->params[paramIndex]);
 
-					func->params[paramIndex].type = paramNode->type;
+					Parameter parameter = {};
+					parameter.type = paramNode->type;
+
+					array_add(&func->params, parameter);
 				}
 			}
 			else

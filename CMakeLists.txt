@@ -38,7 +38,6 @@ add_executable(
 
 add_executable(
     run_tests
-    src/common.h
     src/run_tests.cpp
 )
 

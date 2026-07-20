@@ -21,7 +21,7 @@ Game :: struct
 	world: World;
 };
 
-GameUpdate :: proc(game: *Game)
+GameUpdate :: proc(game: *Game, delta: f32)
 {
 	if game.state == .TitleScreen
 	{
@@ -29,7 +29,7 @@ GameUpdate :: proc(game: *Game)
 	}
 	else if game.state == .World
 	{
-		WorldUpdate(&game.world);
+		WorldUpdate(&game.world, delta);
 	}
 }
 
@@ -43,6 +43,8 @@ GameDraw :: proc(game: *Game)
 	{
 		WorldDraw(&game.world);
 	}
+
+	DrawFPS(0, 0);
 }
 
 main :: proc() -> int
@@ -54,7 +56,9 @@ main :: proc() -> int
 
 	while !WindowShouldClose()
 	{
-		GameUpdate(&game);
+		delta := GetFrameTime()*60.0;
+		
+		GameUpdate(&game, delta);
 
 		BeginDrawing();
 
