@@ -846,17 +846,37 @@ GenerateExpression(Node *baseNode,
 				 i < numArgumentsInRegs;
 				 i++)
 			{
-				Type *paramType = &function->params[i].type;
+				Type *paramType = nullptr;
+
+				if (i < function->params.count)
+				{
+					paramType = &function->params[i].type;
+				}
+				else
+				{
+					Assert(function->isVariadic);
+					paramType = &node->expressions[i]->inferredType;
+				}
 
 				if (paramType->kind == TypeKind_Float32)
 				{
 					Emit(out, context, "    pop rax\t\t\t; put argument");
 					Emit(out, context, "    movd xmm%d, eax", i);
+
+					if (function->isVariadic)
+					{
+						Assert(false);
+					}
 				}
 				else if (paramType->kind == TypeKind_Float64)
 				{
 					Emit(out, context, "    pop rax\t\t\t; put argument");
 					Emit(out, context, "    movq xmm%d, rax", i);
+
+					if (function->isVariadic)
+					{
+						Emit(out, context, "    mov %s, rax", paramRegs[i]);
+					}
 				}
 				else
 				{

@@ -17,6 +17,8 @@ struct Function
 	Type returnType;
 
 	string linkName;
+
+	bool isVariadic;
 };
 
 struct FunctionTable

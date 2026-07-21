@@ -184,6 +184,8 @@ struct FuncNode : public Node
 
 	bool isCoroutine;
 	int yieldIndex;
+
+	bool isVariadic;
 };
 
 struct CallNode : public Node

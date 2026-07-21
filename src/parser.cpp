@@ -1140,8 +1140,6 @@ ParseFunctionDefinition(Parser *parser,
 {
 	// function definition
 	// main :: proc(foo: int) -> i64 { statements; }
-	// main :: proc(foo: int) -> i64 #foreign;
-	// main :: proc(foo: int) -> i64 #foreign "link_name";
 
 	const int MAX_ARGUMENTS = 32;
 
@@ -1194,7 +1192,7 @@ ParseFunctionDefinition(Parser *parser,
 		node->returnType = ParseType(parser, lexer, arena);
 	}
 
-	if (parser->current.kind == TokenKind_Hash)
+	while (parser->current.kind == TokenKind_Hash)
 	{
 		AdvanceToken(parser, lexer); // eat the '#'
 
@@ -1213,8 +1211,6 @@ ParseFunctionDefinition(Parser *parser,
 				AdvanceToken(parser, lexer);
 			}
 
-			ExpectToken(parser, lexer, TokenKind_Semicolon);
-
 			node->isForeign = true;
 		}
 		else if (parser->current.str == "coroutine")
@@ -1222,6 +1218,12 @@ ParseFunctionDefinition(Parser *parser,
 			ExpectToken(parser, lexer, TokenKind_Identifier);
 
 			node->isCoroutine = true;
+		}
+		else if (parser->current.str == "variadic")
+		{
+			ExpectToken(parser, lexer, TokenKind_Identifier);
+
+			node->isVariadic = true;
 		}
 		else
 		{
@@ -1232,6 +1234,10 @@ ParseFunctionDefinition(Parser *parser,
 	if (!node->isForeign)
 	{
 		node->body = ParseBlock(parser, lexer, arena);
+	}
+	else
+	{
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
 	}
 
 	return node;

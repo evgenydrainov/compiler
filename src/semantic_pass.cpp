@@ -682,7 +682,14 @@ AnalyzeExpression(Node *baseNode,
 			Function *function = LookupFunction(funcTable, node->name);
 			if (function)
 			{
-				if (node->numExpressions == function->params.count)
+				bool good = (node->numExpressions == function->params.count);
+
+				if (function->isVariadic)
+				{
+					good = (node->numExpressions >= function->params.count);
+				}
+
+				if (good)
 				{
 					for (int i = 0;
 						 i < node->numExpressions;
@@ -691,6 +698,13 @@ AnalyzeExpression(Node *baseNode,
 						Node *expr = node->expressions[i];
 
 						AnalyzeExpression(expr, context);
+					}
+
+					for (usize i = 0;
+						 i < function->params.count;
+						 i++)
+					{
+						Node *expr = node->expressions[i];
 
 						if (!CanImplicitlyCast(function->params[i].type, expr, context))
 						{
@@ -1238,6 +1252,7 @@ EarlyAnalyze(Node *baseNode,
 				Function *func = DeclareFunction(context->funcTable, node->name);
 				func->returnType = node->returnType;
 				func->linkName = node->name;
+				func->isVariadic = node->isVariadic;
 
 				if (node->isForeign)
 				{
