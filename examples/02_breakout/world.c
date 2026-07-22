@@ -16,6 +16,8 @@ Entity :: struct
 	height: f32;
 
 	ballState: BallState;
+
+	dead: bool;
 };
 
 World :: struct
@@ -108,11 +110,17 @@ WorldUpdate :: proc(world: *World, delta: f32)
 		{
 			brick := &world.bricks[brickIndex];
 
+			if brick.dead
+			{
+				continue;
+			}
+
 			if EntitiesCollide(ball, brick)
 			{
 				ball.vspeed = -ball.vspeed;
-				//brick.width = 0;
-				//brick.height = 0;
+				ball.vspeed *= 1.1;
+				ball.hspeed *= 1.1;
+				brick.dead = true;
 			}
 		}
 	}
@@ -134,6 +142,12 @@ WorldDraw :: proc(world: *World)
 	foreach brickIndex : 0..<world.numBricks
 	{
 		brick := &world.bricks[brickIndex];
+
+		if brick.dead
+		{
+			continue;
+		}
+
 		DrawEntity(brick, 0xffffffff);
 	}
 

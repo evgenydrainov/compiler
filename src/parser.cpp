@@ -40,7 +40,7 @@ LeftBindingPower(TokenKind type)
 		case TokenKind_LessLess:
 			return 9;
 
-		case TokenKind_Asterisk:
+		case TokenKind_Star:
 		case TokenKind_Slash:
 		case TokenKind_Percent:
 			return 10;
@@ -194,7 +194,7 @@ ParseType(Parser *parser,
 		  Lexer *lexer,
 		  Arena *arena)
 {
-	if (parser->current.kind == TokenKind_Asterisk)
+	if (parser->current.kind == TokenKind_Star)
 	{
 		Type type = {};
 		type.kind = TypeKind_Pointer;
@@ -523,7 +523,7 @@ ParseAtom_Inner(Parser *parser,
 		return node;
 	}
 
-	if (parser->current.kind == TokenKind_Asterisk)
+	if (parser->current.kind == TokenKind_Star)
 	{
 		DerefNode *node = MakeNode<DerefNode>(parser->current.location, arena);
 		AdvanceToken(parser, lexer);
@@ -634,7 +634,7 @@ ParseExpression(Parser *parser,
 
 			case TokenKind_Plus:           {lhs = MakeBinaryNode(BinaryOp_Add,          location, lhs, rhs, arena);} break;
 			case TokenKind_Minus:          {lhs = MakeBinaryNode(BinaryOp_Subtract,     location, lhs, rhs, arena);} break;
-			case TokenKind_Asterisk:       {lhs = MakeBinaryNode(BinaryOp_Multiply,     location, lhs, rhs, arena);} break;
+			case TokenKind_Star:           {lhs = MakeBinaryNode(BinaryOp_Multiply,     location, lhs, rhs, arena);} break;
 			case TokenKind_Slash:          {lhs = MakeBinaryNode(BinaryOp_Divide,       location, lhs, rhs, arena);} break;
 			case TokenKind_Percent:        {lhs = MakeBinaryNode(BinaryOp_Modulo,       location, lhs, rhs, arena);} break;
 			case TokenKind_Less:           {lhs = MakeBinaryNode(BinaryOp_Less,         location, lhs, rhs, arena);} break;
@@ -1102,9 +1102,11 @@ ParseStatement(Parser *parser,
 
 		CompoundOperator operators[] =
 		{
-			{TokenKind_PlusEqual, BinaryOp_Add},
-			{TokenKind_MinusEqual, BinaryOp_Subtract},
+			{TokenKind_PlusEqual,    BinaryOp_Add},
+			{TokenKind_MinusEqual,   BinaryOp_Subtract},
 			{TokenKind_PercentEqual, BinaryOp_Modulo},
+			{TokenKind_StarEqual,    BinaryOp_Multiply},
+			{TokenKind_SlashEqual,   BinaryOp_Multiply},
 		};
 
 		for (auto &it : operators)

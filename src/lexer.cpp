@@ -672,6 +672,22 @@ GetToken(Lexer *lexer)
 			}
 		} break;
 
+		case '*':
+		{
+			if (PeekNextChar(lexer) == '=')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_StarEqual, location, 2);
+			}
+		} break;
+
+		case '/':
+		{
+			if (PeekNextChar(lexer) == '=')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_SlashEqual, location, 2);
+			}
+		} break;
+
 		case '.':
 		{
 			if (PeekNextChar(lexer) == '.'

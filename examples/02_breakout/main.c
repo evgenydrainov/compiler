@@ -31,6 +31,12 @@ GameUpdate :: proc(game: *Game, delta: f32)
 	{
 		WorldUpdate(&game.world, delta);
 	}
+
+	if (IsKeyPressed(KEY_ENTER) && (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)))
+		|| IsKeyPressed(KEY_F11)
+	{
+		ToggleBorderlessWindowed();
+	}
 }
 
 GameDraw :: proc(game: *Game)
@@ -43,15 +49,32 @@ GameDraw :: proc(game: *Game)
 	{
 		WorldDraw(&game.world);
 	}
+}
 
-	DrawFPS(0, 0);
+SetupScreenCamera :: proc(camera: *Camera2D)
+{
+	screenWidth  := cast(f32)GetScreenWidth();
+	screenHeight := cast(f32)GetScreenHeight();
+
+	xscale := screenWidth  / cast(f32)GAME_WIDTH;
+	yscale := screenHeight / cast(f32)GAME_HEIGHT;
+
+	scale := fminf(xscale, yscale);
+
+	scaledWidth  := cast(f32)GAME_WIDTH  * scale;
+	scaledHeight := cast(f32)GAME_HEIGHT * scale;
+
+	camera.offset.x = (screenWidth  - scaledWidth)  * 0.5;
+	camera.offset.y = (screenHeight - scaledHeight) * 0.5;
+	camera.zoom = scale;
 }
 
 main :: proc() -> int
 {
+	SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
 	InitWindow(GAME_WIDTH*WINDOW_SCALE, GAME_HEIGHT*WINDOW_SCALE, "breakout"c);
-	SetTargetFPS(60);
-	
+	SetExitKey(KEY_NULL);
+
 	game: Game;
 
 	while !WindowShouldClose()
@@ -65,13 +88,15 @@ main :: proc() -> int
 		ClearBackground(0);
 
 		camera: Camera2D;
-		camera.zoom = cast(f32)WINDOW_SCALE;
+		SetupScreenCamera(&camera);
 
 		BeginMode2D(&camera);
 
 		GameDraw(&game);
 
 		EndMode2D();
+
+		DrawFPS(0, 0);
 
 		EndDrawing();
 	}

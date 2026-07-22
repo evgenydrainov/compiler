@@ -996,25 +996,32 @@ AnalyzeStatement(Node *baseNode,
 
 			ResolveType(&node->type, context, node);
 
-			if (!LookupSymbol(symTable, node->name, symTable->scopeStart))
+			if (node->type.kind != TypeKind_Void)
 			{
-				Symbol *symbol = DeclareSymbol(symTable, node->name, node->type);
-
-				node->stackOffset = symbol->stackOffset;
-
-				if (node->expr)
+				if (!LookupSymbol(symTable, node->name, symTable->scopeStart))
 				{
-					if (!CanImplicitlyCast(symbol->type, node->expr, context))
+					Symbol *symbol = DeclareSymbol(symTable, node->name, node->type);
+
+					node->stackOffset = symbol->stackOffset;
+
+					if (node->expr)
 					{
-						Error(context, node->expr, "cannot implicitly cast '%s' to '%s'",
-							  GetTypeKindPrettyName(node->expr->inferredType.kind),
-							  GetTypeKindPrettyName(symbol->type.kind));
+						if (!CanImplicitlyCast(symbol->type, node->expr, context))
+						{
+							Error(context, node->expr, "cannot implicitly cast '%s' to '%s'",
+								  GetTypeKindPrettyName(node->expr->inferredType.kind),
+								  GetTypeKindPrettyName(symbol->type.kind));
+						}
 					}
+				}
+				else
+				{
+					Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->name));
 				}
 			}
 			else
 			{
-				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->name));
+				Error(context, node, "cannot declare variable of type void");
 			}
 		} break;
 

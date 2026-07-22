@@ -763,7 +763,8 @@ GenerateExpression(Node *baseNode,
 				}
 				else if (node->targetType.kind == TypeKind_Float32)
 				{
-					if (node->what->inferredType.kind == TypeKind_Int64)
+					if (node->what->inferredType.kind == TypeKind_Int32
+						|| node->what->inferredType.kind == TypeKind_Int64)
 					{
 						Emit(out, context, "    pop rax");
 						Emit(out, context, "    cvtsi2ss xmm0, rax");
@@ -840,6 +841,18 @@ GenerateExpression(Node *baseNode,
 				 i--;)
 			{
 				GenerateExpression(node->expressions[i], out, context);
+
+				if (function->isVariadic)
+				{
+					if (i >= 4)
+					{
+						if (node->expressions[i]->inferredType.kind == TypeKind_Float32)
+						{
+							// TODO: probably have to do promotion here?
+							Assert(false);
+						}
+					}
+				}
 			}
 
 			for (int i = 0;
@@ -865,6 +878,7 @@ GenerateExpression(Node *baseNode,
 
 					if (function->isVariadic)
 					{
+						// TODO: do promotion
 						Assert(false);
 					}
 				}

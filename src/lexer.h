@@ -12,7 +12,7 @@
 	X(TokenKind_Ampersand,        '&',       "&"              ) \
 	X(TokenKind_OpenParen,        '(',       "("              ) \
 	X(TokenKind_CloseParen,       ')',       ")"              ) \
-	X(TokenKind_Asterisk,         '*',       "*"              ) \
+	X(TokenKind_Star,             '*',       "*"              ) \
 	X(TokenKind_Plus,             '+',       "+"              ) \
 	X(TokenKind_Comma,            ',',       ","              ) \
 	X(TokenKind_Minus,            '-',       "-"              ) \
@@ -43,35 +43,37 @@
 	X(TokenKind_PlusEqual,        137,       "+="             ) \
 	X(TokenKind_MinusEqual,       138,       "-="             ) \
 	X(TokenKind_PercentEqual,     139,       "%="             ) \
+	X(TokenKind_StarEqual,        140,       "*="             ) \
+	X(TokenKind_SlashEqual,       141,       "/="             ) \
 	/* three-character tokens */ \
-	X(TokenKind_DotDotLess,       140,       "..<"            ) \
+	X(TokenKind_DotDotLess,       142,       "..<"            ) \
 	/* keywords */ \
-	X(TokenKind_If,               141,       "if"             ) \
-	X(TokenKind_Else,             142,       "else"           ) \
-	X(TokenKind_While,            143,       "while"          ) \
-	X(TokenKind_Do,               144,       "do"             ) \
-	X(TokenKind_Print,            145,       "print"          ) \
-	X(TokenKind_Proc,             146,       "proc"           ) \
-	X(TokenKind_Return,           147,       "return"         ) \
-	X(TokenKind_True,             148,       "true"           ) \
-	X(TokenKind_False,            149,       "false"          ) \
-	X(TokenKind_Struct,           150,       "struct"         ) \
-	X(TokenKind_For,              151,       "for"            ) \
-	X(TokenKind_Asm,              152,       "asm"            ) \
-	X(TokenKind_Enum,             153,       "enum"           ) \
-	X(TokenKind_Cast,             154,       "cast"           ) \
-	X(TokenKind_Yield,            155,       "yield"          ) \
-	X(TokenKind_Break,            156,       "break"          ) \
-	X(TokenKind_Continue,         157,       "continue"       ) \
-	X(TokenKind_In,               158,       "in"             ) \
-	X(TokenKind_Foreach,          159,       "foreach"        ) \
+	X(TokenKind_If,               143,       "if"             ) \
+	X(TokenKind_Else,             144,       "else"           ) \
+	X(TokenKind_While,            145,       "while"          ) \
+	X(TokenKind_Do,               146,       "do"             ) \
+	X(TokenKind_Print,            147,       "print"          ) \
+	X(TokenKind_Proc,             148,       "proc"           ) \
+	X(TokenKind_Return,           149,       "return"         ) \
+	X(TokenKind_True,             150,       "true"           ) \
+	X(TokenKind_False,            151,       "false"          ) \
+	X(TokenKind_Struct,           152,       "struct"         ) \
+	X(TokenKind_For,              153,       "for"            ) \
+	X(TokenKind_Asm,              154,       "asm"            ) \
+	X(TokenKind_Enum,             155,       "enum"           ) \
+	X(TokenKind_Cast,             156,       "cast"           ) \
+	X(TokenKind_Yield,            157,       "yield"          ) \
+	X(TokenKind_Break,            158,       "break"          ) \
+	X(TokenKind_Continue,         159,       "continue"       ) \
+	X(TokenKind_In,               160,       "in"             ) \
+	X(TokenKind_Foreach,          161,       "foreach"        ) \
 	/* other */ \
-	X(TokenKind_Identifier,       160,       "identifier"     ) \
-	X(TokenKind_Int64Literal,     161,       "number"         ) \
-	X(TokenKind_Float32Literal,   162,       "number"         ) \
-	X(TokenKind_Float64Literal,   163,       "number"         ) \
-	X(TokenKind_String,           164,       "string"         ) \
-	X(TokenKind_CString,          165,       "cstring"        )
+	X(TokenKind_Identifier,       162,       "identifier"     ) \
+	X(TokenKind_Int64Literal,     163,       "number"         ) \
+	X(TokenKind_Float32Literal,   164,       "number"         ) \
+	X(TokenKind_Float64Literal,   165,       "number"         ) \
+	X(TokenKind_String,           166,       "string"         ) \
+	X(TokenKind_CString,          167,       "cstring"        )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 

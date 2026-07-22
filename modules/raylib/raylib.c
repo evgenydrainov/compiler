@@ -44,6 +44,29 @@ Camera2D :: struct {
     zoom     : f32;         // Camera zoom (scaling around target), must not be set to 0, set to 1.0f for no scale
 };
 
+//----------------------------------------------------------------------------------
+// Enumerators Definition
+//----------------------------------------------------------------------------------
+// System/Window config flags
+// NOTE: Every bit registers one state (use it with bit masks)
+// By default all flags are set to 0
+FLAG_VSYNC_HINT         :: 0x00000040;   // Set to try enabling V-Sync on GPU
+FLAG_FULLSCREEN_MODE    :: 0x00000002;   // Set to run program in fullscreen
+FLAG_WINDOW_RESIZABLE   :: 0x00000004;   // Set to allow resizable window
+FLAG_WINDOW_UNDECORATED :: 0x00000008;   // Set to disable window decoration (frame and buttons)
+FLAG_WINDOW_HIDDEN      :: 0x00000080;   // Set to hide window
+FLAG_WINDOW_MINIMIZED   :: 0x00000200;   // Set to minimize window (iconify)
+FLAG_WINDOW_MAXIMIZED   :: 0x00000400;   // Set to maximize window (expanded to monitor)
+FLAG_WINDOW_UNFOCUSED   :: 0x00000800;   // Set to window non focused
+FLAG_WINDOW_TOPMOST     :: 0x00001000;   // Set to window always on top
+FLAG_WINDOW_ALWAYS_RUN  :: 0x00000100;   // Set to allow windows running while minimized
+FLAG_WINDOW_TRANSPARENT :: 0x00000010;   // Set to allow transparent framebuffer
+FLAG_WINDOW_HIGHDPI     :: 0x00002000;   // Set to support HighDPI
+FLAG_WINDOW_MOUSE_PASSTHROUGH :: 0x00004000; // Set to support mouse passthrough, only supported when FLAG_WINDOW_UNDECORATED
+FLAG_BORDERLESS_WINDOWED_MODE :: 0x00008000; // Set to run program in borderless windowed mode
+FLAG_MSAA_4X_HINT       :: 0x00000020;   // Set to try enabling MSAA 4X
+FLAG_INTERLACED_HINT    :: 0x00010000;   // Set to try enabling interlaced video format (for V3D)
+
 // Keyboard keys (US keyboard layout)
 // NOTE: Use GetKeyPressed() to allow redefining required keys for alternative layouts
 KEY_NULL            :: 0;        // Key: NULL, used for no key pressed
@@ -169,6 +192,10 @@ KEY_VOLUME_DOWN     :: 25;       // Key: Android volume down button
 InitWindow        :: proc(width: i32, height: i32, title: *u8) #foreign; // Initialize window and OpenGL context
 CloseWindow       :: proc()                                    #foreign; // Close window and unload OpenGL context
 WindowShouldClose :: proc() -> bool                            #foreign; // Check if application should close (KEY_ESCAPE pressed or windows close icon clicked)
+ToggleFullscreen  :: proc()                                    #foreign; // Toggle window state: fullscreen/windowed, resizes monitor to match window resolution
+ToggleBorderlessWindowed :: proc()                             #foreign; // Toggle window state: borderless windowed, resizes window to match monitor resolution
+GetScreenWidth    :: proc() -> i32                             #foreign; // Get current screen width
+GetScreenHeight   :: proc() -> i32                             #foreign; // Get current screen height
 
 // Drawing-related functions
 ClearBackground :: proc(color: i64)        #foreign; // Set background color (framebuffer clear color)
@@ -183,6 +210,9 @@ GetFrameTime :: proc() -> f32  #foreign; // Get time in seconds for last frame d
 GetTime      :: proc() -> f64  #foreign; // Get elapsed time in seconds since InitWindow()
 GetFPS       :: proc() -> i32  #foreign; // Get current FPS
 
+// Misc. functions
+SetConfigFlags :: proc(flags: u32) #foreign; // Setup init configuration flags (view FLAGS)
+
 //------------------------------------------------------------------------------------
 // Input Handling Functions (Module: core)
 //------------------------------------------------------------------------------------
@@ -193,6 +223,7 @@ IsKeyPressedRepeat :: proc(key: i32) -> bool #foreign; // Check if a key has bee
 IsKeyDown          :: proc(key: i32) -> bool #foreign; // Check if a key is being pressed
 IsKeyReleased      :: proc(key: i32) -> bool #foreign; // Check if a key has been released once
 IsKeyUp            :: proc(key: i32) -> bool #foreign; // Check if a key is NOT being pressed
+SetExitKey         :: proc(key: i32)         #foreign; // Set a custom key to exit program (default is ESC)
 
 // Basic shapes drawing functions
 DrawPixel     :: proc(posX: i32, posY: i32, color: i64)                          #foreign; // Draw a pixel using geometry [Can be slow, use with care]
