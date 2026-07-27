@@ -1,2 +1,2 @@
 @echo off
-..\..\build\Debug\compiler.exe main.c
+..\..\compiler.exe main.c

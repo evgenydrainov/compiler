@@ -20,15 +20,35 @@ Error(SemanticContext *context,
 
 	if (!context->suppressErrors)
 	{
-		fprintf(stderr, STR_FMT "(%d, %d): ",
+		fprintf(stderr, STR_FMT "(%d, %d): error: ",
 				STR_ARG(node->location.fileName), node->location.line, node->location.column);
 		vfprintf(stderr, format, args);
 		fprintf(stderr, "\n");
 	}
 
 	va_end(args);
-	
+
 	context->hadError = true;
+}
+
+internal void
+Note(SemanticContext *context,
+	 Node *node,
+	 char *format,
+	 ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	if (!context->suppressErrors)
+	{
+		fprintf(stderr, STR_FMT "(%d, %d): note: ",
+				STR_ARG(node->location.fileName), node->location.line, node->location.column);
+		vfprintf(stderr, format, args);
+		fprintf(stderr, "\n");
+	}
+
+	va_end(args);
 }
 
 struct Scope
@@ -120,7 +140,7 @@ EvaluateConstantExpression(Node *baseNode,
 		{
 			if (value2 == 0)
 			{
-				Error(context, baseNode, "division by zero");
+				Error(context, baseNode, "division by zero in constant expression");
 				return 0;
 			}
 		}
@@ -164,7 +184,8 @@ EvaluateConstantExpression(Node *baseNode,
 		}
 		else
 		{
-			Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
+			Error(context, node, STR_FMT_QUOTED " is not a constant", STR_ARG(node->name));
+			Note(context, node, "only constants declared with '::' can be used in a constant expression");
 		}
 
 		return result;
@@ -188,7 +209,8 @@ EvaluateConstantExpression(Node *baseNode,
 	}
 	else
 	{
-		Error(context, baseNode, "not a constant expression");
+		Error(context, baseNode, "expression is not a compile-time constant");
+		Note(context, baseNode, "a constant expression can only use integer literals, constants and operators");
 	}
 
 	return 0;
@@ -243,7 +265,9 @@ ResolveType(Type *type,
 			}
 			else
 			{
-				Error(context, nodeForError, STR_FMT_QUOTED ": unknown type", STR_ARG(type->name));
+				Error(context, nodeForError,
+					  "undeclared type " STR_FMT_QUOTED " (there is no struct or enum with this name)",
+					  STR_ARG(type->name));
 
 				local_persist StructInfo dummyStructInfo;
 				type->structInfo = &dummyStructInfo; // avoid crashes
@@ -261,13 +285,15 @@ ResolveType(Type *type,
 		if (type->arrayLength == 0)
 		{
 			i64 arrayLength = EvaluateConstantExpression(type->arrayLengthExpr, context);
-			if (arrayLength != 0)
+			if (arrayLength > 0)
 			{
 				type->arrayLength = (int)arrayLength;
 			}
 			else
 			{
-				Error(context, nodeForError, "array length cannot be zero");
+				Error(context, nodeForError,
+					  "array length must be greater than zero, but it is %lld",
+					  arrayLength);
 
 				type->arrayLength = 1; // avoid crash
 			}
@@ -460,7 +486,10 @@ AnalyzeBinaryExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node, "cannot %s", opName);
+				Error(context, node, "cannot %s '%s' and '%s'",
+					  opName,
+					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
+					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 			}
 		} break;
 
@@ -515,7 +544,9 @@ AnalyzeBinaryExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node, "lhs and rhs must be boolean");
+				Error(context, node, "both operands must be 'bool', but they are '%s' and '%s'",
+					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
+					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 			}
 		} break;
 	}
@@ -611,7 +642,8 @@ AnalyzeExpression(Node *baseNode,
 				}
 				else
 				{
-					Error(context, node->expr, "cannot negate '%s'",
+					Error(context, node->expr,
+						  "cannot negate '%s': operand must be a signed integer or a float",
 						  GetTypeKindPrettyName(node->expr->inferredType.kind));
 				}
 			}
@@ -623,7 +655,7 @@ AnalyzeExpression(Node *baseNode,
 				}
 				else
 				{
-					Error(context, node->expr, "cannot negate '%s'",
+					Error(context, node->expr, "cannot negate '%s': operand must be 'bool'",
 						  GetTypeKindPrettyName(node->expr->inferredType.kind));
 				}
 			}
@@ -708,8 +740,11 @@ AnalyzeExpression(Node *baseNode,
 
 						if (!CanImplicitlyCast(function->params[i].type, expr, context))
 						{
-							Error(context, expr, "cannot implicitly cast '%s' to '%s'",
+							Error(context, expr,
+								  "cannot pass '%s' as argument %d of " STR_FMT_QUOTED ": expected '%s'",
 								  GetTypeKindPrettyName(expr->inferredType.kind),
+								  (int)(i + 1),
+								  STR_ARG(function->name),
 								  GetTypeKindPrettyName(function->params[i].type.kind));
 						}
 					}
@@ -719,15 +754,19 @@ AnalyzeExpression(Node *baseNode,
 				}
 				else
 				{
-					Error(context, node, "cannot call " STR_FMT_QUOTED ": expected %d arguments, but got %d",
+					Error(context, node,
+						  "cannot call " STR_FMT_QUOTED ": it takes %s%d argument%s, but %d %s given",
 						  STR_ARG(function->name),
-						  function->params.count,
-						  node->numExpressions);
+						  function->isVariadic ? "at least " : "",
+						  (int)function->params.count,
+						  (function->params.count == 1) ? "" : "s",
+						  node->numExpressions,
+						  (node->numExpressions == 1) ? "was" : "were");
 				}
 			}
 			else
 			{
-				Error(context, node, STR_FMT_QUOTED ": identifier not found", STR_ARG(node->name));
+				Error(context, node, "undeclared procedure " STR_FMT_QUOTED, STR_ARG(node->name));
 			}
 		} break;
 
@@ -744,7 +783,9 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node->what, "cannot take address of non-lvalue");
+				Error(context, node->what, "cannot take the address of this expression");
+				Note(context, node->what,
+					 "the operand of '&' must be a variable, a field, an array element or a dereference");
 			}
 		} break;
 
@@ -762,7 +803,8 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node->what, "cannot dereference non-pointer");
+				Error(context, node->what, "cannot dereference '%s': it is not a pointer",
+					  GetTypeKindPrettyName(node->what->inferredType.kind));
 			}
 		} break;
 
@@ -793,13 +835,24 @@ AnalyzeExpression(Node *baseNode,
 					}
 					else
 					{
-						Error(context, node, "enumerator " STR_FMT_QUOTED " does not exist",
+						Error(context, node, "enum " STR_FMT_QUOTED " has no enumerator " STR_FMT_QUOTED,
+							  STR_ARG(expectedType.enumInfo->name),
 							  STR_ARG(node->fieldName));
 					}
 				}
+				else if (expectedType.kind == TypeKind_Unknown
+						 || expectedType.kind == TypeKind_InferMe)
+				{
+					Error(context, node, "cannot infer the enum type of '." STR_FMT "' here",
+						  STR_ARG(node->fieldName));
+					Note(context, node,
+						 "there is no expected enum type in this context, write the enum name explicitly");
+				}
 				else
 				{
-					Error(context, node, "");
+					Error(context, node, "cannot use '." STR_FMT "' here: expected type is '%s', not an enum",
+						  STR_ARG(node->fieldName),
+						  GetTypeKindPrettyName(expectedType.kind));
 				}
 
 				break;
@@ -826,7 +879,8 @@ AnalyzeExpression(Node *baseNode,
 					}
 					else
 					{
-						Error(context, node, "enumerator " STR_FMT_QUOTED " does not exist",
+						Error(context, node, "enum " STR_FMT_QUOTED " has no enumerator " STR_FMT_QUOTED,
+							  STR_ARG(type->name),
 							  STR_ARG(node->fieldName));
 					}
 
@@ -846,7 +900,8 @@ AnalyzeExpression(Node *baseNode,
 				}
 				else
 				{
-					Error(context, node, "struct has no field " STR_FMT_QUOTED,
+					Error(context, node, "struct " STR_FMT_QUOTED " has no field " STR_FMT_QUOTED,
+						  STR_ARG(node->expr->inferredType.structInfo->name),
 						  STR_ARG(node->fieldName));
 				}
 			}
@@ -867,18 +922,23 @@ AnalyzeExpression(Node *baseNode,
 					}
 					else
 					{
-						Error(context, node, "struct has no field " STR_FMT_QUOTED,
+						Error(context, node, "struct " STR_FMT_QUOTED " has no field " STR_FMT_QUOTED,
+							  STR_ARG(node->expr->inferredType.pointerTo->structInfo->name),
 							  STR_ARG(node->fieldName));
 					}
 				}
 				else
 				{
-					Error(context, node->expr, "cannot access field of pointer to non-struct");
+					Error(context, node->expr,
+						  "cannot access field " STR_FMT_QUOTED ": it is not a pointer to a struct",
+						  STR_ARG(node->fieldName));
 				}
 			}
 			else
 			{
-				Error(context, node->expr, "cannot access field of non-struct");
+				Error(context, node->expr, "cannot access field " STR_FMT_QUOTED " of '%s': it is not a struct",
+					  STR_ARG(node->fieldName),
+					  GetTypeKindPrettyName(node->expr->inferredType.kind));
 			}
 		} break;
 
@@ -891,7 +951,9 @@ AnalyzeExpression(Node *baseNode,
 
 			if (!IsSignedInteger(node->indexExpr->inferredType))
 			{
-				Error(context, node->indexExpr, "");
+				Error(context, node->indexExpr,
+					  "array index must be a signed integer, but it is '%s'",
+					  GetTypeKindPrettyName(node->indexExpr->inferredType.kind));
 				break;
 			}
 
@@ -905,7 +967,9 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node->arrayExpr, "");
+				Error(context, node->arrayExpr,
+					  "cannot index '%s': it is not an array or a pointer",
+					  GetTypeKindPrettyName(node->arrayExpr->inferredType.kind));
 			}
 		} break;
 
@@ -957,7 +1021,9 @@ AnalyzeExpression(Node *baseNode,
 				}
 			}
 
-			Error(context, node, "cannot cast");
+			Error(context, node, "cannot cast '%s' to '%s'",
+				  GetTypeKindPrettyName(node->what->inferredType.kind),
+				  GetTypeKindPrettyName(node->targetType.kind));
 		} break;
 
 		case NodeKind_Break:
@@ -1008,20 +1074,24 @@ AnalyzeStatement(Node *baseNode,
 					{
 						if (!CanImplicitlyCast(symbol->type, node->expr, context))
 						{
-							Error(context, node->expr, "cannot implicitly cast '%s' to '%s'",
-								  GetTypeKindPrettyName(node->expr->inferredType.kind),
-								  GetTypeKindPrettyName(symbol->type.kind));
+							Error(context, node->expr,
+								  "cannot initialize " STR_FMT_QUOTED " of type '%s' with a value of type '%s'",
+								  STR_ARG(node->name),
+								  GetTypeKindPrettyName(symbol->type.kind),
+								  GetTypeKindPrettyName(node->expr->inferredType.kind));
 						}
 					}
 				}
 				else
 				{
-					Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->name));
+					Error(context, node, "variable " STR_FMT_QUOTED " is already declared in this scope",
+						  STR_ARG(node->name));
 				}
 			}
 			else
 			{
-				Error(context, node, "cannot declare variable of type void");
+				Error(context, node, "cannot declare variable " STR_FMT_QUOTED " of type 'void'",
+					  STR_ARG(node->name));
 			}
 		} break;
 
@@ -1036,14 +1106,17 @@ AnalyzeStatement(Node *baseNode,
 			{
 				if (!CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 				{
-					Error(context, node->rhs, "cannot implicitly cast '%s' to '%s'",
+					Error(context, node->rhs, "cannot assign a value of type '%s' to '%s'",
 						  GetTypeKindPrettyName(node->rhs->inferredType.kind),
 						  GetTypeKindPrettyName(node->lhs->inferredType.kind));
 				}
 			}
 			else
 			{
-				Error(context, node->lhs, "cannot assign to non-lvalue");
+				Error(context, node->lhs,
+					  "cannot assign to this expression");
+				Note(context, node->lhs,
+					 "the left side of '=' must be a variable, a field, an array element or a dereference");
 			}
 		} break;
 
@@ -1066,7 +1139,7 @@ AnalyzeStatement(Node *baseNode,
 			if (node->condition->inferredType.kind != TypeKind_Bool)
 			{
 				Error(context, node->condition,
-					  "'if' condition must be boolean, it is of type '%s'",
+					  "'if' condition must be of type 'bool', but it is '%s'",
 					  GetTypeKindPrettyName(node->condition->inferredType.kind));
 			}
 		} break;
@@ -1081,7 +1154,7 @@ AnalyzeStatement(Node *baseNode,
 			if (node->condition->inferredType.kind != TypeKind_Bool)
 			{
 				Error(context, node->condition,
-					  "'while' condition must be boolean, it is of type '%s'",
+					  "'while' condition must be of type 'bool', but it is '%s'",
 					  GetTypeKindPrettyName(node->condition->inferredType.kind));
 			}
 		} break;
@@ -1103,7 +1176,7 @@ AnalyzeStatement(Node *baseNode,
 			if (node->cond->inferredType.kind != TypeKind_Bool)
 			{
 				Error(context, node->cond,
-					  "'for' condition must be boolean, it is of type '%s'",
+					  "'for' condition must be of type 'bool', but it is '%s'",
 					  GetTypeKindPrettyName(node->cond->inferredType.kind));
 			}
 		} break;
@@ -1130,10 +1203,12 @@ AnalyzeStatement(Node *baseNode,
 				
 				if (!CanImplicitlyCast(context->currentFunction->returnType, node->expr, context))
 				{
-					Error(context, node, "cannot implicitly cast '%s' to '%s'",
+					Error(context, node,
+						  "cannot return a value of type '%s' from " STR_FMT_QUOTED ": its return type is '%s'",
 						  GetTypeKindPrettyName(node->expr->inferredType.kind),
+						  STR_ARG(context->currentFunction->name),
 						  GetTypeKindPrettyName(context->currentFunction->returnType.kind));
-				}	
+				}
 			}
 			else
 			{
@@ -1141,7 +1216,8 @@ AnalyzeStatement(Node *baseNode,
 
 				if (context->currentFunction->returnType.kind != TypeKind_Void)
 				{
-					Error(context, node, "cannot return 'void': function return type is '%s'",
+					Error(context, node, STR_FMT_QUOTED " must return a value of type '%s'",
+						  STR_ARG(context->currentFunction->name),
 						  GetTypeKindPrettyName(context->currentFunction->returnType.kind));
 				}
 			}
@@ -1180,7 +1256,10 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 			if (node->returnType.kind == TypeKind_Struct)
 			{
-				Error(context, node, "cannot return struct by value");
+				Error(context, node, STR_FMT_QUOTED " cannot return struct " STR_FMT_QUOTED " by value",
+					  STR_ARG(node->name),
+					  STR_ARG(node->returnType.name));
+				Note(context, node, "return a pointer to the struct instead");
 			}
 
 			Scope scope = EnterScope(symTable);
@@ -1199,12 +1278,18 @@ AnalyzeTopLevelStatement(Node *baseNode,
 					  || size == 4
 					  || size == 8))
 				{
-					Error(context, param, "cannot pass argument of size %d by value", size);
+					Error(context, param,
+						  "cannot pass parameter " STR_FMT_QUOTED " by value: its size is %d bytes",
+						  STR_ARG(param->name),
+						  size);
+					Note(context, param,
+						 "only types of size 1, 2, 4 or 8 can be passed by value, pass a pointer instead");
 				}
 
 				if (LookupSymbol(symTable, param->name, 0))
 				{
-					Error(context, param, STR_FMT_QUOTED ": redefinition", STR_ARG(param->name));
+					Error(context, param, "parameter " STR_FMT_QUOTED " is already declared",
+						  STR_ARG(param->name));
 				}
 				else
 				{
@@ -1283,7 +1368,7 @@ EarlyAnalyze(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node, "function " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
+				Error(context, node, "redefinition of procedure " STR_FMT_QUOTED, STR_ARG(node->name));
 			}
 		} break;
 
@@ -1316,7 +1401,10 @@ EarlyAnalyze(Node *baseNode,
 					}
 					else
 					{
-						Error(context, field, STR_FMT_QUOTED ": redefinition", STR_ARG(field->name));
+						Error(context, field,
+							  "struct " STR_FMT_QUOTED " already has a field " STR_FMT_QUOTED,
+							  STR_ARG(node->name),
+							  STR_ARG(field->name));
 					}
 				}
 
@@ -1324,7 +1412,9 @@ EarlyAnalyze(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node, "struct " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
+				Error(context, node,
+					  "cannot declare struct " STR_FMT_QUOTED ": a type with this name already exists",
+					  STR_ARG(node->name));
 			}
 		} break;
 
@@ -1354,13 +1444,18 @@ EarlyAnalyze(Node *baseNode,
 					}
 					else
 					{
-						Error(context, enumerator, STR_FMT_QUOTED ": redefinition", STR_ARG(enumerator->name));
+						Error(context, enumerator,
+							  "enum " STR_FMT_QUOTED " already has an enumerator " STR_FMT_QUOTED,
+							  STR_ARG(node->name),
+							  STR_ARG(enumerator->name));
 					}
 				}
 			}
 			else
 			{
-				Error(context, node, "enum " STR_FMT_QUOTED " was already defined", STR_ARG(node->name));
+				Error(context, node,
+					  "cannot declare enum " STR_FMT_QUOTED ": a type with this name already exists",
+					  STR_ARG(node->name));
 			}
 		} break;
 
@@ -1376,7 +1471,7 @@ EarlyAnalyze(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->name));
+				Error(context, node, "redefinition of constant " STR_FMT_QUOTED, STR_ARG(node->name));
 			}
 		} break;
 
@@ -1390,12 +1485,13 @@ EarlyAnalyze(Node *baseNode,
 
 				if (node->expr)
 				{
-					Error(context, node, "global variable assignment not allowed");
+					Error(context, node, "global variable " STR_FMT_QUOTED " cannot have an initializer",
+						  STR_ARG(node->name));
 				}
 			}
 			else
 			{
-				Error(context, node, STR_FMT_QUOTED ": redefinition", STR_ARG(node->name));
+				Error(context, node, "redefinition of global variable " STR_FMT_QUOTED, STR_ARG(node->name));
 			}
 		} break;
 	}

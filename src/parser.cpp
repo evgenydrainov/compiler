@@ -94,7 +94,7 @@ ErrorAtTokenVA(Parser *parser,
 			   char *format,
 			   va_list args)
 {
-	fprintf(stderr, STR_FMT "(%d, %d): ",
+	fprintf(stderr, STR_FMT "(%d, %d): error: ",
 			STR_ARG(token.location.fileName), token.location.line, token.location.column);
 	vfprintf(stderr, format, args);
 	fprintf(stderr, "\n");
@@ -156,7 +156,7 @@ ExpectToken(Parser *parser,
 			if (parser->current.kind == TokenKind_Error)
 			{
 				string errorMessage = parser->current.str;
-				ErrorAtCurrent(parser, "syntax error: " STR_FMT, STR_ARG(errorMessage));
+				ErrorAtCurrent(parser, STR_FMT, STR_ARG(errorMessage));
 			}
 			else
 			{
@@ -175,7 +175,7 @@ UnexpectedCurrentToken(Parser *parser)
 	if (parser->current.kind == TokenKind_Error)
 	{
 		string errorMessage = parser->current.str;
-		ErrorAtCurrent(parser, "syntax error: " STR_FMT, STR_ARG(errorMessage));
+		ErrorAtCurrent(parser, STR_FMT, STR_ARG(errorMessage));
 	}
 	else
 	{
