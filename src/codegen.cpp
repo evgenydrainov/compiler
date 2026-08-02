@@ -479,7 +479,7 @@ GenerateBinaryExpression(Node *baseNode,
 
 		case BinaryOp_LogicalAnd:
 		{
-			int uniqueId = context->uniqueLabelId++;
+			int uniqueId = ++context->uniqueLabelId;
 
 			GenerateExpression(node->lhs, out, context);
 
@@ -506,7 +506,7 @@ GenerateBinaryExpression(Node *baseNode,
 
 		case BinaryOp_LogicalOr:
 		{
-			int uniqueId = context->uniqueLabelId++;
+			int uniqueId = ++context->uniqueLabelId;
 
 			GenerateExpression(node->lhs, out, context);
 
@@ -1062,7 +1062,7 @@ GenerateStatement(Node *baseNode,
 		{
 			IfNode *node = As<IfNode>(baseNode);
 
-			int uniqueId = context->uniqueLabelId++;
+			int uniqueId = ++context->uniqueLabelId;
 
 			if (node->elseBlock)
 			{
@@ -1103,7 +1103,7 @@ GenerateStatement(Node *baseNode,
 		{
 			WhileNode *node = As<WhileNode>(baseNode);
 
-			int uniqueId = context->uniqueLabelId++;
+			int uniqueId = ++context->uniqueLabelId;
 
 			int saveCurrentLoopUniqueId = context->currentLoopUniqueId;
 			context->currentLoopUniqueId = uniqueId;
@@ -1131,7 +1131,7 @@ GenerateStatement(Node *baseNode,
 		{
 			ForNode *node = As<ForNode>(baseNode);
 
-			int uniqueId = context->uniqueLabelId++;
+			int uniqueId = ++context->uniqueLabelId;
 
 			int saveCurrentLoopUniqueId = context->currentLoopUniqueId;
 			context->currentLoopUniqueId = uniqueId;
@@ -1235,12 +1235,16 @@ GenerateStatement(Node *baseNode,
 
 		case NodeKind_Break:
 		{
+			Assert(context->currentLoopUniqueId != 0);
+
 			Emit(out, context, "    jmp .end_%d\t; 'break'", context->currentLoopUniqueId);
 			Emit(out, context, "");
 		} break;
 
 		case NodeKind_Continue:
 		{
+			Assert(context->currentLoopUniqueId != 0);
+
 			Emit(out, context, "    jmp .continue_%d\t; 'continue'", context->currentLoopUniqueId);
 			Emit(out, context, "");
 		} break;

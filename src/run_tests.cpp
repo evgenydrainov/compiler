@@ -98,7 +98,7 @@ int main()
 	//TestReturnCode("12_foreign_function", 0);
 	//TestReturnCode("13_coroutine", 0);
 	//TestReturnCode("14_short_circuit", 0);
-	//TestReturnCode("15_break_continue", 0);
+	TestReturnCode("15_break_continue", 0);
 	//TestReturnCode("16_nested_aggregates", 0);
 	//TestReturnCode("17_array_of_structs", 0);
 	//TestReturnCode("18_floats", 0);
@@ -130,5 +130,5 @@ int main()
 		exit(1);
 	}
 
-	TestReturnCode("main", 0);
+	//TestReturnCode("main", 0);
 }

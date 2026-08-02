@@ -22,6 +22,8 @@ struct SemanticContext
 
 	FuncNode *currentFunction;
 
+	Node *currentLoop;
+
 	BumpArray<GenerateCStringLiteral> cstringLiterals;
 	BumpArray<GenerateStringLiteral> stringLiterals;
 };

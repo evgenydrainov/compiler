@@ -1028,12 +1028,24 @@ AnalyzeExpression(Node *baseNode,
 
 		case NodeKind_Break:
 		{
-			// TODO
+			if (!(context->currentLoop
+				  && (context->currentLoop->kind == NodeKind_While
+					  || context->currentLoop->kind == NodeKind_For)))
+			{
+				Error(context, baseNode,
+					  "'break' is only allowed in 'while' and 'for' loops");
+			}
 		} break;
 
 		case NodeKind_Continue:
 		{
-			// TODO
+			if (!(context->currentLoop
+				  && (context->currentLoop->kind == NodeKind_While
+					  || context->currentLoop->kind == NodeKind_For)))
+			{
+				Error(context, baseNode,
+					  "'continue' is only allowed in 'while' and 'for' loops");
+			}
 		} break;
 	}
 }
@@ -1149,7 +1161,13 @@ AnalyzeStatement(Node *baseNode,
 			WhileNode *node = As<WhileNode>(baseNode);
 
 			AnalyzeExpression(node->condition, context);
+
+			Node *saveCurrentLoop = context->currentLoop;
+			context->currentLoop = node;
+
 			AnalyzeBlock(node->body, context);
+
+			context->currentLoop = saveCurrentLoop;
 
 			if (node->condition->inferredType.kind != TypeKind_Bool)
 			{
@@ -1169,7 +1187,12 @@ AnalyzeStatement(Node *baseNode,
 			AnalyzeExpression(node->cond, context);
 			AnalyzeStatement(node->incr, context);
 
+			Node *saveCurrentLoop = context->currentLoop;
+			context->currentLoop = node;
+
 			AnalyzeBlock(node->body, context);
+
+			context->currentLoop = saveCurrentLoop;
 
 			LeaveScope(symTable, scope);
 
