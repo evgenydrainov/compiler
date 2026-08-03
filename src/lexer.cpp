@@ -135,6 +135,10 @@ IdentifierType(string str)
 			{
 				result = TokenKind_Do;
 			}
+			if (str == "defer")
+			{
+				result = TokenKind_Defer;
+			}
 		} break;
 
 		case 'e':

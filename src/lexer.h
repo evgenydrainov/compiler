@@ -67,13 +67,14 @@
 	X(TokenKind_Continue,         159,       "continue"       ) \
 	X(TokenKind_In,               160,       "in"             ) \
 	X(TokenKind_Foreach,          161,       "foreach"        ) \
+	X(TokenKind_Defer,            162,       "defer"          ) \
 	/* other */ \
-	X(TokenKind_Identifier,       162,       "identifier"     ) \
-	X(TokenKind_Int64Literal,     163,       "number"         ) \
-	X(TokenKind_Float32Literal,   164,       "number"         ) \
-	X(TokenKind_Float64Literal,   165,       "number"         ) \
-	X(TokenKind_String,           166,       "string"         ) \
-	X(TokenKind_CString,          167,       "cstring"        )
+	X(TokenKind_Identifier,       163,       "identifier"     ) \
+	X(TokenKind_Int64Literal,     164,       "number"         ) \
+	X(TokenKind_Float32Literal,   165,       "number"         ) \
+	X(TokenKind_Float64Literal,   166,       "number"         ) \
+	X(TokenKind_String,           167,       "string"         ) \
+	X(TokenKind_CString,          168,       "cstring"        )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 

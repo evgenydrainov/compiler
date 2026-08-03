@@ -38,7 +38,8 @@
 	X(NodeKind_Yield,             30,    ""   ) \
 	X(NodeKind_Break,             31,    ""   ) \
 	X(NodeKind_Continue,          32,    ""   ) \
-	X(NodeKind_For,               33,    ""   )
+	X(NodeKind_For,               33,    ""   ) \
+	X(NodeKind_Defer,             34,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -357,6 +358,13 @@ struct ForNode : public Node
 	Node *cond;
 	Node *incr;
 	Node *body;
+};
+
+struct DeferNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Defer;
+
+	Node *what;
 };
 
 template <typename T>

@@ -4,24 +4,6 @@
 #include <stdarg.h>
 
 internal void
-GenerateStatement(Node *node,
-				  FILE *out,
-				  CodegenContext *context);
-
-internal void
-GenerateBlock(Node *baseNode,
-			  FILE *out,
-			  CodegenContext *context)
-{
-	BlockNode *node = As<BlockNode>(baseNode);
-
-	for (Node *it : node->statements)
-	{
-		GenerateStatement(it, out, context);
-	}
-}
-
-internal void
 Emit(FILE *out,
 	 CodegenContext *context,
 	 char *format,
@@ -47,6 +29,45 @@ Emit(FILE *out,
 	{
 		context->stackDepth--;
 	}
+}
+
+internal void
+GenerateStatement(Node *node,
+				  FILE *out,
+				  CodegenContext *context);
+
+internal void
+EmitDefers(FILE *out,
+		   CodegenContext *context,
+		   usize floor)
+{
+	for (usize i = context->deferStack.count;
+		 i-- > floor;)
+	{
+		Emit(out, context, "; deferred statement begin");
+
+		GenerateStatement(context->deferStack[i], out, context);
+
+		Emit(out, context, "; deferred statement end");
+	}
+}
+
+internal void
+GenerateBlock(Node *baseNode,
+			  FILE *out,
+			  CodegenContext *context)
+{
+	BlockNode *node = As<BlockNode>(baseNode);
+
+	usize marker = context->deferStack.count;
+
+	for (Node *it : node->statements)
+	{
+		GenerateStatement(it, out, context);
+	}
+
+	EmitDefers(out, context, marker);
+	context->deferStack.count = marker;
 }
 
 internal void
@@ -1106,7 +1127,10 @@ GenerateStatement(Node *baseNode,
 			int uniqueId = ++context->uniqueLabelId;
 
 			int saveCurrentLoopUniqueId = context->currentLoopUniqueId;
+			usize saveCurrentLoopDeferFloor = context->currentLoopDeferFloor;
+
 			context->currentLoopUniqueId = uniqueId;
+			context->currentLoopDeferFloor = context->deferStack.count;
 
 			Emit(out, context, ".loop_%d:", uniqueId);
 
@@ -1125,6 +1149,7 @@ GenerateStatement(Node *baseNode,
 			Emit(out, context, "");
 
 			context->currentLoopUniqueId = saveCurrentLoopUniqueId;
+			context->currentLoopDeferFloor = saveCurrentLoopDeferFloor;
 		} break;
 
 		case NodeKind_For:
@@ -1134,7 +1159,10 @@ GenerateStatement(Node *baseNode,
 			int uniqueId = ++context->uniqueLabelId;
 
 			int saveCurrentLoopUniqueId = context->currentLoopUniqueId;
+			usize saveCurrentLoopDeferFloor = context->currentLoopDeferFloor;
+
 			context->currentLoopUniqueId = uniqueId;
+			context->currentLoopDeferFloor = context->deferStack.count;
 
 			GenerateStatement(node->init, out, context);
 
@@ -1157,6 +1185,7 @@ GenerateStatement(Node *baseNode,
 			Emit(out, context, "");
 
 			context->currentLoopUniqueId = saveCurrentLoopUniqueId;
+			context->currentLoopDeferFloor = saveCurrentLoopDeferFloor;
 		} break;
 
 		case NodeKind_Print:
@@ -1191,6 +1220,8 @@ GenerateStatement(Node *baseNode,
 			{
 				GenerateExpression(node->expr, out, context);
 
+				EmitDefers(out, context, 0);
+
 				Emit(out, context, "    pop rax\t\t\t; store expression result into rax");
 
 				if (context->currentReturnType.kind == TypeKind_Float32)
@@ -1205,6 +1236,8 @@ GenerateStatement(Node *baseNode,
 			else
 			{
 				// bare return;
+
+				EmitDefers(out, context, 0);
 			}
 
 			Emit(out, context, "    jmp .epilogue\t\t; return");
@@ -1237,6 +1270,8 @@ GenerateStatement(Node *baseNode,
 		{
 			Assert(context->currentLoopUniqueId != 0);
 
+			EmitDefers(out, context, context->currentLoopDeferFloor);
+
 			Emit(out, context, "    jmp .end_%d\t; 'break'", context->currentLoopUniqueId);
 			Emit(out, context, "");
 		} break;
@@ -1245,8 +1280,17 @@ GenerateStatement(Node *baseNode,
 		{
 			Assert(context->currentLoopUniqueId != 0);
 
+			EmitDefers(out, context, context->currentLoopDeferFloor);
+
 			Emit(out, context, "    jmp .continue_%d\t; 'continue'", context->currentLoopUniqueId);
 			Emit(out, context, "");
+		} break;
+
+		case NodeKind_Defer:
+		{
+			DeferNode *node = As<DeferNode>(baseNode);
+
+			array_add(&context->deferStack, node->what);
 		} break;
 
 		default:
@@ -1365,6 +1409,8 @@ GenerateTopLevelStatement(Node *baseNode,
 			Emit(out, context, "");
 
 			Assert(context->stackDepth == 0);
+
+			Assert(context->deferStack.count == 0);
 		} break;
 
 		case NodeKind_StructDecl:

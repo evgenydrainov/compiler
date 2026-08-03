@@ -1047,6 +1047,13 @@ AnalyzeExpression(Node *baseNode,
 					  "'continue' is only allowed in 'while' and 'for' loops");
 			}
 		} break;
+
+		case NodeKind_Defer:
+		{
+			DeferNode *node = As<DeferNode>(baseNode);
+
+			AnalyzeStatement(node->what, context);
+		} break;
 	}
 }
 

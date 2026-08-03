@@ -885,6 +885,20 @@ ParseForeachStatement(Parser *parser,
 }
 
 internal Node *
+ParseDeferStatement(Parser *parser,
+					Lexer *lexer,
+					Arena *arena)
+{
+	DeferNode *node = MakeNode<DeferNode>(parser->current.location, arena);
+
+	AdvanceToken(parser, lexer); // eat the 'defer'
+
+	node->what = ParseBlockOrSingleStatement(parser, lexer, arena);
+
+	return node;
+}
+
+internal Node *
 ParsePrintStatement(Parser *parser,
 					Lexer *lexer,
 					Arena *arena)
@@ -1005,6 +1019,11 @@ ParseStatement(Parser *parser,
 	if (parser->current.kind == TokenKind_Foreach)
 	{
 		return ParseForeachStatement(parser, lexer, arena);
+	}
+
+	if (parser->current.kind == TokenKind_Defer)
+	{
+		return ParseDeferStatement(parser, lexer, arena);
 	}
 
 	if (parser->current.kind == TokenKind_Print)
