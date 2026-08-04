@@ -899,6 +899,64 @@ ParseDeferStatement(Parser *parser,
 }
 
 internal Node *
+ParseSwitchStatement(Parser *parser,
+					 Lexer *lexer,
+					 Arena *arena)
+{
+	SwitchNode *node = MakeNode<SwitchNode>(parser->current.location, arena);
+
+	AdvanceToken(parser, lexer); // eat the 'switch'
+
+	node->expr = ParseExpression(parser, lexer, 0, arena);
+
+	ExpectToken(parser, lexer, TokenKind_OpenBrace);
+
+	node->cases = PushBumpArray<CaseNode *>(arena, 64);
+
+	while (!parser->hadError
+		   && parser->current.kind != TokenKind_CloseBrace)
+	{
+		if (parser->current.kind == TokenKind_Case)
+		{
+			CaseNode *caseNode = MakeNode<CaseNode>(parser->current.location, arena);
+
+			AdvanceToken(parser, lexer); // eat the 'case'
+
+			caseNode->label = ParseExpression(parser, lexer, 0, arena);
+
+			ExpectToken(parser, lexer, TokenKind_Colon);
+
+			caseNode->body = ParseBlock(parser, lexer, arena);
+
+			array_add(&node->cases, caseNode);
+		}
+		else if (parser->current.kind == TokenKind_Default)
+		{
+			if (!node->defaultBody)
+			{
+				AdvanceToken(parser, lexer); // eat the 'default'
+
+				ExpectToken(parser, lexer, TokenKind_Colon);
+
+				node->defaultBody = ParseBlock(parser, lexer, arena);
+			}
+			else
+			{
+				ErrorAtCurrent(parser, "default case was already defined");
+			}
+		}
+		else
+		{
+			UnexpectedCurrentToken(parser);
+		}
+	}
+
+	ExpectToken(parser, lexer, TokenKind_CloseBrace);
+
+	return node;
+}
+
+internal Node *
 ParsePrintStatement(Parser *parser,
 					Lexer *lexer,
 					Arena *arena)
@@ -1024,6 +1082,11 @@ ParseStatement(Parser *parser,
 	if (parser->current.kind == TokenKind_Defer)
 	{
 		return ParseDeferStatement(parser, lexer, arena);
+	}
+
+	if (parser->current.kind == TokenKind_Switch)
+	{
+		return ParseSwitchStatement(parser, lexer, arena);
 	}
 
 	if (parser->current.kind == TokenKind_Print)

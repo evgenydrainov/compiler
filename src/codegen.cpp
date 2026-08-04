@@ -985,6 +985,14 @@ GenerateStatement(Node *baseNode,
 {
 	switch (baseNode->kind)
 	{
+		default:
+		{
+			GenerateExpression(baseNode, out, context);
+
+			Emit(out, context, "    pop rax\t\t\t; discard the result");
+			Emit(out, context, "");
+		} break;
+
 		case NodeKind_VarDecl:
 		{
 			VarDeclNode *node = As<VarDeclNode>(baseNode);
@@ -1293,12 +1301,56 @@ GenerateStatement(Node *baseNode,
 			array_add(&context->deferStack, node->what);
 		} break;
 
-		default:
+		case NodeKind_Switch:
 		{
-			GenerateExpression(baseNode, out, context);
+			SwitchNode *node = As<SwitchNode>(baseNode);
 
-			Emit(out, context, "    pop rax\t\t\t; discard the result");
-			Emit(out, context, "");
+			int uniqueId = ++context->uniqueLabelId;
+
+			GenerateExpression(node->expr, out, context);
+
+			Emit(out, context, "    pop rax");
+
+			{
+				int i = 0;
+				for (CaseNode *caseNode : node->cases)
+				{
+					Emit(out, context, "    cmp rax, %lld", caseNode->labelValue);
+					Emit(out, context, "    je .case_%d_%d", uniqueId, i);
+
+					i++;
+				}
+			}
+
+			if (node->defaultBody)
+			{
+				Emit(out, context, "    jmp .default_%d", uniqueId);
+			}
+			else
+			{
+				Emit(out, context, "    jmp .end_%d", uniqueId);
+			}
+
+			{
+				int i = 0;
+				for (CaseNode *caseNode : node->cases)
+				{
+					Emit(out, context, ".case_%d_%d:", uniqueId, i);
+					GenerateBlock(caseNode->body, out, context);
+					Emit(out, context, "    jmp .end_%d", uniqueId);
+
+					i++;
+				}
+			}
+
+			if (node->defaultBody)
+			{
+				Emit(out, context, ".default_%d:", uniqueId);
+				GenerateBlock(node->defaultBody, out, context);
+				Emit(out, context, "    jmp .end_%d", uniqueId);
+			}
+
+			Emit(out, context, ".end_%d:", uniqueId);
 		} break;
 	}
 }

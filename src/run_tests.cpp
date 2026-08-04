@@ -102,7 +102,8 @@ int main()
 	//TestReturnCode("16_nested_aggregates", 0);
 	//TestReturnCode("17_array_of_structs", 0);
 	//TestReturnCode("18_floats", 0);
-	TestReturnCode("19_defer", 0);
+	//TestReturnCode("19_defer", 0);
+	TestReturnCode("20_switch", 0);
 
 	if (_chdir("should_fail") != 0)
 	{

@@ -221,21 +221,26 @@ TryEvaluateConstantExpression(Node *baseNode,
 							  SemanticContext *context,
 							  i64 *outResult)
 {
-	bool suppressErrors = context->suppressErrors;
+	bool saveSuppressErrors = context->suppressErrors;
+	bool saveHadError = context->hadError;
+
 	context->suppressErrors = true;
+	context->hadError = false;
 
 	i64 result = EvaluateConstantExpression(baseNode, context);
-	context->suppressErrors = suppressErrors;
 
-	if (!context->hadError)
+	bool evaluationFailed = context->hadError;
+
+	context->suppressErrors = saveSuppressErrors;
+	context->hadError = saveHadError;
+
+	if (!evaluationFailed)
 	{
 		*outResult = result;
 		return true;
 	}
 	else
 	{
-		context->hadError = false;
-
 		*outResult = 0;
 		return false;
 	}
@@ -1053,6 +1058,43 @@ AnalyzeExpression(Node *baseNode,
 			DeferNode *node = As<DeferNode>(baseNode);
 
 			AnalyzeStatement(node->what, context);
+		} break;
+
+		case NodeKind_Switch:
+		{
+			SwitchNode *node = As<SwitchNode>(baseNode);
+
+			AnalyzeExpression(node->expr, context);
+
+			if (IsInteger(node->expr->inferredType)
+				|| node->expr->inferredType.kind == TypeKind_Enum)
+			{
+				for (CaseNode *caseNode : node->cases)
+				{
+					AnalyzeExpression(caseNode->label, context, node->expr->inferredType);
+
+					AnalyzeBlock(caseNode->body, context);
+
+					i64 result;
+					if (TryEvaluateConstantExpression(caseNode->label, context, &result))
+					{
+						caseNode->labelValue = result;
+					}
+					else
+					{
+						Error(context, caseNode->label, "case label must be constant");
+					}
+				}
+
+				if (node->defaultBody)
+				{
+					AnalyzeBlock(node->defaultBody, context);
+				}
+			}
+			else
+			{
+				Error(context, node->expr, "switch expression must be an integer or an enum");
+			}
 		} break;
 	}
 }

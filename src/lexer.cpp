@@ -123,9 +123,13 @@ IdentifierType(string str)
 			{
 				result = TokenKind_Cast;
 			}
-			if (str == "continue")
+			else if (str == "continue")
 			{
 				result = TokenKind_Continue;
+			}
+			else if (str == "case")
+			{
+				result = TokenKind_Case;
 			}
 		} break;
 
@@ -135,9 +139,13 @@ IdentifierType(string str)
 			{
 				result = TokenKind_Do;
 			}
-			if (str == "defer")
+			else if (str == "defer")
 			{
 				result = TokenKind_Defer;
+			}
+			else if (str == "default")
+			{
+				result = TokenKind_Default;
 			}
 		} break;
 
@@ -147,7 +155,7 @@ IdentifierType(string str)
 			{
 				result = TokenKind_Else;
 			}
-			if (str == "enum")
+			else if (str == "enum")
 			{
 				result = TokenKind_Enum;
 			}
@@ -206,6 +214,10 @@ IdentifierType(string str)
 			if (str == "struct")
 			{
 				result = TokenKind_Struct;
+			}
+			else if (str == "switch")
+			{
+				result = TokenKind_Switch;
 			}
 		} break;
 

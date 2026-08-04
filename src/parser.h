@@ -39,7 +39,9 @@
 	X(NodeKind_Break,             31,    ""   ) \
 	X(NodeKind_Continue,          32,    ""   ) \
 	X(NodeKind_For,               33,    ""   ) \
-	X(NodeKind_Defer,             34,    ""   )
+	X(NodeKind_Defer,             34,    ""   ) \
+	X(NodeKind_Switch,            35,    ""   ) \
+	X(NodeKind_Case,              36,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -365,6 +367,24 @@ struct DeferNode : public Node
 	static constexpr NodeKind KIND = NodeKind_Defer;
 
 	Node *what;
+};
+
+struct CaseNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Case;
+
+	Node *label;
+	Node *body;
+	i64 labelValue;
+};
+
+struct SwitchNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Switch;
+
+	Node *expr;
+	BumpArray<CaseNode *> cases;
+	Node *defaultBody;
 };
 
 template <typename T>

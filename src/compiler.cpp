@@ -266,7 +266,7 @@ Compile(CompileOptions *options)
 	}
 
 	Arena arena = {};
-	arena.capacity = Megabytes(1);
+	arena.capacity = Megabytes(2);
 	arena.data = (u8 *)malloc(arena.capacity);
 
 	defer { free(arena.data); };
