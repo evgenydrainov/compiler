@@ -97,6 +97,63 @@ PopShadowSpace(FILE *out,
 }
 
 internal void
+EmitConvertRaxToIntegerType(Type type,
+							FILE *out,
+							CodegenContext *context)
+{
+	Assert(IsInteger(type));
+
+	int size = SizeOfType(type);
+
+	if (IsSignedInteger(type))
+	{
+		if (size == 8)
+		{
+			// already a full register
+		}
+		else if (size == 4)
+		{
+			Emit(out, context, "    movsxd rax, eax");
+		}
+		else if (size == 2)
+		{
+			Emit(out, context, "    movsx rax, ax");
+		}
+		else if (size == 1)
+		{
+			Emit(out, context, "    movsx rax, al");
+		}
+		else
+		{
+			Assert(false);
+		}
+	}
+	else
+	{
+		if (size == 8)
+		{
+			// already a full register
+		}
+		else if (size == 4)
+		{
+			Emit(out, context, "    mov eax, eax");
+		}
+		else if (size == 2)
+		{
+			Emit(out, context, "    movzx rax, ax");
+		}
+		else if (size == 1)
+		{
+			Emit(out, context, "    movzx rax, al");
+		}
+		else
+		{
+			Assert(false);
+		}
+	}
+}
+
+internal void
 GenerateExpression(Node *baseNode,
 				   FILE *out,
 				   CodegenContext *context);
@@ -751,86 +808,55 @@ GenerateExpression(Node *baseNode,
 
 			GenerateExpression(node->what, out, context);
 
-			if (IsFloatingPoint(node->targetType)
-				|| IsFloatingPoint(node->what->inferredType))
+			Type from = node->what->inferredType;
+			Type to = node->targetType;
+
+			bool fromFloat = IsFloatingPoint(from);
+			bool toFloat = IsFloatingPoint(to);
+
+			if (fromFloat
+				|| toFloat
+				|| (IsInteger(to) && SizeOfType(to) < 8))
 			{
-				if (node->targetType.kind == TypeKind_Int32)
+				Emit(out, context, "    pop rax");
+
+				// widen the source
+				if (from.kind == TypeKind_Float32)
 				{
-					if (node->what->inferredType.kind == TypeKind_Float32)
-					{
-						Emit(out, context, "    pop rax");
-						Emit(out, context, "    movd xmm0, eax");
-						Emit(out, context, "    cvttss2si rax, xmm0");
-						Emit(out, context, "    push rax");
-					}
-					else
-					{
-						Assert(!"this cast is not implemented");
-					}
+					Emit(out, context, "    movd xmm0, eax");
+					Emit(out, context, "    cvtss2sd xmm0, xmm0");
 				}
-				else if (node->targetType.kind == TypeKind_Int64)
+				else if (from.kind == TypeKind_Float64)
 				{
-					if (node->what->inferredType.kind == TypeKind_Float64)
-					{
-						Emit(out, context, "    pop rax");
-						Emit(out, context, "    movq xmm0, rax");
-						Emit(out, context, "    cvttsd2si rax, xmm0");
-						Emit(out, context, "    push rax");
-					}
-					else
-					{
-						Assert(!"this cast is not implemented");
-					}
+					Emit(out, context, "    movq xmm0, rax");
 				}
-				else if (node->targetType.kind == TypeKind_Float32)
+
+				// convert
+				if (!fromFloat && toFloat)
 				{
-					if (node->what->inferredType.kind == TypeKind_Int32
-						|| node->what->inferredType.kind == TypeKind_Int64)
-					{
-						Emit(out, context, "    pop rax");
-						Emit(out, context, "    cvtsi2ss xmm0, rax");
-						Emit(out, context, "    movd eax, xmm0");
-						Emit(out, context, "    push rax");
-					}
-					else if (node->what->inferredType.kind == TypeKind_Float64)
-					{
-						Emit(out, context, "    pop rax");
-						Emit(out, context, "    movq xmm1, rax");
-						Emit(out, context, "    cvtsd2ss xmm0, xmm1");
-						Emit(out, context, "    movd eax, xmm0");
-						Emit(out, context, "    push rax");
-					}
-					else
-					{
-						Assert(!"this cast is not implemented");
-					}
+					Emit(out, context, "    cvtsi2sd xmm0, rax");
 				}
-				else if (node->targetType.kind == TypeKind_Float64)
+				else if (fromFloat && !toFloat)
 				{
-					if (node->what->inferredType.kind == TypeKind_Int64)
-					{
-						Emit(out, context, "    pop rax");
-						Emit(out, context, "    cvtsi2sd xmm0, rax");
-						Emit(out, context, "    movq rax, xmm0");
-						Emit(out, context, "    push rax");
-					}
-					else if (node->what->inferredType.kind == TypeKind_Float32)
-					{
-						Emit(out, context, "    pop rax");
-						Emit(out, context, "    movd xmm1, eax");
-						Emit(out, context, "    cvtss2sd xmm0, xmm1");
-						Emit(out, context, "    movq rax, xmm0");
-						Emit(out, context, "    push rax");
-					}
-					else
-					{
-						Assert(!"this cast is not implemented");
-					}
+					Emit(out, context, "    cvttsd2si rax, xmm0");
 				}
-				else
+
+				// narrow to the target
+				if (to.kind == TypeKind_Float32)
 				{
-					Assert(!"this cast is not implemented");
+					Emit(out, context, "    cvtsd2ss xmm0, xmm0");
+					Emit(out, context, "    movd eax, xmm0");
 				}
+				else if (to.kind == TypeKind_Float64)
+				{
+					Emit(out, context, "    movq rax, xmm0");
+				}
+				else if (IsInteger(to))
+				{
+					EmitConvertRaxToIntegerType(to, out, context);
+				}
+
+				Emit(out, context, "    push rax");
 			}
 		} break;
 
