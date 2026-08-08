@@ -104,6 +104,7 @@ int main()
 	//TestReturnCode("18_floats", 0);
 	//TestReturnCode("19_defer", 0);
 	//TestReturnCode("20_switch", 0);
+	TestReturnCode("21_structs_by_value", 0);
 
 	if (_chdir("should_fail") != 0)
 	{
@@ -117,6 +118,8 @@ int main()
 	//TestCompileError("04_undeclared_variable");
 	//TestCompileError("05_unknown_field");
 	//TestCompileError("06_wrong_arg_count");
+	//TestCompileError("07_address_of_struct_result");	// not implemented yet
+	//TestCompileError("08_assign_to_struct_result");	// not implemented yet
 
 	if (_chdir("..\\..\\examples\\01_raylib") != 0)
 	{

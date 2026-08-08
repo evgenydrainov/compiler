@@ -13,27 +13,12 @@ struct Arena
 
 extern Arena g_tempMemory;
 
-inline bool
-IsPowerOfTwo(usize x)
-{
-	bool result = ((x != 0)
-				   && ((x & (x - 1)) == 0));
-	return result;
-}
-
-inline usize
-AlignForward(usize ptr, usize alignment)
-{
-	Assert(IsPowerOfTwo(alignment));
-	return (ptr + (alignment-1)) & ~(alignment-1);
-}
-
 inline void *
 PushSize(Arena *arena,
 		 usize size,
 		 usize alignment = DEFAULT_ALIGNMENT)
 {
-	usize alignedPos = AlignForward(arena->pos, alignment);
+	usize alignedPos = align_forward(arena->pos, alignment);
 
 	Assert(alignedPos + size <= arena->capacity);
 

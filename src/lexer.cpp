@@ -483,40 +483,71 @@ ParseNumber(Lexer *lexer, SourceLocation location)
 internal void
 SkipWhitespace(Lexer *lexer)
 {
-	bool done = false;
-	while (!done)
+	int commentDepth = 0;
+
+	for (;;)
 	{
-		char c = PeekChar(lexer);
-		if (c == ' '
-			|| c == '\t'
-			|| c == '\r')
+		if (commentDepth == 0
+			&& (lexer->current[0] == ' '
+				|| lexer->current[0] == '\t'
+				|| lexer->current[0] == '\r'))
 		{
 			AdvanceChar(lexer);
+
+			continue;
 		}
-		else if (c == '\n')
+
+		if (lexer->current[0] == '\n')
 		{
+			AdvanceChar(lexer);
+
 			lexer->line++;
-			AdvanceChar(lexer);
 			lexer->lineStart = lexer->current;
+
+			continue;
 		}
-		else if (c == '/')
+
+		if (commentDepth == 0
+			&& lexer->current[0] == '/'
+			&& lexer->current[1] == '/')
 		{
-			if (PeekNextChar(lexer) == '/')
+			AdvanceChar(lexer, 2);
+
+			while (!IsAtEnd(lexer) && PeekChar(lexer) != '\n')
 			{
-				while (!IsAtEnd(lexer) && PeekChar(lexer) != '\n')
-				{
-					AdvanceChar(lexer);
-				}
+				AdvanceChar(lexer);
 			}
-			else
-			{
-				done = true;
-			}
+
+			continue;
 		}
-		else
+
+		if (lexer->current[0] == '/'
+			&& lexer->current[1] == '*')
 		{
-			done = true;
+			AdvanceChar(lexer, 2);
+			commentDepth++;
+
+			continue;
 		}
+
+		if (commentDepth > 0
+			&& lexer->current[0] == '*'
+			&& lexer->current[1] == '/')
+		{
+			AdvanceChar(lexer, 2);
+			commentDepth--;
+
+			continue;
+		}
+
+		if (commentDepth > 0)
+		{
+			AdvanceChar(lexer);
+
+			continue;
+		}
+
+		break;
 	}
 }
 

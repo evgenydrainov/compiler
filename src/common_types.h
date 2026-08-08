@@ -110,3 +110,17 @@ StrLen(char *str)
 
 	return result;
 }
+
+inline bool
+is_power_of_two(usize x)
+{
+	bool result = (x != 0) && ((x & (x - 1)) == 0);
+	return result;
+}
+
+inline usize
+align_forward(usize ptr, usize alignment)
+{
+	Assert(is_power_of_two(alignment));
+	return (ptr + (alignment-1)) & ~(alignment-1);
+}

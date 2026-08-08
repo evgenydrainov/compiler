@@ -19,6 +19,14 @@ Vector4 :: struct {
     w : f32;                // Vector w component
 };
 
+// Color, 4 components, R8G8B8A8 (32bit)
+Color :: struct {
+    r : u8;        // Color red value
+    g : u8;        // Color green value
+    b : u8;        // Color blue value
+    a : u8;        // Color alpha value
+};
+
 // Rectangle, 4 components
 Rectangle :: struct {
     x      : f32;           // Rectangle top-left corner position x
@@ -198,7 +206,7 @@ GetScreenWidth    :: proc() -> i32                             #foreign; // Get 
 GetScreenHeight   :: proc() -> i32                             #foreign; // Get current screen height
 
 // Drawing-related functions
-ClearBackground :: proc(color: i64)        #foreign; // Set background color (framebuffer clear color)
+ClearBackground :: proc(color: Color)      #foreign; // Set background color (framebuffer clear color)
 BeginDrawing    :: proc()                  #foreign; // Setup canvas (framebuffer) to start drawing
 EndDrawing      :: proc()                  #foreign; // End canvas drawing and swap buffers (double buffering)
 BeginMode2D     :: proc(camera: *Camera2D) #foreign; // Begin 2D mode with custom camera (2D)
@@ -226,8 +234,8 @@ IsKeyUp            :: proc(key: i32) -> bool #foreign; // Check if a key is NOT 
 SetExitKey         :: proc(key: i32)         #foreign; // Set a custom key to exit program (default is ESC)
 
 // Basic shapes drawing functions
-DrawPixel     :: proc(posX: i32, posY: i32, color: i64)                          #foreign; // Draw a pixel using geometry [Can be slow, use with care]
-DrawRectangle :: proc(posX: i32, posY: i32, width: i32, height: i32, color: i64) #foreign; // Draw a color-filled rectangle
+DrawPixel     :: proc(posX: i32, posY: i32, color: Color)                          #foreign; // Draw a pixel using geometry [Can be slow, use with care]
+DrawRectangle :: proc(posX: i32, posY: i32, width: i32, height: i32, color: Color) #foreign; // Draw a color-filled rectangle
 
 // Texture loading functions
 // NOTE: These functions require GPU access
@@ -237,9 +245,12 @@ LoadTexture :: proc(texture: *Texture, fileName: *u8) #foreign; // Load texture 
 DrawTexture    :: proc(texture: *Texture, posX: i32, posY: i32, tint: i64)                  #foreign; // Draw a Texture2D
 DrawTextureRec :: proc(texture: *Texture, source: *Rectangle, position: Vector2, tint: i64) #foreign; // Draw a part of a texture defined by a rectangle
 
+// Color/pixel related functions
+GetColor :: proc(hexValue: u32) -> Color #foreign; // Get Color structure from hexadecimal value
+
 // Text drawing functions
-DrawFPS  :: proc(posX: i32, posY: i32)                                       #foreign; // Draw current FPS
-DrawText :: proc(text: *u8, posX: i32, posY: i32, fontSize: i32, color: i64) #foreign; // Draw text (using default font)
+DrawFPS  :: proc(posX: i32, posY: i32)                                         #foreign; // Draw current FPS
+DrawText :: proc(text: *u8, posX: i32, posY: i32, fontSize: i32, color: Color) #foreign; // Draw text (using default font)
 
 // Text font info functions
 MeasureText :: proc(text: *u8, fontSize: i32) -> i32 #foreign; // Measure string width for default font

@@ -149,13 +149,13 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 	// TODO: win condition
 }
 
-entity_draw :: proc(entity: *Entity, color: int)
+entity_draw :: proc(entity: *Entity, color: u32)
 {
 	DrawRectangle(cast(i32)(entity.x - entity.width*0.5),
 				  cast(i32)(entity.y - entity.height*0.5),
 				  cast(i32)entity.width,
 				  cast(i32)entity.height,
-				  color);
+				  GetColor(color));
 }
 
 world_draw_ui :: proc(world: *World)

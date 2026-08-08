@@ -55,8 +55,7 @@ struct StructField
 struct StructInfo
 {
 	string name;
-	StructField fields[32];
-	int numFields;
+	StaticBumpArray<StructField, 32> fields;
 	int size;
 };
 
@@ -147,8 +146,8 @@ FindField(StructInfo *info, string name)
 
 	StructField *result = nullptr;
 
-	for (int i = 0;
-		 i < info->numFields;
+	for (usize i = 0;
+		 i < info->fields.count;
 		 i++)
 	{
 		if (info->fields[i].name == name)
@@ -212,4 +211,14 @@ IsFloatingPoint(Type type)
 {
 	return (type.kind == TypeKind_Float32
 			|| type.kind == TypeKind_Float64);
+}
+
+inline bool
+IsRegisterSized(Type type)
+{
+	int size = SizeOfType(type);
+	return (size == 1
+			|| size == 2
+			|| size == 4
+			|| size == 8);
 }

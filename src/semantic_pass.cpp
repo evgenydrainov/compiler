@@ -1326,12 +1326,17 @@ AnalyzeTopLevelStatement(Node *baseNode,
 		{
 			FuncNode *node = As<FuncNode>(baseNode);
 
+			ResolveType(&node->returnType, context, node);
+
 			if (node->returnType.kind == TypeKind_Struct)
 			{
-				Error(context, node, STR_FMT_QUOTED " cannot return struct " STR_FMT_QUOTED " by value",
-					  STR_ARG(node->name),
-					  STR_ARG(node->returnType.name));
-				Note(context, node, "return a pointer to the struct instead");
+				if (!IsRegisterSized(node->returnType))
+				{
+					Error(context, node, STR_FMT_QUOTED " cannot return struct " STR_FMT_QUOTED " by value",
+						  STR_ARG(node->name),
+						  STR_ARG(node->returnType.name));
+					Note(context, node, "return a pointer to the struct instead");
+				}
 			}
 
 			Scope scope = EnterScope(symTable);
@@ -1457,19 +1462,28 @@ EarlyAnalyze(Node *baseNode,
 				type->structInfo->name = node->name;
 
 				int offset = 0;
+				int maxAlignment = 0;
+
 				for (StructFieldDeclNode *field : node->fields)
 				{
 					if (!FindField(type->structInfo, field->name))
 					{
 						ResolveType(&field->type, context, field);
 
-						type->structInfo->fields[type->structInfo->numFields].name = field->name;
-						type->structInfo->fields[type->structInfo->numFields].type = field->type;
+						StructField fieldInfo = {};
+						fieldInfo.name = field->name;
+						fieldInfo.type = field->type;
 
-						type->structInfo->fields[type->structInfo->numFields].offset = offset;
-						offset += SizeOfType(field->type);
+						int size = SizeOfType(field->type);
+						int alignment = Min(size, 8);
 
-						type->structInfo->numFields++;
+						offset = (int)align_forward(offset, alignment);
+						maxAlignment = Max(maxAlignment, alignment);
+
+						fieldInfo.offset = offset;
+						offset += size;
+
+						array_add(&type->structInfo->fields, fieldInfo);
 					}
 					else
 					{
@@ -1480,7 +1494,7 @@ EarlyAnalyze(Node *baseNode,
 					}
 				}
 
-				type->structInfo->size = offset;
+				type->structInfo->size = (int)align_forward(offset, maxAlignment);
 			}
 			else
 			{

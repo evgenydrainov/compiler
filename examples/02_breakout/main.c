@@ -41,7 +41,7 @@ main :: proc() -> int
 
 		BeginDrawing();
 
-		ClearBackground(0xff000000);
+		ClearBackground(GetColor(0x000000ff));
 
 		camera: Camera2D;
 		setup_screen_camera(&camera);

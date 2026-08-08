@@ -47,7 +47,7 @@ DeclareSymbol(SymbolTable *table,
 			  Type type)
 {
 	int size = SizeOfType(type);
-	size = (int)AlignForward(size, 8); // align to 8 for now
+	size = (int)align_forward(size, 8); // align to 8 for now
 
 	table->stackSize += size;
 
