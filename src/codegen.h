@@ -8,6 +8,8 @@ struct FunctionTable;
 
 struct CodegenContext
 {
+	FILE *out;
+
 	int uniqueLabelId;
 	int stackDepth;
 
@@ -25,5 +27,4 @@ struct CodegenContext
 };
 
 void Generate_x86_64(Node *_program,
-					 FILE *out,
 					 CodegenContext *context);

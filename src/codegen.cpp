@@ -4,16 +4,15 @@
 #include <stdarg.h>
 
 internal void
-Emit(FILE *out,
-	 CodegenContext *context,
+Emit(CodegenContext *context,
 	 char *format,
 	 ...)
 {
 	va_list args;
 	va_start(args, format);
 
-	vfprintf(out, format, args);
-	fprintf(out, "\n");
+	vfprintf(context->out, format, args);
+	fprintf(context->out, "\n");
 
 	va_end(args);
 
@@ -33,28 +32,25 @@ Emit(FILE *out,
 
 internal void
 GenerateStatement(Node *node,
-				  FILE *out,
 				  CodegenContext *context);
 
 internal void
-EmitDefers(FILE *out,
-		   CodegenContext *context,
+EmitDefers(CodegenContext *context,
 		   usize floor)
 {
 	for (usize i = context->deferStack.count;
 		 i-- > floor;)
 	{
-		Emit(out, context, "; deferred statement begin");
+		Emit(context, "; deferred statement begin");
 
-		GenerateStatement(context->deferStack[i], out, context);
+		GenerateStatement(context->deferStack[i], context);
 
-		Emit(out, context, "; deferred statement end");
+		Emit(context, "; deferred statement end");
 	}
 }
 
 internal void
 GenerateBlock(Node *baseNode,
-			  FILE *out,
 			  CodegenContext *context)
 {
 	BlockNode *node = As<BlockNode>(baseNode);
@@ -63,16 +59,15 @@ GenerateBlock(Node *baseNode,
 
 	for (Node *it : node->statements)
 	{
-		GenerateStatement(it, out, context);
+		GenerateStatement(it, context);
 	}
 
-	EmitDefers(out, context, marker);
+	EmitDefers(context, marker);
 	context->deferStack.count = marker;
 }
 
 internal void
-PushShadowSpace(FILE *out,
-				CodegenContext *context)
+PushShadowSpace(CodegenContext *context)
 {
 	int numBytes = 32;
 	if (context->stackDepth % 2 == 1)
@@ -80,12 +75,11 @@ PushShadowSpace(FILE *out,
 		numBytes += 8;
 	}
 
-	Emit(out, context, "    sub rsp, %d\t\t; push shadow space", numBytes);
+	Emit(context, "    sub rsp, %d\t\t; push shadow space", numBytes);
 }
 
 internal void
-PopShadowSpace(FILE *out,
-			   CodegenContext *context)
+PopShadowSpace(CodegenContext *context)
 {
 	int numBytes = 32;
 	if (context->stackDepth % 2 == 1)
@@ -93,12 +87,11 @@ PopShadowSpace(FILE *out,
 		numBytes += 8;
 	}
 
-	Emit(out, context, "    add rsp, %d\t\t; pop shadow space", numBytes);
+	Emit(context, "    add rsp, %d\t\t; pop shadow space", numBytes);
 }
 
 internal void
 EmitConvertRaxToIntegerType(Type type,
-							FILE *out,
 							CodegenContext *context)
 {
 	Assert(IsInteger(type));
@@ -113,15 +106,15 @@ EmitConvertRaxToIntegerType(Type type,
 		}
 		else if (size == 4)
 		{
-			Emit(out, context, "    movsxd rax, eax");
+			Emit(context, "    movsxd rax, eax");
 		}
 		else if (size == 2)
 		{
-			Emit(out, context, "    movsx rax, ax");
+			Emit(context, "    movsx rax, ax");
 		}
 		else if (size == 1)
 		{
-			Emit(out, context, "    movsx rax, al");
+			Emit(context, "    movsx rax, al");
 		}
 		else
 		{
@@ -136,15 +129,15 @@ EmitConvertRaxToIntegerType(Type type,
 		}
 		else if (size == 4)
 		{
-			Emit(out, context, "    mov eax, eax");
+			Emit(context, "    mov eax, eax");
 		}
 		else if (size == 2)
 		{
-			Emit(out, context, "    movzx rax, ax");
+			Emit(context, "    movzx rax, ax");
 		}
 		else if (size == 1)
 		{
-			Emit(out, context, "    movzx rax, al");
+			Emit(context, "    movzx rax, al");
 		}
 		else
 		{
@@ -155,12 +148,10 @@ EmitConvertRaxToIntegerType(Type type,
 
 internal void
 GenerateExpression(Node *baseNode,
-				   FILE *out,
 				   CodegenContext *context);
 
 internal void
 GenerateLValueAddress(Node *baseNode,
-					  FILE *out,
 					  CodegenContext *context)
 {
 	switch (baseNode->kind)
@@ -171,25 +162,25 @@ GenerateLValueAddress(Node *baseNode,
 
 			if (node->isGlobal)
 			{
-				Emit(out, context, "    lea rax, [rel " STR_FMT "]\t; load address of variable " STR_FMT_QUOTED,
+				Emit(context, "    lea rax, [rel " STR_FMT "]\t; load address of variable " STR_FMT_QUOTED,
 					 STR_ARG(node->name),
 					 STR_ARG(node->name));
 			}
 			else
 			{
-				Emit(out, context, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED,
+				Emit(context, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED,
 					 node->stackOffset,
 					 STR_ARG(node->name));
 			}
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Deref:
 		{
 			DerefNode *node = As<DerefNode>(baseNode);
 
-			GenerateExpression(node->what, out, context);
+			GenerateExpression(node->what, context);
 		} break;
 
 		case NodeKind_FieldAccess:
@@ -198,31 +189,31 @@ GenerateLValueAddress(Node *baseNode,
 
 			if (node->expr->inferredType.kind == TypeKind_Struct)
 			{
-				GenerateLValueAddress(node->expr, out, context);
+				GenerateLValueAddress(node->expr, context);
 			}
 			else if (node->expr->inferredType.kind == TypeKind_Pointer)
 			{
-				GenerateExpression(node->expr, out, context);
+				GenerateExpression(node->expr, context);
 			}
 			else
 			{
 				Assert(false);
 			}
 
-			Emit(out, context, "    pop rax");
-			Emit(out, context, "    add rax, %d\t\t; add offset of field " STR_FMT_QUOTED,
+			Emit(context, "    pop rax");
+			Emit(context, "    add rax, %d\t\t; add offset of field " STR_FMT_QUOTED,
 				 node->fieldOffset,
 				 STR_ARG(node->fieldName));
-			Emit(out, context, "    push rax");
+			Emit(context, "    push rax");
 		} break;
 
 		case NodeKind_String:
 		{
 			StringNode *node = As<StringNode>(baseNode);
 
-			Emit(out, context, "    lea rax, [rel string_literal_%d]", node->uniqueId);
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    lea rax, [rel string_literal_%d]", node->uniqueId);
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_ArrayIndexAccess:
@@ -233,13 +224,13 @@ GenerateLValueAddress(Node *baseNode,
 
 			if (node->arrayExpr->inferredType.kind == TypeKind_Pointer)
 			{
-				GenerateExpression(node->arrayExpr, out, context);
+				GenerateExpression(node->arrayExpr, context);
 
 				size = SizeOfType(*node->arrayExpr->inferredType.pointerTo);
 			}
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Array)
 			{
-				GenerateLValueAddress(node->arrayExpr, out, context);
+				GenerateLValueAddress(node->arrayExpr, context);
 
 				size = SizeOfType(*node->arrayExpr->inferredType.arrayElementType);
 			}
@@ -248,24 +239,24 @@ GenerateLValueAddress(Node *baseNode,
 				Assert(false);
 			}
 
-			GenerateExpression(node->indexExpr, out, context);
+			GenerateExpression(node->indexExpr, context);
 
-			Emit(out, context, "    pop rcx");
-			Emit(out, context, "    pop rbx");
+			Emit(context, "    pop rcx");
+			Emit(context, "    pop rbx");
 
 			if (size == 1
 				|| size == 2
 				|| size == 4
 				|| size == 8)
 			{
-				Emit(out, context, "    lea rax, [rbx + rcx * %d]", size);
-				Emit(out, context, "    push rax");
+				Emit(context, "    lea rax, [rbx + rcx * %d]", size);
+				Emit(context, "    push rax");
 			}
 			else
 			{
-				Emit(out, context, "    imul rcx, rcx, %d", size);
-				Emit(out, context, "    add rbx, rcx");
-				Emit(out, context, "    push rbx");
+				Emit(context, "    imul rcx, rcx, %d", size);
+				Emit(context, "    add rbx, rcx");
+				Emit(context, "    push rbx");
 			}
 		} break;
 
@@ -278,7 +269,6 @@ GenerateLValueAddress(Node *baseNode,
 
 internal void
 GenerateBinaryExpression(Node *baseNode,
-						 FILE *out,
 						 CodegenContext *context)
 {
 	BinaryNode *node = As<BinaryNode>(baseNode);
@@ -301,93 +291,93 @@ GenerateBinaryExpression(Node *baseNode,
 		case BinaryOp_BitOr:
 		case BinaryOp_BitXor:
 		{
-			GenerateExpression(node->lhs, out, context);
-			GenerateExpression(node->rhs, out, context);
+			GenerateExpression(node->lhs, context);
+			GenerateExpression(node->rhs, context);
 
-			Emit(out, context, "    pop rcx");
-			Emit(out, context, "    pop rax");
+			Emit(context, "    pop rcx");
+			Emit(context, "    pop rax");
 
 			if (node->inferredType.kind == TypeKind_Float32)
 			{
-				Emit(out, context, "    movq xmm1, rcx");
-				Emit(out, context, "    movq xmm0, rax");
+				Emit(context, "    movq xmm1, rcx");
+				Emit(context, "    movq xmm0, rax");
 
 				if (node->op == BinaryOp_Add)
 				{
-					Emit(out, context, "    addss xmm0, xmm1\t; perform addition");
+					Emit(context, "    addss xmm0, xmm1\t; perform addition");
 				}
 				else if (node->op == BinaryOp_Subtract)
 				{
-					Emit(out, context, "    subss xmm0, xmm1\t; perform subtraction");
+					Emit(context, "    subss xmm0, xmm1\t; perform subtraction");
 				}
 				else if (node->op == BinaryOp_Multiply)
 				{
-					Emit(out, context, "    mulss xmm0, xmm1\t; perform multiplication");
+					Emit(context, "    mulss xmm0, xmm1\t; perform multiplication");
 				}
 				else if (node->op == BinaryOp_Divide)
 				{
-					Emit(out, context, "    divss xmm0, xmm1\t; perform multiplication");
+					Emit(context, "    divss xmm0, xmm1\t; perform multiplication");
 				}
 				else
 				{
 					Assert(false);
 				}
 
-				Emit(out, context, "    movq rax, xmm0");
+				Emit(context, "    movq rax, xmm0");
 			}
 			else if (node->inferredType.kind == TypeKind_Float64)
 			{
-				Emit(out, context, "    movq xmm1, rcx");
-				Emit(out, context, "    movq xmm0, rax");
+				Emit(context, "    movq xmm1, rcx");
+				Emit(context, "    movq xmm0, rax");
 
 				if (node->op == BinaryOp_Add)
 				{
-					Emit(out, context, "    addsd xmm0, xmm1\t; perform addition");
+					Emit(context, "    addsd xmm0, xmm1\t; perform addition");
 				}
 				else if (node->op == BinaryOp_Subtract)
 				{
-					Emit(out, context, "    subsd xmm0, xmm1\t; perform subtraction");
+					Emit(context, "    subsd xmm0, xmm1\t; perform subtraction");
 				}
 				else if (node->op == BinaryOp_Multiply)
 				{
-					Emit(out, context, "    mulsd xmm0, xmm1\t; perform multiplication");
+					Emit(context, "    mulsd xmm0, xmm1\t; perform multiplication");
 				}
 				else if (node->op == BinaryOp_Divide)
 				{
-					Emit(out, context, "    divsd xmm0, xmm1\t; perform multiplication");
+					Emit(context, "    divsd xmm0, xmm1\t; perform multiplication");
 				}
 				else
 				{
 					Assert(false);
 				}
 
-				Emit(out, context, "    movq rax, xmm0");
+				Emit(context, "    movq rax, xmm0");
 			}
 			else
 			{
 				if (node->op == BinaryOp_Add)
 				{
-					Emit(out, context, "    add rax, rcx\t; perform addition");
+					Emit(context, "    add rax, rcx\t; perform addition");
 				}
 				else if (node->op == BinaryOp_Subtract)
 				{
-					Emit(out, context, "    sub rax, rcx\t; perform subtraction");
+					Emit(context, "    sub rax, rcx\t; perform subtraction");
 				}
 				else if (node->op == BinaryOp_Multiply)
 				{
-					Emit(out, context, "    imul rax, rcx\t; perform multiplication");
+					Emit(context, "    imul rax, rcx\t; perform multiplication");
 				}
 				else if (node->op == BinaryOp_Divide)
 				{
-					Emit(out, context, "    cqo     \t\t;");
+					Emit(context, "    cqo     \t\t;");
 
 					if (IsSignedInteger(node->inferredType))
 					{
-						Emit(out, context, "    idiv rcx\t\t; perform division");
+						Emit(context, "    idiv rcx\t\t; perform division");
 					}
 					else if (IsUnsignedInteger(node->inferredType))
 					{
-						Emit(out, context, "    div rcx\t\t; perform division");
+						Emit(context, "    div rcx\t\t; perform division");
 					}
 					else
 					{
@@ -396,36 +386,36 @@ GenerateBinaryExpression(Node *baseNode,
 				}
 				else if (node->op == BinaryOp_Modulo)
 				{
-					Emit(out, context, "    cqo");
+					Emit(context, "    cqo");
 
 					if (IsSignedInteger(node->inferredType))
 					{
-						Emit(out, context, "    idiv rcx\t\t; perform division");
+						Emit(context, "    idiv rcx\t\t; perform division");
 					}
 					else if (IsUnsignedInteger(node->inferredType))
 					{
-						Emit(out, context, "    div rcx\t\t; perform division");
+						Emit(context, "    div rcx\t\t; perform division");
 					}
 					else
 					{
 						Assert(false);
 					}
 
-					Emit(out, context, "    mov rax, rdx");
+					Emit(context, "    mov rax, rdx");
 				}
 				else if (node->op == BinaryOp_ShiftLeft)
 				{
-					Emit(out, context, "    shl rax, cl");
+					Emit(context, "    shl rax, cl");
 				}
 				else if (node->op == BinaryOp_ShiftRight)
 				{
 					if (IsSignedInteger(node->inferredType))
 					{
-						Emit(out, context, "    sar rax, cl");
+						Emit(context, "    sar rax, cl");
 					}
 					else if (IsUnsignedInteger(node->inferredType))
 					{
-						Emit(out, context, "    shr rax, cl");
+						Emit(context, "    shr rax, cl");
 					}
 					else
 					{
@@ -434,15 +424,15 @@ GenerateBinaryExpression(Node *baseNode,
 				}
 				else if (node->op == BinaryOp_BitAnd)
 				{
-					Emit(out, context, "    and rax, rcx");
+					Emit(context, "    and rax, rcx");
 				}
 				else if (node->op == BinaryOp_BitOr)
 				{
-					Emit(out, context, "    or rax, rcx");
+					Emit(context, "    or rax, rcx");
 				}
 				else if (node->op == BinaryOp_BitXor)
 				{
-					Emit(out, context, "    xor rax, rcx");
+					Emit(context, "    xor rax, rcx");
 				}
 				else
 				{
@@ -450,8 +440,8 @@ GenerateBinaryExpression(Node *baseNode,
 				}
 			}
 
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case BinaryOp_Greater:
@@ -461,8 +451,8 @@ GenerateBinaryExpression(Node *baseNode,
 		case BinaryOp_LessEqual:
 		case BinaryOp_NotEqual:
 		{
-			GenerateExpression(node->lhs, out, context);
-			GenerateExpression(node->rhs, out, context);
+			GenerateExpression(node->lhs, context);
+			GenerateExpression(node->rhs, context);
 
 			char *setccInstruction = "";
 
@@ -529,91 +519,90 @@ GenerateBinaryExpression(Node *baseNode,
 				}
 			}
 
-			Emit(out, context, "    pop rcx");
-			Emit(out, context, "    pop rax");
+			Emit(context, "    pop rcx");
+			Emit(context, "    pop rax");
 
 			if (node->lhs->inferredType.kind == TypeKind_Float32)
 			{
-				Emit(out, context, "    movq xmm1, rcx");
-				Emit(out, context, "    movq xmm0, rax");
-				Emit(out, context, "    ucomiss xmm0, xmm1");
+				Emit(context, "    movq xmm1, rcx");
+				Emit(context, "    movq xmm0, rax");
+				Emit(context, "    ucomiss xmm0, xmm1");
 			}
 			else if (node->lhs->inferredType.kind == TypeKind_Float64)
 			{
-				Emit(out, context, "    movq xmm1, rcx");
-				Emit(out, context, "    movq xmm0, rax");
-				Emit(out, context, "    ucomisd xmm0, xmm1");
+				Emit(context, "    movq xmm1, rcx");
+				Emit(context, "    movq xmm0, rax");
+				Emit(context, "    ucomisd xmm0, xmm1");
 			}
 			else
 			{
-				Emit(out, context, "    cmp rax, rcx");
+				Emit(context, "    cmp rax, rcx");
 			}
 
-			Emit(out, context, "    %s al", setccInstruction);
-			Emit(out, context, "    movzx rax, al");
-			Emit(out, context, "    push rax\t\t; push the comparison result");
-			Emit(out, context, "");
+			Emit(context, "    %s al", setccInstruction);
+			Emit(context, "    movzx rax, al");
+			Emit(context, "    push rax\t\t; push the comparison result");
+			Emit(context, "");
 		} break;
 
 		case BinaryOp_LogicalAnd:
 		{
 			int uniqueId = ++context->uniqueLabelId;
 
-			GenerateExpression(node->lhs, out, context);
+			GenerateExpression(node->lhs, context);
 
-			Emit(out, context, "    pop rax");
-			Emit(out, context, "    cmp rax, 0");
-			Emit(out, context, "    je .and_false_%d", uniqueId);
-			Emit(out, context, "");
+			Emit(context, "    pop rax");
+			Emit(context, "    cmp rax, 0");
+			Emit(context, "    je .and_false_%d", uniqueId);
+			Emit(context, "");
 
-			GenerateExpression(node->rhs, out, context);
+			GenerateExpression(node->rhs, context);
 
-			Emit(out, context, "    pop rax");
-			Emit(out, context, "    cmp rax, 0");
-			Emit(out, context, "    je .and_false_%d", uniqueId);
-			Emit(out, context, "");
+			Emit(context, "    pop rax");
+			Emit(context, "    cmp rax, 0");
+			Emit(context, "    je .and_false_%d", uniqueId);
+			Emit(context, "");
 
-			Emit(out, context, "    mov rax, 1");
-			Emit(out, context, "    jmp .and_end_%d", uniqueId);
-			Emit(out, context, ".and_false_%d:", uniqueId);
-			Emit(out, context, "    mov rax, 0");
-			Emit(out, context, ".and_end_%d:", uniqueId);
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    mov rax, 1");
+			Emit(context, "    jmp .and_end_%d", uniqueId);
+			Emit(context, ".and_false_%d:", uniqueId);
+			Emit(context, "    mov rax, 0");
+			Emit(context, ".and_end_%d:", uniqueId);
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case BinaryOp_LogicalOr:
 		{
 			int uniqueId = ++context->uniqueLabelId;
 
-			GenerateExpression(node->lhs, out, context);
+			GenerateExpression(node->lhs, context);
 
-			Emit(out, context, "    pop rax");
-			Emit(out, context, "    cmp rax, 0");
-			Emit(out, context, "    jne .or_true_%d", uniqueId);
-			Emit(out, context, "");
+			Emit(context, "    pop rax");
+			Emit(context, "    cmp rax, 0");
+			Emit(context, "    jne .or_true_%d", uniqueId);
+			Emit(context, "");
 
-			GenerateExpression(node->rhs, out, context);
+			GenerateExpression(node->rhs, context);
 
-			Emit(out, context, "    pop rax");
-			Emit(out, context, "    cmp rax, 0");
-			Emit(out, context, "    jne .or_true_%d", uniqueId);
-			Emit(out, context, "");
+			Emit(context, "    pop rax");
+			Emit(context, "    cmp rax, 0");
+			Emit(context, "    jne .or_true_%d", uniqueId);
+			Emit(context, "");
 
-			Emit(out, context, "    mov rax, 0");
-			Emit(out, context, "    jmp .or_end_%d", uniqueId);
-			Emit(out, context, ".or_true_%d:", uniqueId);
-			Emit(out, context, "    mov rax, 1");
-			Emit(out, context, ".or_end_%d:", uniqueId);
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    mov rax, 0");
+			Emit(context, "    jmp .or_end_%d", uniqueId);
+			Emit(context, ".or_true_%d:", uniqueId);
+			Emit(context, "    mov rax, 1");
+			Emit(context, ".or_end_%d:", uniqueId);
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 	}
 }
 
 internal void
 GenerateExpression(Node *baseNode,
-				   FILE *out,
 				   CodegenContext *context)
 {
 	switch (baseNode->kind)
@@ -627,9 +616,9 @@ GenerateExpression(Node *baseNode,
 		{
 			Int64LiteralNode *node = As<Int64LiteralNode>(baseNode);
 
-			Emit(out, context, "    mov rax, %lld\t\t; load int64 literal", node->value);
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    mov rax, %lld\t\t; load int64 literal", node->value);
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Float32Literal:
@@ -638,9 +627,9 @@ GenerateExpression(Node *baseNode,
 
 			u32 u32Value = *(u32 *)&node->value;
 
-			Emit(out, context, "    mov rax, 0x%X\t\t; load float32 literal %f", u32Value, node->value);
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    mov rax, 0x%X\t\t; load float32 literal %f", u32Value, node->value);
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Float64Literal:
@@ -649,47 +638,47 @@ GenerateExpression(Node *baseNode,
 
 			u64 u64Value = *(u64 *)&node->value;
 
-			Emit(out, context, "    mov rax, 0x%llX\t\t; load float64 literal %f", u64Value, node->value);
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    mov rax, 0x%llX\t\t; load float64 literal %f", u64Value, node->value);
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_CString:
 		{
 			CStringNode *node = As<CStringNode>(baseNode);
 
-			Emit(out, context, "    lea rax, [rel cstring_literal_%d]\t; load string literal", node->uniqueId);
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    lea rax, [rel cstring_literal_%d]\t; load string literal", node->uniqueId);
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Bool:
 		{
 			BoolNode *node = As<BoolNode>(baseNode);
 
-			Emit(out, context, "    mov rax, %d\t\t; load boolean literal", (int)node->boolValue);
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    mov rax, %d\t\t; load boolean literal", (int)node->boolValue);
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Binary:
 		{
-			GenerateBinaryExpression(baseNode, out, context);
+			GenerateBinaryExpression(baseNode, context);
 		} break;
 
 		case NodeKind_Unary:
 		{
 			UnaryNode *node = As<UnaryNode>(baseNode);
 
-			GenerateExpression(node->expr, out, context);
+			GenerateExpression(node->expr, context);
 
 			if (node->inferredType.kind == TypeKind_Float32)
 			{
 				if (node->op == UnaryOp_Negate)
 				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    xor eax, 0x80000000\t; float32 negate");
-					Emit(out, context, "    push rax");
+					Emit(context, "    pop rax");
+					Emit(context, "    xor eax, 0x80000000\t; float32 negate");
+					Emit(context, "    push rax");
 				}
 				else
 				{
@@ -700,10 +689,10 @@ GenerateExpression(Node *baseNode,
 			{
 				if (node->op == UnaryOp_Negate)
 				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    mov rcx, 0x8000000000000000");
-					Emit(out, context, "    xor rax, rcx\t; float64 negate");
-					Emit(out, context, "    push rax");
+					Emit(context, "    pop rax");
+					Emit(context, "    mov rcx, 0x8000000000000000");
+					Emit(context, "    xor rax, rcx\t; float64 negate");
+					Emit(context, "    push rax");
 				}
 				else
 				{
@@ -714,23 +703,23 @@ GenerateExpression(Node *baseNode,
 			{
 				if (node->op == UnaryOp_Negate)
 				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    neg rax");
-					Emit(out, context, "    push rax");
+					Emit(context, "    pop rax");
+					Emit(context, "    neg rax");
+					Emit(context, "    push rax");
 				}
 				else if (node->op == UnaryOp_LogicalNot)
 				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    cmp rax, 0");
-					Emit(out, context, "    sete al");
-					Emit(out, context, "    movzx rax, al");
-					Emit(out, context, "    push rax");
+					Emit(context, "    pop rax");
+					Emit(context, "    cmp rax, 0");
+					Emit(context, "    sete al");
+					Emit(context, "    movzx rax, al");
+					Emit(context, "    push rax");
 				}
 				else if (node->op == UnaryOp_BitNegate)
 				{
-					Emit(out, context, "    pop rax");
-					Emit(out, context, "    not rax");
-					Emit(out, context, "    push rax");
+					Emit(context, "    pop rax");
+					Emit(context, "    not rax");
+					Emit(context, "    push rax");
 				}
 				else
 				{
@@ -738,7 +727,7 @@ GenerateExpression(Node *baseNode,
 				}
 			}
 
-			Emit(out, context, "");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Var:
@@ -748,26 +737,26 @@ GenerateExpression(Node *baseNode,
 		{
 			int size = SizeOfType(baseNode->inferredType);
 
-			GenerateLValueAddress(baseNode, out, context);
-			Emit(out, context, "    pop rax");
+			GenerateLValueAddress(baseNode, context);
+			Emit(context, "    pop rax");
 
 			if (IsSignedInteger(baseNode->inferredType))
 			{
 				if (size == 8)
 				{
-					Emit(out, context, "    mov rax, qword [rax]");
+					Emit(context, "    mov rax, qword [rax]");
 				}
 				else if (size == 4)
 				{
-					Emit(out, context, "    movsxd rax, dword [rax]");
+					Emit(context, "    movsxd rax, dword [rax]");
 				}
 				else if (size == 2)
 				{
-					Emit(out, context, "    movsx rax, word [rax]");
+					Emit(context, "    movsx rax, word [rax]");
 				}
 				else if (size == 1)
 				{
-					Emit(out, context, "    movsx rax, byte [rax]");
+					Emit(context, "    movsx rax, byte [rax]");
 				}
 				else
 				{
@@ -778,19 +767,19 @@ GenerateExpression(Node *baseNode,
 			{
 				if (size == 8)
 				{
-					Emit(out, context, "    mov rax, qword [rax]");
+					Emit(context, "    mov rax, qword [rax]");
 				}
 				else if (size == 4)
 				{
-					Emit(out, context, "    mov eax, dword [rax]");
+					Emit(context, "    mov eax, dword [rax]");
 				}
 				else if (size == 2)
 				{
-					Emit(out, context, "    movzx rax, word [rax]");
+					Emit(context, "    movzx rax, word [rax]");
 				}
 				else if (size == 1)
 				{
-					Emit(out, context, "    movzx rax, byte [rax]");
+					Emit(context, "    movzx rax, byte [rax]");
 				}
 				else
 				{
@@ -798,15 +787,15 @@ GenerateExpression(Node *baseNode,
 				}
 			}
 
-			Emit(out, context, "    push rax");
-			Emit(out, context, "");
+			Emit(context, "    push rax");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Cast:
 		{
 			CastNode *node = As<CastNode>(baseNode);
 
-			GenerateExpression(node->what, out, context);
+			GenerateExpression(node->what, context);
 
 			Type from = node->what->inferredType;
 			Type to = node->targetType;
@@ -818,45 +807,45 @@ GenerateExpression(Node *baseNode,
 				|| toFloat
 				|| (IsInteger(to) && SizeOfType(to) < 8))
 			{
-				Emit(out, context, "    pop rax");
+				Emit(context, "    pop rax");
 
 				// widen the source
 				if (from.kind == TypeKind_Float32)
 				{
-					Emit(out, context, "    movd xmm0, eax");
-					Emit(out, context, "    cvtss2sd xmm0, xmm0");
+					Emit(context, "    movd xmm0, eax");
+					Emit(context, "    cvtss2sd xmm0, xmm0");
 				}
 				else if (from.kind == TypeKind_Float64)
 				{
-					Emit(out, context, "    movq xmm0, rax");
+					Emit(context, "    movq xmm0, rax");
 				}
 
 				// convert
 				if (!fromFloat && toFloat)
 				{
-					Emit(out, context, "    cvtsi2sd xmm0, rax");
+					Emit(context, "    cvtsi2sd xmm0, rax");
 				}
 				else if (fromFloat && !toFloat)
 				{
-					Emit(out, context, "    cvttsd2si rax, xmm0");
+					Emit(context, "    cvttsd2si rax, xmm0");
 				}
 
 				// narrow to the target
 				if (to.kind == TypeKind_Float32)
 				{
-					Emit(out, context, "    cvtsd2ss xmm0, xmm0");
-					Emit(out, context, "    movd eax, xmm0");
+					Emit(context, "    cvtsd2ss xmm0, xmm0");
+					Emit(context, "    movd eax, xmm0");
 				}
 				else if (to.kind == TypeKind_Float64)
 				{
-					Emit(out, context, "    movq rax, xmm0");
+					Emit(context, "    movq rax, xmm0");
 				}
 				else if (IsInteger(to))
 				{
-					EmitConvertRaxToIntegerType(to, out, context);
+					EmitConvertRaxToIntegerType(to, context);
 				}
 
-				Emit(out, context, "    push rax");
+				Emit(context, "    push rax");
 			}
 		} break;
 
@@ -881,14 +870,14 @@ GenerateExpression(Node *baseNode,
 			int padding = ((context->stackDepth + numArgumentsOnStack) % 2) ? 8 : 0;
 			if (padding)
 			{
-				Emit(out, context, "    sub rsp, %d\t\t; align stack", padding);
+				Emit(context, "    sub rsp, %d\t\t; align stack", padding);
 				context->stackDepth++;
 			}
 
 			for (int i = node->numExpressions;
 				 i--;)
 			{
-				GenerateExpression(node->expressions[i], out, context);
+				GenerateExpression(node->expressions[i], context);
 
 				if (function->isVariadic)
 				{
@@ -921,8 +910,8 @@ GenerateExpression(Node *baseNode,
 
 				if (paramType->kind == TypeKind_Float32)
 				{
-					Emit(out, context, "    pop rax\t\t\t; put argument");
-					Emit(out, context, "    movd xmm%d, eax", i);
+					Emit(context, "    pop rax\t\t\t; put argument");
+					Emit(context, "    movd xmm%d, eax", i);
 
 					if (function->isVariadic)
 					{
@@ -932,50 +921,50 @@ GenerateExpression(Node *baseNode,
 				}
 				else if (paramType->kind == TypeKind_Float64)
 				{
-					Emit(out, context, "    pop rax\t\t\t; put argument");
-					Emit(out, context, "    movq xmm%d, rax", i);
+					Emit(context, "    pop rax\t\t\t; put argument");
+					Emit(context, "    movq xmm%d, rax", i);
 
 					if (function->isVariadic)
 					{
-						Emit(out, context, "    mov %s, rax", paramRegs[i]);
+						Emit(context, "    mov %s, rax", paramRegs[i]);
 					}
 				}
 				else
 				{
-					Emit(out, context, "    pop %s\t\t\t; put argument", paramRegs[i]);
+					Emit(context, "    pop %s\t\t\t; put argument", paramRegs[i]);
 				}
 			}
-			Emit(out, context, "");
+			Emit(context, "");
 
-			Emit(out, context, "    sub rsp, 32\t\t; reserve shadow space");
-			Emit(out, context, "    call " STR_FMT, STR_ARG(node->linkName));
-			Emit(out, context, "    add rsp, 32\t\t; free shadow space");
+			Emit(context, "    sub rsp, 32\t\t; reserve shadow space");
+			Emit(context, "    call " STR_FMT, STR_ARG(node->linkName));
+			Emit(context, "    add rsp, 32\t\t; free shadow space");
 
 			if (numArgumentsOnStack + padding/8 > 0)
 			{
 				int cleanup = numArgumentsOnStack*8 + padding;
-				Emit(out, context, "    add rsp, %d\t\t; free stack arguments", cleanup);
+				Emit(context, "    add rsp, %d\t\t; free stack arguments", cleanup);
 				context->stackDepth -= numArgumentsOnStack + padding/8;
 			}
 
 			if (node->inferredType.kind == TypeKind_Float32)
 			{
-				Emit(out, context, "    movd eax, xmm0");
+				Emit(context, "    movd eax, xmm0");
 			}
 			else if (node->inferredType.kind == TypeKind_Float64)
 			{
-				Emit(out, context, "    movq rax, xmm0");
+				Emit(context, "    movq rax, xmm0");
 			}
 
-			Emit(out, context, "    push rax\t\t; push the function return value");
-			Emit(out, context, "");
+			Emit(context, "    push rax\t\t; push the function return value");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_AddressOf:
 		{
 			AddressOfNode *node = As<AddressOfNode>(baseNode);
 
-			GenerateLValueAddress(node->what, out, context);
+			GenerateLValueAddress(node->what, context);
 		} break;
 	}
 }
@@ -1007,17 +996,16 @@ GetRegisterForTypeSize(Type type)
 
 internal void
 GenerateStatement(Node *baseNode,
-				  FILE *out,
 				  CodegenContext *context)
 {
 	switch (baseNode->kind)
 	{
 		default:
 		{
-			GenerateExpression(baseNode, out, context);
+			GenerateExpression(baseNode, context);
 
-			Emit(out, context, "    pop rax\t\t\t; discard the result");
-			Emit(out, context, "");
+			Emit(context, "    pop rax\t\t\t; discard the result");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_VarDecl:
@@ -1037,7 +1025,7 @@ GenerateStatement(Node *baseNode,
 				assignNode.lhs = &varNode;
 				assignNode.rhs = node->expr;
 
-				GenerateStatement(&assignNode, out, context);
+				GenerateStatement(&assignNode, context);
 			}
 			else
 			{
@@ -1046,30 +1034,30 @@ GenerateStatement(Node *baseNode,
 				int size = SizeOfType(varNode.inferredType);
 				if (size > 8)
 				{
-					GenerateLValueAddress(&varNode, out, context);
+					GenerateLValueAddress(&varNode, context);
 
-					Emit(out, context, "    pop rdi");
+					Emit(context, "    pop rdi");
 
 					Assert(size % 8 == 0);
 
 					for (int i = 0; i < size; i += 8)
 					{
-						Emit(out, context, "    mov qword [rdi + %d], 0", i);
+						Emit(context, "    mov qword [rdi + %d], 0", i);
 					}
 
-					Emit(out, context, "");
+					Emit(context, "");
 				}
 				else
 				{
-					GenerateLValueAddress(&varNode, out, context);
+					GenerateLValueAddress(&varNode, context);
 
-					Emit(out, context, "    pop rcx");
-					Emit(out, context, "    mov rax, 0");
+					Emit(context, "    pop rcx");
+					Emit(context, "    mov rax, 0");
 
 					char *reg = GetRegisterForTypeSize(varNode.inferredType);
 
-					Emit(out, context, "    mov [rcx], %s", reg);
-					Emit(out, context, "");
+					Emit(context, "    mov [rcx], %s", reg);
+					Emit(context, "");
 				}
 			}
 		} break;
@@ -1083,34 +1071,34 @@ GenerateStatement(Node *baseNode,
 			{
 				Assert(SizeOfType(node->lhs->inferredType) == SizeOfType(node->rhs->inferredType));
 
-				GenerateLValueAddress(node->rhs, out, context);
-				GenerateLValueAddress(node->lhs, out, context);
+				GenerateLValueAddress(node->rhs, context);
+				GenerateLValueAddress(node->lhs, context);
 
-				Emit(out, context, "    pop rdi");
-				Emit(out, context, "    pop rsi");
+				Emit(context, "    pop rdi");
+				Emit(context, "    pop rsi");
 
 				Assert(size % 8 == 0);
 
 				for (int i = 0; i < size; i += 8)
 				{
-					Emit(out, context, "    mov rax, [rsi + %d]", i);
-					Emit(out, context, "    mov [rdi + %d], rax", i);
+					Emit(context, "    mov rax, [rsi + %d]", i);
+					Emit(context, "    mov [rdi + %d], rax", i);
 				}
 
-				Emit(out, context, "");
+				Emit(context, "");
 			}
 			else
 			{
-				GenerateExpression(node->rhs, out, context);
-				GenerateLValueAddress(node->lhs, out, context);
+				GenerateExpression(node->rhs, context);
+				GenerateLValueAddress(node->lhs, context);
 
-				Emit(out, context, "    pop rcx");
-				Emit(out, context, "    pop rax");
+				Emit(context, "    pop rcx");
+				Emit(context, "    pop rax");
 
 				char *reg = GetRegisterForTypeSize(node->lhs->inferredType);
 
-				Emit(out, context, "    mov [rcx], %s", reg);
-				Emit(out, context, "");
+				Emit(context, "    mov [rcx], %s", reg);
+				Emit(context, "");
 			}
 		} break;
 
@@ -1122,36 +1110,36 @@ GenerateStatement(Node *baseNode,
 
 			if (node->elseBlock)
 			{
-				GenerateExpression(node->condition, out, context);
+				GenerateExpression(node->condition, context);
 
-				Emit(out, context, "    pop rax\t\t; load the comparison result");
-				Emit(out, context, "    cmp rax, 0");
-				Emit(out, context, "    je .else_%d", uniqueId);
-				Emit(out, context, "");
+				Emit(context, "    pop rax\t\t; load the comparison result");
+				Emit(context, "    cmp rax, 0");
+				Emit(context, "    je .else_%d", uniqueId);
+				Emit(context, "");
 
-				GenerateStatement(node->thenBlock, out, context);
+				GenerateStatement(node->thenBlock, context);
 
-				Emit(out, context, "    jmp .end_%d", uniqueId);
-				Emit(out, context, ".else_%d:", uniqueId);
+				Emit(context, "    jmp .end_%d", uniqueId);
+				Emit(context, ".else_%d:", uniqueId);
 
-				GenerateStatement(node->elseBlock, out, context);
+				GenerateStatement(node->elseBlock, context);
 
-				Emit(out, context, ".end_%d:", uniqueId);
-				Emit(out, context, "");
+				Emit(context, ".end_%d:", uniqueId);
+				Emit(context, "");
 			}
 			else
 			{
-				GenerateExpression(node->condition, out, context);
+				GenerateExpression(node->condition, context);
 
-				Emit(out, context, "    pop rax\t\t; load the comparison result");
-				Emit(out, context, "    cmp rax, 0");
-				Emit(out, context, "    je .end_%d", uniqueId);
-				Emit(out, context, "");
+				Emit(context, "    pop rax\t\t; load the comparison result");
+				Emit(context, "    cmp rax, 0");
+				Emit(context, "    je .end_%d", uniqueId);
+				Emit(context, "");
 
-				GenerateStatement(node->thenBlock, out, context);
+				GenerateStatement(node->thenBlock, context);
 
-				Emit(out, context, ".end_%d:", uniqueId);
-				Emit(out, context, "");
+				Emit(context, ".end_%d:", uniqueId);
+				Emit(context, "");
 			}
 		} break;
 
@@ -1167,21 +1155,21 @@ GenerateStatement(Node *baseNode,
 			context->currentLoopUniqueId = uniqueId;
 			context->currentLoopDeferFloor = context->deferStack.count;
 
-			Emit(out, context, ".loop_%d:", uniqueId);
+			Emit(context, ".loop_%d:", uniqueId);
 
-			GenerateExpression(node->condition, out, context);
+			GenerateExpression(node->condition, context);
 
-			Emit(out, context, "    pop rax\t\t; load the comparison result");
-			Emit(out, context, "    cmp rax, 0");
-			Emit(out, context, "    je .end_%d", uniqueId);
-			Emit(out, context, "");
+			Emit(context, "    pop rax\t\t; load the comparison result");
+			Emit(context, "    cmp rax, 0");
+			Emit(context, "    je .end_%d", uniqueId);
+			Emit(context, "");
 
-			GenerateBlock(node->body, out, context);
+			GenerateBlock(node->body, context);
 
-			Emit(out, context, ".continue_%d:", uniqueId);
-			Emit(out, context, "    jmp .loop_%d", uniqueId);
-			Emit(out, context, ".end_%d:", uniqueId);
-			Emit(out, context, "");
+			Emit(context, ".continue_%d:", uniqueId);
+			Emit(context, "    jmp .loop_%d", uniqueId);
+			Emit(context, ".end_%d:", uniqueId);
+			Emit(context, "");
 
 			context->currentLoopUniqueId = saveCurrentLoopUniqueId;
 			context->currentLoopDeferFloor = saveCurrentLoopDeferFloor;
@@ -1199,25 +1187,25 @@ GenerateStatement(Node *baseNode,
 			context->currentLoopUniqueId = uniqueId;
 			context->currentLoopDeferFloor = context->deferStack.count;
 
-			GenerateStatement(node->init, out, context);
+			GenerateStatement(node->init, context);
 
-			Emit(out, context, ".loop_%d:", uniqueId);
+			Emit(context, ".loop_%d:", uniqueId);
 
-			GenerateExpression(node->cond, out, context);
+			GenerateExpression(node->cond, context);
 
-			Emit(out, context, "    pop rax\t\t; load the comparison result");
-			Emit(out, context, "    cmp rax, 0");
-			Emit(out, context, "    je .end_%d", uniqueId);
-			Emit(out, context, "");
+			Emit(context, "    pop rax\t\t; load the comparison result");
+			Emit(context, "    cmp rax, 0");
+			Emit(context, "    je .end_%d", uniqueId);
+			Emit(context, "");
 
-			GenerateBlock(node->body, out, context);
+			GenerateBlock(node->body, context);
 
-			Emit(out, context, ".continue_%d:", uniqueId);
-			GenerateStatement(node->incr, out, context);
+			Emit(context, ".continue_%d:", uniqueId);
+			GenerateStatement(node->incr, context);
 
-			Emit(out, context, "    jmp .loop_%d", uniqueId);
-			Emit(out, context, ".end_%d:", uniqueId);
-			Emit(out, context, "");
+			Emit(context, "    jmp .loop_%d", uniqueId);
+			Emit(context, ".end_%d:", uniqueId);
+			Emit(context, "");
 
 			context->currentLoopUniqueId = saveCurrentLoopUniqueId;
 			context->currentLoopDeferFloor = saveCurrentLoopDeferFloor;
@@ -1227,24 +1215,24 @@ GenerateStatement(Node *baseNode,
 		{
 			PrintNode *node = As<PrintNode>(baseNode);
 
-			GenerateExpression(node->expr, out, context);
+			GenerateExpression(node->expr, context);
 
-			Emit(out, context, "    pop rax\t\t\t; store expression result into rax");
-			Emit(out, context, "");
+			Emit(context, "    pop rax\t\t\t; store expression result into rax");
+			Emit(context, "");
 
-			Emit(out, context, "    lea rcx, [rel builtin_print_format]\t\t; put 1st argument into rcx");
-			Emit(out, context, "    mov rdx, rax\t\t\t; put 2nd argument into rdx");
-			PushShadowSpace(out, context);
-			Emit(out, context, "    call printf");
-			PopShadowSpace(out, context);
-			Emit(out, context, "");
+			Emit(context, "    lea rcx, [rel builtin_print_format]\t\t; put 1st argument into rcx");
+			Emit(context, "    mov rdx, rax\t\t\t; put 2nd argument into rdx");
+			PushShadowSpace(context);
+			Emit(context, "    call printf");
+			PopShadowSpace(context);
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Block:
 		{
 			BlockNode *node = As<BlockNode>(baseNode);
 
-			GenerateBlock(node, out, context);
+			GenerateBlock(node, context);
 		} break;
 
 		case NodeKind_Return:
@@ -1253,72 +1241,72 @@ GenerateStatement(Node *baseNode,
 
 			if (node->expr)
 			{
-				GenerateExpression(node->expr, out, context);
+				GenerateExpression(node->expr, context);
 
-				EmitDefers(out, context, 0);
+				EmitDefers(context, 0);
 
-				Emit(out, context, "    pop rax\t\t\t; store expression result into rax");
+				Emit(context, "    pop rax\t\t\t; store expression result into rax");
 
 				if (context->currentReturnType.kind == TypeKind_Float32)
 				{
-					Emit(out, context, "    movd xmm0, eax");
+					Emit(context, "    movd xmm0, eax");
 				}
 				else if (context->currentReturnType.kind == TypeKind_Float64)
 				{
-					Emit(out, context, "    movq xmm0, rax");
+					Emit(context, "    movq xmm0, rax");
 				}
 			}
 			else
 			{
 				// bare return;
 
-				EmitDefers(out, context, 0);
+				EmitDefers(context, 0);
 			}
 
-			Emit(out, context, "    jmp .epilogue\t\t; return");
-			Emit(out, context, "");
+			Emit(context, "    jmp .epilogue\t\t; return");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Asm:
 		{
 			AsmNode *node = As<AsmNode>(baseNode);
 
-			Emit(out, context, "    ; inline assembly begin");
-			Emit(out, context, STR_FMT, STR_ARG(node->code));
-			Emit(out, context, "");
-			Emit(out, context, "    ; inline assembly end");
-			Emit(out, context, "");
+			Emit(context, "    ; inline assembly begin");
+			Emit(context, STR_FMT, STR_ARG(node->code));
+			Emit(context, "");
+			Emit(context, "    ; inline assembly end");
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Yield:
 		{
 			YieldNode *node = As<YieldNode>(baseNode);
 
-			Emit(out, context, "    mov rax, [rbp - 8]");
-			Emit(out, context, "    mov [rax], %d", node->yieldIndex);
-			Emit(out, context, "    jmp .epilogue");
-			Emit(out, context, ".coroutine_state_%d:", node->yieldIndex);
-			Emit(out, context, "");
+			Emit(context, "    mov rax, [rbp - 8]");
+			Emit(context, "    mov [rax], %d", node->yieldIndex);
+			Emit(context, "    jmp .epilogue");
+			Emit(context, ".coroutine_state_%d:", node->yieldIndex);
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Break:
 		{
 			Assert(context->currentLoopUniqueId != 0);
 
-			EmitDefers(out, context, context->currentLoopDeferFloor);
+			EmitDefers(context, context->currentLoopDeferFloor);
 
-			Emit(out, context, "    jmp .end_%d\t; 'break'", context->currentLoopUniqueId);
-			Emit(out, context, "");
+			Emit(context, "    jmp .end_%d\t; 'break'", context->currentLoopUniqueId);
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Continue:
 		{
 			Assert(context->currentLoopUniqueId != 0);
 
-			EmitDefers(out, context, context->currentLoopDeferFloor);
+			EmitDefers(context, context->currentLoopDeferFloor);
 
-			Emit(out, context, "    jmp .continue_%d\t; 'continue'", context->currentLoopUniqueId);
-			Emit(out, context, "");
+			Emit(context, "    jmp .continue_%d\t; 'continue'", context->currentLoopUniqueId);
+			Emit(context, "");
 		} break;
 
 		case NodeKind_Defer:
@@ -1334,16 +1322,16 @@ GenerateStatement(Node *baseNode,
 
 			int uniqueId = ++context->uniqueLabelId;
 
-			GenerateExpression(node->expr, out, context);
+			GenerateExpression(node->expr, context);
 
-			Emit(out, context, "    pop rax");
+			Emit(context, "    pop rax");
 
 			{
 				int i = 0;
 				for (CaseNode *caseNode : node->cases)
 				{
-					Emit(out, context, "    cmp rax, %lld", caseNode->labelValue);
-					Emit(out, context, "    je .case_%d_%d", uniqueId, i);
+					Emit(context, "    cmp rax, %lld", caseNode->labelValue);
+					Emit(context, "    je .case_%d_%d", uniqueId, i);
 
 					i++;
 				}
@@ -1351,20 +1339,20 @@ GenerateStatement(Node *baseNode,
 
 			if (node->defaultBody)
 			{
-				Emit(out, context, "    jmp .default_%d", uniqueId);
+				Emit(context, "    jmp .default_%d", uniqueId);
 			}
 			else
 			{
-				Emit(out, context, "    jmp .end_%d", uniqueId);
+				Emit(context, "    jmp .end_%d", uniqueId);
 			}
 
 			{
 				int i = 0;
 				for (CaseNode *caseNode : node->cases)
 				{
-					Emit(out, context, ".case_%d_%d:", uniqueId, i);
-					GenerateStatement(caseNode->body, out, context);
-					Emit(out, context, "    jmp .end_%d", uniqueId);
+					Emit(context, ".case_%d_%d:", uniqueId, i);
+					GenerateStatement(caseNode->body, context);
+					Emit(context, "    jmp .end_%d", uniqueId);
 
 					i++;
 				}
@@ -1372,12 +1360,12 @@ GenerateStatement(Node *baseNode,
 
 			if (node->defaultBody)
 			{
-				Emit(out, context, ".default_%d:", uniqueId);
-				GenerateStatement(node->defaultBody, out, context);
-				Emit(out, context, "    jmp .end_%d", uniqueId);
+				Emit(context, ".default_%d:", uniqueId);
+				GenerateStatement(node->defaultBody, context);
+				Emit(context, "    jmp .end_%d", uniqueId);
 			}
 
-			Emit(out, context, ".end_%d:", uniqueId);
+			Emit(context, ".end_%d:", uniqueId);
 		} break;
 	}
 }
@@ -1401,15 +1389,15 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			context->currentReturnType = node->returnType;
 
-			Emit(out, context, STR_FMT ":", STR_ARG(node->name));
+			Emit(context, STR_FMT ":", STR_ARG(node->name));
 
 			// doesn't affect stack depth
-			Emit(out, context, "    push rbp");
+			Emit(context, "    push rbp");
 			context->stackDepth--;
 
-			Emit(out, context, "    mov rbp, rsp");
-			Emit(out, context, "    sub rsp, %d", functionBody->stackSize);
-			Emit(out, context, "");
+			Emit(context, "    mov rbp, rsp");
+			Emit(context, "    sub rsp, %d", functionBody->stackSize);
+			Emit(context, "");
 
 			char *paramRegs[] =
 			{
@@ -1429,15 +1417,15 @@ GenerateTopLevelStatement(Node *baseNode,
 
 				if (param->type.kind == TypeKind_Float32)
 				{
-					Emit(out, context, "    movss [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
+					Emit(context, "    movss [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
 				}
 				else if (param->type.kind == TypeKind_Float64)
 				{
-					Emit(out, context, "    movsd [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
+					Emit(context, "    movsd [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
 				}
 				else
 				{
-					Emit(out, context, "    mov [rbp - %d], %s\t\t; unpack argument", param->stackOffset, paramRegs[i]);
+					Emit(context, "    mov [rbp - %d], %s\t\t; unpack argument", param->stackOffset, paramRegs[i]);
 				}
 			}
 
@@ -1448,50 +1436,50 @@ GenerateTopLevelStatement(Node *baseNode,
 				ParamNode *param = As<ParamNode>(node->params[i]);
 
 				int callerOffset = 48 + (i - numParamsInRegs)*8;
-				Emit(out, context, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d", callerOffset, i+1);
-				Emit(out, context, "    mov [rbp - %d], rax", param->stackOffset);
+				Emit(context, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d", callerOffset, i+1);
+				Emit(context, "    mov [rbp - %d], rax", param->stackOffset);
 			}
-			Emit(out, context, "");
+			Emit(context, "");
 
 			if (node->isCoroutine)
 			{
-				Emit(out, context, "    mov rax, [rbp - 8]");
-				Emit(out, context, "    mov rax, [rax]");
-				Emit(out, context, "");
+				Emit(context, "    mov rax, [rbp - 8]");
+				Emit(context, "    mov rax, [rax]");
+				Emit(context, "");
 
 				for (int i = 0;
 					 i <= node->yieldIndex;
 					 i++)
 				{
-					Emit(out, context, "    cmp rax, %d", i);
-					Emit(out, context, "    je .coroutine_state_%d", i);
+					Emit(context, "    cmp rax, %d", i);
+					Emit(context, "    je .coroutine_state_%d", i);
 				}
-				Emit(out, context, "");
+				Emit(context, "");
 
-				Emit(out, context, "    jmp .epilogue");
-				Emit(out, context, "");
+				Emit(context, "    jmp .epilogue");
+				Emit(context, "");
 
-				Emit(out, context, ".coroutine_state_0:");
+				Emit(context, ".coroutine_state_0:");
 			}
 
-			GenerateBlock(node->body, out, context);
+			GenerateBlock(node->body, context);
 
 			if (node->isCoroutine)
 			{
-				Emit(out, context, "    mov rax, qword [rbp - 8]");
-				Emit(out, context, "    mov qword [rax], -1");
-				Emit(out, context, "");
+				Emit(context, "    mov rax, qword [rbp - 8]");
+				Emit(context, "    mov qword [rax], -1");
+				Emit(context, "");
 			}
 
-			Emit(out, context, ".epilogue:");
-			Emit(out, context, "    mov rsp, rbp");
+			Emit(context, ".epilogue:");
+			Emit(context, "    mov rsp, rbp");
 
 			// doesn't affect stack depth
-			Emit(out, context, "    pop rbp");
+			Emit(context, "    pop rbp");
 			context->stackDepth++;
 
-			Emit(out, context, "    ret");
-			Emit(out, context, "");
+			Emit(context, "    ret");
+			Emit(context, "");
 
 			Assert(context->stackDepth == 0);
 
@@ -1587,9 +1575,10 @@ WriteStringBytes(string str,
 
 void
 Generate_x86_64(Node *_program,
-				FILE *out,
 				CodegenContext *context)
 {
+	FILE *out = context->out;
+
 	fprintf(out, "default rel\n");
 	fprintf(out, "\n");
 

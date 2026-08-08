@@ -314,7 +314,8 @@ Compile(CompileOptions *options)
 			return CompileResult_CannotWriteFile;
 		}
 
-		Generate_x86_64(program, out, &codegenContext);
+		codegenContext.out = out;
+		Generate_x86_64(program, &codegenContext);
 
 		fclose(out);
 	}
