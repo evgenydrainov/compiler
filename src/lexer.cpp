@@ -1,6 +1,6 @@
 #include "lexer.h"
 
-#include <stdlib.h>
+#include <stdlib.h> // HACK, for strtod
 
 internal bool
 IsAlpha(char c)
@@ -385,12 +385,12 @@ ParseDecimalNumber(Lexer *lexer, SourceLocation location)
 			str.count++;
 		}
 
-		// hack
+		// HACK
 		char saveChar = *lexer->current;
 		*lexer->current = 0;
 		float64Value = strtod(str.data, nullptr);
 		*lexer->current = saveChar;
-		// hack
+		// HACK
 
 		if (lexer->current[0] == 'f'
 			&& lexer->current[1] == '6'

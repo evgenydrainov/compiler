@@ -926,7 +926,8 @@ ParseSwitchStatement(Parser *parser,
 
 			ExpectToken(parser, lexer, TokenKind_Colon);
 
-			caseNode->body = ParseBlock(parser, lexer, arena);
+			// TODO: parse multiple statements
+			caseNode->body = ParseBlockOrSingleStatement(parser, lexer, arena);
 
 			array_add(&node->cases, caseNode);
 		}
@@ -938,7 +939,8 @@ ParseSwitchStatement(Parser *parser,
 
 				ExpectToken(parser, lexer, TokenKind_Colon);
 
-				node->defaultBody = ParseBlock(parser, lexer, arena);
+				// TODO: parse multiple statements
+				node->defaultBody = ParseBlockOrSingleStatement(parser, lexer, arena);
 			}
 			else
 			{

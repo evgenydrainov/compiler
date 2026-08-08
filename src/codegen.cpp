@@ -882,6 +882,7 @@ GenerateExpression(Node *baseNode,
 			if (padding)
 			{
 				Emit(out, context, "    sub rsp, %d\t\t; align stack", padding);
+				context->stackDepth++;
 			}
 
 			for (int i = node->numExpressions;
@@ -954,7 +955,7 @@ GenerateExpression(Node *baseNode,
 			{
 				int cleanup = numArgumentsOnStack*8 + padding;
 				Emit(out, context, "    add rsp, %d\t\t; free stack arguments", cleanup);
-				context->stackDepth -= numArgumentsOnStack;
+				context->stackDepth -= numArgumentsOnStack + padding/8;
 			}
 
 			if (node->inferredType.kind == TypeKind_Float32)
@@ -1362,7 +1363,7 @@ GenerateStatement(Node *baseNode,
 				for (CaseNode *caseNode : node->cases)
 				{
 					Emit(out, context, ".case_%d_%d:", uniqueId, i);
-					GenerateBlock(caseNode->body, out, context);
+					GenerateStatement(caseNode->body, out, context);
 					Emit(out, context, "    jmp .end_%d", uniqueId);
 
 					i++;
@@ -1372,7 +1373,7 @@ GenerateStatement(Node *baseNode,
 			if (node->defaultBody)
 			{
 				Emit(out, context, ".default_%d:", uniqueId);
-				GenerateBlock(node->defaultBody, out, context);
+				GenerateStatement(node->defaultBody, out, context);
 				Emit(out, context, "    jmp .end_%d", uniqueId);
 			}
 
@@ -1401,8 +1402,11 @@ GenerateTopLevelStatement(Node *baseNode,
 			context->currentReturnType = node->returnType;
 
 			Emit(out, context, STR_FMT ":", STR_ARG(node->name));
+
+			// doesn't affect stack depth
 			Emit(out, context, "    push rbp");
 			context->stackDepth--;
+
 			Emit(out, context, "    mov rbp, rsp");
 			Emit(out, context, "    sub rsp, %d", functionBody->stackSize);
 			Emit(out, context, "");
@@ -1481,8 +1485,11 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			Emit(out, context, ".epilogue:");
 			Emit(out, context, "    mov rsp, rbp");
+
+			// doesn't affect stack depth
 			Emit(out, context, "    pop rbp");
 			context->stackDepth++;
+
 			Emit(out, context, "    ret");
 			Emit(out, context, "");
 

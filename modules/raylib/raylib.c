@@ -243,3 +243,8 @@ DrawText :: proc(text: *u8, posX: i32, posY: i32, fontSize: i32, color: i64) #fo
 
 // Text font info functions
 MeasureText :: proc(text: *u8, fontSize: i32) -> i32 #foreign; // Measure string width for default font
+
+// Text strings management functions (no UTF-8 strings, only byte chars)
+// WARNING 1: Most of these functions use internal static buffers[], it's recommended to store returned data on user-side for re-use
+// WARNING 2: Some functions allocate memory internally for the returned strings, those strings must be freed by user using MemFree()
+TextFormat :: proc(text: *u8) -> *u8 #foreign #variadic; // Text formatting with variables (sprintf() style)

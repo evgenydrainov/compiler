@@ -9,6 +9,18 @@ CoroutineState :: struct
 	state: i64;
 };
 
-printf :: proc(format: *u8) #foreign #variadic;
-fminf :: proc(a: f32, b: f32) -> f32 #foreign;
-fmaxf :: proc(a: f32, b: f32) -> f32 #foreign;
+printf :: proc(format: *u8)           #foreign #variadic;
+fminf  :: proc(a: f32, b: f32) -> f32 #foreign;
+fmaxf  :: proc(a: f32, b: f32) -> f32 #foreign;
+
+fabsf  :: proc(a: f32) -> f32
+{
+	if a >= 0.0
+	{
+		return a;
+	}
+	else
+	{
+		return -a;
+	}
+}

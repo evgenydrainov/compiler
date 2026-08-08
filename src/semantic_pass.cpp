@@ -1073,7 +1073,7 @@ AnalyzeExpression(Node *baseNode,
 				{
 					AnalyzeExpression(caseNode->label, context, node->expr->inferredType);
 
-					AnalyzeBlock(caseNode->body, context);
+					AnalyzeStatement(caseNode->body, context);
 
 					i64 result;
 					if (TryEvaluateConstantExpression(caseNode->label, context, &result))
@@ -1088,7 +1088,7 @@ AnalyzeExpression(Node *baseNode,
 
 				if (node->defaultBody)
 				{
-					AnalyzeBlock(node->defaultBody, context);
+					AnalyzeStatement(node->defaultBody, context);
 				}
 			}
 			else
