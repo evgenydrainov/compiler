@@ -756,6 +756,15 @@ AnalyzeExpression(Node *baseNode,
 
 					node->inferredType = function->returnType;
 					node->linkName = function->linkName;
+
+					ResolveType(&node->inferredType, context, node);
+
+					if (!IsRegisterSized(node->inferredType))
+					{
+						// TODO: is this correct?
+						symTable->stackSize = (int)align_forward(symTable->stackSize, 16);
+						node->returnSlotOffset = DeclareSymbol(symTable, "$ret", node->inferredType)->stackOffset;
+					}
 				}
 				else
 				{
@@ -1328,18 +1337,15 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 			ResolveType(&node->returnType, context, node);
 
-			if (node->returnType.kind == TypeKind_Struct)
-			{
-				if (!IsRegisterSized(node->returnType))
-				{
-					Error(context, node, STR_FMT_QUOTED " cannot return struct " STR_FMT_QUOTED " by value",
-						  STR_ARG(node->name),
-						  STR_ARG(node->returnType.name));
-					Note(context, node, "return a pointer to the struct instead");
-				}
-			}
-
 			Scope scope = EnterScope(symTable);
+
+			if (!IsRegisterSized(node->returnType))
+			{
+				Symbol *symbol = DeclareSymbol(symTable, "%ret", { .kind = TypeKind_Int64 });
+
+				// TODO: 8 is hardcoded everywhere else
+				Assert(symbol->stackOffset == 8);
+			}
 
 			for (int i = 0;
 				 i < node->numParams;

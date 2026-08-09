@@ -201,6 +201,8 @@ struct CallNode : public Node
 	int numExpressions;
 
 	string linkName;
+
+	int returnSlotOffset;
 };
 
 struct ReturnNode : public Node

@@ -113,6 +113,10 @@ SizeOfType(Type type)
 		case TypeKind_Bool:    {result = 8;} break;
 		case TypeKind_Enum:    {result = 8;} break;
 
+		// NOTE: the size of a void type is asked when a function checks if
+		// it has a large struct return value
+		case TypeKind_Void:    {result = 1;} break;
+
 		case TypeKind_Struct:
 		{
 			Assert(type.structInfo && "type was not resolved");

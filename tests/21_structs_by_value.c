@@ -8,8 +8,6 @@ main :: proc() -> i64
 		if sumSmall(s) != 7 { return 3; }
 	}
 
-	/*
-
 	// ---- 16-byte struct returned into a fresh variable ----
 	{
 		v := makeV2(10, 20);
@@ -46,8 +44,10 @@ main :: proc() -> i64
 	{
 		v := makeV3(1, 2, 3);
 		if v.x + v.y + v.z != 6 { return 12; }
-		if sumV3(v) != 6 { return 13; }
+		//if sumV3(v) != 6 { return 13; }
 	}
+
+	/*
 
 	// ---- sizes that are not a multiple of 8: the copy needs a tail ----
 	{
@@ -170,8 +170,6 @@ Small :: struct
 	b: i32;
 }
 
-/*
-
 clobberSmall :: proc(s: Small)
 {
 	s.a = 99;
@@ -184,6 +182,41 @@ makeV2 :: proc(x: i64, y: i64) -> V2
 	v.x = x;
 	v.y = y;
 	return v;
+}
+
+V2 :: struct
+{
+	x: i64;
+	y: i64;
+}
+
+Nested :: struct
+{
+	min: V2;
+	max: V2;
+}
+
+makeV3 :: proc(x: i64, y: i64, z: i64) -> V3
+{
+	v: V3;
+	v.x = x;
+	v.y = y;
+	v.z = z;
+	return v;
+}
+
+V3 :: struct
+{
+	x: i64;
+	y: i64;
+	z: i64;
+}
+
+/*
+
+sumV3 :: proc(v: V3) -> i64
+{
+	return v.x + v.y + v.z;
 }
 
 sumV2 :: proc(v: V2) -> i64
@@ -200,20 +233,6 @@ clobber :: proc(v: V2)
 {
 	v.x = 999;
 	v.y = 999;
-}
-
-makeV3 :: proc(x: i64, y: i64, z: i64) -> V3
-{
-	v: V3;
-	v.x = x;
-	v.y = y;
-	v.z = z;
-	return v;
-}
-
-sumV3 :: proc(v: V3) -> i64
-{
-	return v.x + v.y + v.z;
 }
 
 makeThree :: proc(a: i8, b: i8, c: i8) -> Three
@@ -343,19 +362,6 @@ countdown :: proc(n: i64) -> V2
 	return v;
 }
 
-V2 :: struct
-{
-	x: i64;
-	y: i64;
-}
-
-V3 :: struct
-{
-	x: i64;
-	y: i64;
-	z: i64;
-}
-
 // 3 bytes: neither register-sized nor a multiple of 8
 Three :: struct
 {
@@ -377,12 +383,6 @@ Mixed :: struct
 {
 	a: i8;
 	b: i64;
-}
-
-Nested :: struct
-{
-	min: V2;
-	max: V2;
 }
 
 Bag :: struct

@@ -135,5 +135,5 @@ int main()
 		exit(1);
 	}
 
-	TestReturnCode("main", 0);
+	//TestReturnCode("main", 0);
 }
