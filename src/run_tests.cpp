@@ -24,7 +24,7 @@ TestReturnCode(char *testName, int expectedCode)
 					inputPath,
 					nullptr) != 0)
 		{
-			fprintf(stderr, "Test %s failed: compilation error\n", testName);
+			fprintf(stderr, "TEST %s FAILED: compilation error\n", testName);
 			exit(1);
 		}
 	}
@@ -36,7 +36,7 @@ TestReturnCode(char *testName, int expectedCode)
 		int code = (int)_spawnl(_P_WAIT, exePath, testName, nullptr);
 		if (code != expectedCode)
 		{
-			fprintf(stderr, "Test %s failed: result is %d, but expected %d\n", testName, code, expectedCode);
+			fprintf(stderr, "TEST %s FAILED: result is %d, but expected %d\n", testName, code, expectedCode);
 			exit(1);
 		}
 
@@ -60,11 +60,50 @@ TestCompileError(char *testName)
 				inputPath,
 				nullptr) == 0)
 	{
-		fprintf(stderr, "Test %s failed: the program compiled, but it was not supposed to.\n", testName);
+		fprintf(stderr, "TEST %s FAILED: the program compiled, but it was not supposed to.\n", testName);
 		exit(1);
 	}
 
 	printf("Test %s passed\n", testName);
+}
+
+internal void
+run_tests()
+{
+	TestReturnCode("01_arithmetic", 0);
+	TestReturnCode("02_variables_scope", 0);
+	TestReturnCode("03_control_flow", 0);
+	TestReturnCode("04_functions", 0);
+	TestReturnCode("05_pointers", 0);
+	TestReturnCode("06_structs", 0);
+	TestReturnCode("07_logical_comparison", 0);
+	TestReturnCode("08_bitwise", 0);
+	TestReturnCode("09_casts_and_unsigned", 0);
+	TestReturnCode("10_arrays", 0);
+	TestReturnCode("11_enums", 0);
+	TestReturnCode("12_foreign_function", 0);
+	TestReturnCode("13_coroutine", 0);
+	TestReturnCode("14_short_circuit", 0);
+	TestReturnCode("15_break_continue", 0);
+	TestReturnCode("16_nested_aggregates", 0);
+	TestReturnCode("17_array_of_structs", 0);
+	TestReturnCode("18_floats", 0);
+	TestReturnCode("19_defer", 0);
+	TestReturnCode("20_switch", 0);
+	TestReturnCode("21_structs_by_value", 0);
+}
+
+internal void
+run_failure_tests()
+{
+	TestCompileError("01_assign_to_literal");
+	TestCompileError("02_redeclaration");
+	TestCompileError("03_type_mismatch_return");
+	TestCompileError("04_undeclared_variable");
+	TestCompileError("05_unknown_field");
+	TestCompileError("06_wrong_arg_count");
+	TestCompileError("07_address_of_struct_result");
+	TestCompileError("08_assign_to_struct_result");
 }
 
 int main()
@@ -84,27 +123,7 @@ int main()
 		exit(1);
 	}
 	
-	//TestReturnCode("01_arithmetic", 0);
-	//TestReturnCode("02_variables_scope", 0);
-	//TestReturnCode("03_control_flow", 0);
-	//TestReturnCode("04_functions", 0);
-	//TestReturnCode("05_pointers", 0);
-	//TestReturnCode("06_structs", 0);
-	//TestReturnCode("07_logical_comparison", 0);
-	//TestReturnCode("08_bitwise", 0);
-	//TestReturnCode("09_casts_and_unsigned", 0);
-	//TestReturnCode("10_arrays", 0);
-	//TestReturnCode("11_enums", 0);
-	//TestReturnCode("12_foreign_function", 0);
-	//TestReturnCode("13_coroutine", 0);
-	//TestReturnCode("14_short_circuit", 0);
-	//TestReturnCode("15_break_continue", 0);
-	//TestReturnCode("16_nested_aggregates", 0);
-	//TestReturnCode("17_array_of_structs", 0);
-	//TestReturnCode("18_floats", 0);
-	//TestReturnCode("19_defer", 0);
-	//TestReturnCode("20_switch", 0);
-	TestReturnCode("21_structs_by_value", 0);
+	run_tests();
 
 	if (_chdir("should_fail") != 0)
 	{
@@ -112,14 +131,7 @@ int main()
 		exit(1);
 	}
 
-	//TestCompileError("01_assign_to_literal");
-	//TestCompileError("02_redeclaration");
-	//TestCompileError("03_type_mismatch_return");
-	//TestCompileError("04_undeclared_variable");
-	//TestCompileError("05_unknown_field");
-	//TestCompileError("06_wrong_arg_count");
-	//TestCompileError("07_address_of_struct_result");	// not implemented yet
-	//TestCompileError("08_assign_to_struct_result");	// not implemented yet
+	run_failure_tests();
 
 	if (_chdir("..\\..\\examples\\01_raylib") != 0)
 	{

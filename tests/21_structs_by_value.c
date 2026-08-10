@@ -143,6 +143,49 @@ main :: proc() -> i64
 		if v.y != 10 { return 39; }   // 4 + 3 + 2 + 1
 	}
 
+	// ---- structs in the 5th slot and later: only the first four arguments
+	// travel in registers, the rest go on the stack ----
+	{
+		if mix6(1, 2, 3, 4, makeV2(5, 6), 7) != 28 { return 40; }
+
+		// a register-sized struct still has to be handed over on the stack here
+		if smallOnStack(1, 2, 3, 4, makeSmall(5, 6)) != 21 { return 41; }
+
+		// 3 bytes, so the copy is not a whole number of registers
+		if threeOnStack(1, 2, 3, 4, 5, makeThree(6, 7, 8)) != 36 { return 42; }
+
+		// 32 bytes, the largest copy in this file
+		if bagOnStack(1, 2, 3, 4, makeBag(10, 20, 30)) != 70 { return 43; }
+	}
+
+	// ---- several structs past the register slots at once ----
+	{
+		if twoOnStack(1, 2, 3, 4, makeV2(10, 20), makeV2(30, 40)) != 110 { return 44; }
+		if mix8(1, makeV2(2, 3), 4, makeV3(5, 6, 7), 8, makeSmall(9, 10)) != 55 { return 45; }
+	}
+
+	// ---- the hidden return pointer takes a register slot of its own, so a
+	// struct argument spills one position earlier than it looks ----
+	{
+		v := buildFromStack(1, 2, 3, makeV2(4, 5));
+		if v.x != 1 { return 46; }
+		if v.y != 5 { return 47; }   // 2 + 3
+		if v.z != 9 { return 48; }   // 4 + 5
+	}
+
+	// ---- by value still means a copy when the argument came off the stack ----
+	{
+		v := makeV2(1, 2);
+		clobberOnStack(1, 2, 3, 4, v);
+		if v.x != 1 { return 49; }
+		if v.y != 2 { return 50; }
+	}
+
+	// ---- a stack-passed struct handed on to a further call ----
+	{
+		if forwardFromStack(1, 2, 3, 4, makeV2(6, 7)) != 13 { return 51; }
+	}
+
 	return 0;
 }
 
@@ -383,4 +426,61 @@ Bag :: struct
 {
 	items: [3]i64;
 	count: i64;
+}
+
+// 'v' is the 5th argument, so it arrives on the stack
+mix6 :: proc(a: i64, b: i64, c: i64, d: i64, v: V2, e: i64) -> i64
+{
+	return a + b + c + d + v.x + v.y + e;
+}
+
+smallOnStack :: proc(a: i64, b: i64, c: i64, d: i64, s: Small) -> i64
+{
+	return a + b + c + d + cast(i64) s.a + cast(i64) s.b;
+}
+
+threeOnStack :: proc(a: i64, b: i64, c: i64, d: i64, e: i64, t: Three) -> i64
+{
+	return a + b + c + d + e + cast(i64) t.a + cast(i64) t.b + cast(i64) t.c;
+}
+
+bagOnStack :: proc(a: i64, b: i64, c: i64, d: i64, bag: Bag) -> i64
+{
+	return a + b + c + d + sumBag(bag);
+}
+
+// both structs land on the stack, and they must not end up as two views of
+// the same copy
+twoOnStack :: proc(a: i64, b: i64, c: i64, d: i64, p: V2, q: V2) -> i64
+{
+	return a + b + c + d + p.x + p.y + q.x + q.y;
+}
+
+// structs before and after the register/stack boundary in one call
+mix8 :: proc(a: i64, v: V2, b: i64, w: V3, c: i64, s: Small) -> i64
+{
+	return a + v.x + v.y + b + w.x + w.y + w.z + c
+		 + cast(i64) s.a + cast(i64) s.b;
+}
+
+// returns a struct, so the hidden return pointer eats the first register slot
+// and 'v' becomes the 5th argument
+buildFromStack :: proc(a: i64, b: i64, c: i64, v: V2) -> V3
+{
+	r: V3;
+	r.x = a;
+	r.y = b + c;
+	r.z = v.x + v.y;
+	return r;
+}
+
+clobberOnStack :: proc(a: i64, b: i64, c: i64, d: i64, v: V2)
+{
+	v.x = 999;
+	v.y = 999;
+}
+
+forwardFromStack :: proc(a: i64, b: i64, c: i64, d: i64, v: V2) -> i64
+{
+	return sumV2(v);
 }

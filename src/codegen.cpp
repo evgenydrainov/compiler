@@ -1605,8 +1605,6 @@ GenerateTopLevelStatement(Node *baseNode,
 					{
 						// this argument is passed by reference
 
-						// NOTE: this copy is completely redundant
-
 						Emit(context, "    lea rdi, [rbp - %d]", param->stackOffset);
 
 						Emit(context, "    mov rsi, %s", paramRegs[i]);
@@ -1630,15 +1628,22 @@ GenerateTopLevelStatement(Node *baseNode,
 
 				Assert(param);
 
+				int callerOffset = 48 + (i - numParamsInRegs)*8;
+
 				if (IsRegisterSized(param->type))
 				{
-					int callerOffset = 48 + (i - numParamsInRegs)*8;
 					Emit(context, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d", callerOffset, i+1);
 					Emit(context, "    mov [rbp - %d], rax", param->stackOffset);
 				}
 				else
 				{
-					Assert(!"todo");
+					// this argument is passed by reference
+
+					Emit(context, "    lea rdi, [rbp - %d]", param->stackOffset);
+
+					Emit(context, "    mov rsi, [rbp + %d]", callerOffset);
+
+					EmitCopyBytes(context, "rdi", "rsi", SizeOfType(param->type));
 				}
 			}
 			Emit(context, "");

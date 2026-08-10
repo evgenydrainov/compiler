@@ -103,19 +103,31 @@ AnalyzeBlock(Node *baseNode,
 }
 
 internal bool
-IsLValue(Node *node)
+IsLValue(Node *_node)
 {
-	switch (node->kind)
-	{
-		case NodeKind_Var:
-		case NodeKind_Deref:
-		case NodeKind_FieldAccess:
-		case NodeKind_ArrayIndexAccess:
-			return true;
+	bool result = false;
 
-		default:
-			return false;
+	switch (_node->kind)
+	{
+		case NodeKind_Var:   {result = true;} break;
+		case NodeKind_Deref: {result = true;} break;
+
+		case NodeKind_FieldAccess:
+		{
+			FieldAccessNode *node = As<FieldAccessNode>(_node);
+			result = IsLValue(node->expr);
+		} break;
+
+		case NodeKind_ArrayIndexAccess:
+		{
+			ArrayIndexAccessNode *node = As<ArrayIndexAccessNode>(_node);
+			result = IsLValue(node->arrayExpr);
+		} break;
+
+		default: {} break;
 	}
+
+	return result;
 }
 
 internal i64
