@@ -1599,6 +1599,11 @@ EarlyAnalyze(Node *baseNode,
 				Error(context, node, "redefinition of global variable " STR_FMT_QUOTED, STR_ARG(node->name));
 			}
 		} break;
+
+		case NodeKind_Asm:
+		{
+			// do nothing
+		} break;
 	}
 }
 

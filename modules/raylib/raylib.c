@@ -209,7 +209,7 @@ GetScreenHeight   :: proc() -> i32                             #foreign; // Get 
 ClearBackground :: proc(color: Color)      #foreign; // Set background color (framebuffer clear color)
 BeginDrawing    :: proc()                  #foreign; // Setup canvas (framebuffer) to start drawing
 EndDrawing      :: proc()                  #foreign; // End canvas drawing and swap buffers (double buffering)
-BeginMode2D     :: proc(camera: *Camera2D) #foreign; // Begin 2D mode with custom camera (2D)
+BeginMode2D     :: proc(camera: Camera2D)  #foreign; // Begin 2D mode with custom camera (2D)
 EndMode2D       :: proc()                  #foreign; // Ends 2D mode with custom camera
 
 // Timing-related functions
@@ -239,11 +239,11 @@ DrawRectangle :: proc(posX: i32, posY: i32, width: i32, height: i32, color: Colo
 
 // Texture loading functions
 // NOTE: These functions require GPU access
-LoadTexture :: proc(texture: *Texture, fileName: *u8) #foreign; // Load texture from file into GPU memory (VRAM)
+LoadTexture :: proc(fileName: *u8) -> Texture #foreign; // Load texture from file into GPU memory (VRAM)
 
 // Texture drawing functions
-DrawTexture    :: proc(texture: *Texture, posX: i32, posY: i32, tint: i64)                  #foreign; // Draw a Texture2D
-DrawTextureRec :: proc(texture: *Texture, source: *Rectangle, position: Vector2, tint: i64) #foreign; // Draw a part of a texture defined by a rectangle
+DrawTexture    :: proc(texture: Texture, posX: i32, posY: i32, tint: i64)                 #foreign; // Draw a Texture2D
+DrawTextureRec :: proc(texture: Texture, source: Rectangle, position: Vector2, tint: i64) #foreign; // Draw a part of a texture defined by a rectangle
 
 // Color/pixel related functions
 GetColor :: proc(hexValue: u32) -> Color #foreign; // Get Color structure from hexadecimal value

@@ -46,7 +46,7 @@ main :: proc() -> int
 		camera: Camera2D;
 		setup_screen_camera(&camera);
 
-		BeginMode2D(&camera);
+		BeginMode2D(camera);
 		game_draw(&game);
 		EndMode2D();
 

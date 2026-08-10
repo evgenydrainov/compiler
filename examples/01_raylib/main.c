@@ -141,43 +141,43 @@ GameUpdate :: proc(game: *Game)
 GameDraw :: proc(game: *Game)
 {
 	camera: Camera2D;
-	camera.zoom = int64_to_float32(4);
+	camera.zoom = 4.0;
 
-	BeginMode2D(&camera);
+	BeginMode2D(camera);
 
 	for y := 0; y < game.tilemap.height; y += 1
 	{
 		for x := 0; x < game.tilemap.width; x += 1
 		{
 			tile := GetTile(&game.tilemap, x, y);
-			draw_texture(&game.tex_tilemap,
+			draw_texture(game.tex_tilemap,
 						 (tile%16)*16, (tile/16)*16, 16, 16,
 						 x*16, y*16);
 		}
 	}
 
-	draw_texture(&game.tex_player,
+	draw_texture(game.tex_player,
 				 game.player.srcX, game.player.srcY, 16, 16,
 				 (game.player.x>>16)-8, (game.player.y>>16)-8);
 
 	EndMode2D();
 }
 
-draw_texture :: proc(texture: *Texture,
+draw_texture :: proc(texture: Texture,
 					 srcX: i64, srcY: i64, srcWidth: i64, srcHeight: i64,
 					 posX: i64, posY: i64)
 {
 	source: Rectangle;
-	source.x      = int64_to_float32(srcX);
-	source.y      = int64_to_float32(srcY);
-	source.width  = int64_to_float32(srcWidth);
-	source.height = int64_to_float32(srcHeight);
+	source.x      = cast(f32)srcX;
+	source.y      = cast(f32)srcY;
+	source.width  = cast(f32)srcWidth;
+	source.height = cast(f32)srcHeight;
 
 	position: Vector2;
-	position.x = int64_to_float32(posX);
-	position.y = int64_to_float32(posY);
+	position.x = cast(f32)posX;
+	position.y = cast(f32)posY;
 
-	DrawTextureRec(texture, &source, position, 0xffffffff);
+	DrawTextureRec(texture, source, position, 0xffffffff);
 }
 
 main :: proc() -> i64
@@ -189,8 +189,8 @@ main :: proc() -> i64
 	game.player.x = 160<<16;
 	game.player.y = 130<<16;
 
-	LoadTexture(&game.tex_player, "player.png"c);
-	LoadTexture(&game.tex_tilemap, "tilemap.png"c);
+	game.tex_player = LoadTexture("player.png"c);
+	game.tex_tilemap = LoadTexture("tilemap.png"c);
 
 	game.tilemap.data = get_tilemap_data();
 	game.tilemap.width = 16;
@@ -202,7 +202,7 @@ main :: proc() -> i64
 
 		BeginDrawing();
 
-		ClearBackground(0xff000000);
+		ClearBackground(GetColor(0x000000ff));
 
 		GameDraw(&game);
 

@@ -139,7 +139,7 @@ int main()
 		exit(1);
 	}
 
-	//TestReturnCode("main", 0);
+	TestReturnCode("main", 0);
 
 	if (_chdir("..\\02_breakout") != 0)
 	{
@@ -147,5 +147,5 @@ int main()
 		exit(1);
 	}
 
-	TestReturnCode("main", 0);
+	//TestReturnCode("main", 0);
 }
