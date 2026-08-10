@@ -1083,6 +1083,16 @@ AnalyzeExpression(Node *baseNode,
 				}
 			}
 
+			if (node->targetType.kind == TypeKind_Pointer)
+			{
+				if (node->what->inferredType.kind == TypeKind_Pointer)
+				{
+					// any pointer can be cast into any pointer
+					node->inferredType = node->targetType;
+					break;
+				}
+			}
+
 			Error(context, node, "cannot cast '%s' to '%s'",
 				  GetTypeKindPrettyName(node->what->inferredType.kind),
 				  GetTypeKindPrettyName(node->targetType.kind));
