@@ -497,7 +497,9 @@ AnalyzeBinaryExpression(Node *baseNode,
 
 			char *opName = GetBinaryOpPrettyName(node->op);
 
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
+				&& node->lhs->inferredType.kind != TypeKind_Struct
+				&& node->rhs->inferredType.kind != TypeKind_Struct)
 			{
 				node->inferredType = node->lhs->inferredType;
 			}
@@ -518,7 +520,9 @@ AnalyzeBinaryExpression(Node *baseNode,
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
 
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
+				&& node->lhs->inferredType.kind != TypeKind_Struct
+				&& node->rhs->inferredType.kind != TypeKind_Struct)
 			{
 				node->inferredType.kind = TypeKind_Bool;
 			}
@@ -536,7 +540,9 @@ AnalyzeBinaryExpression(Node *baseNode,
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context, node->lhs->inferredType);
 
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
+				&& node->lhs->inferredType.kind != TypeKind_Struct
+				&& node->rhs->inferredType.kind != TypeKind_Struct)
 			{
 				node->inferredType.kind = TypeKind_Bool;
 			}
