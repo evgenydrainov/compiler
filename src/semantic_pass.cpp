@@ -465,6 +465,17 @@ CanImplicitlyCast(Type destType,
 		}
 	}
 
+	if (destType.kind == TypeKind_Pointer)
+	{
+		if (source->inferredType.kind == TypeKind_Pointer
+			&& source->inferredType.pointerTo->kind == TypeKind_Void)
+		{
+			// allow *void to cast into any pointer for now
+			// foo: *int = null;
+			return true;
+		}
+	}
+
 	return false;
 }
 
@@ -605,6 +616,14 @@ AnalyzeExpression(Node *baseNode,
 		case NodeKind_Float64Literal:
 		{
 			baseNode->inferredType.kind = TypeKind_Float64;
+		} break;
+
+		case NodeKind_NullLiteral:
+		{
+			local_persist Type voidType = { .kind = TypeKind_Void };
+
+			baseNode->inferredType.kind = TypeKind_Pointer;
+			baseNode->inferredType.pointerTo = &voidType;
 		} break;
 
 		case NodeKind_String:

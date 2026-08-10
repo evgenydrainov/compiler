@@ -691,6 +691,13 @@ GenerateExpression(Node *baseNode,
 			Emit(context, "");
 		} break;
 
+		case NodeKind_NullLiteral:
+		{
+			Emit(context, "    mov rax, 0\t\t; load 'null' literal");
+			Emit(context, "    push rax");
+			Emit(context, "");
+		} break;
+
 		case NodeKind_CString:
 		{
 			CStringNode *node = As<CStringNode>(baseNode);

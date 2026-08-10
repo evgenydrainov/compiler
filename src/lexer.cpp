@@ -189,6 +189,14 @@ IdentifierType(string str)
 			}
 		} break;
 
+		case 'n':
+		{
+			if (str == "null")
+			{
+				result = TokenKind_Null;
+			}
+		} break;
+
 		case 'p':
 		{
 			if (str == "print")

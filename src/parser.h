@@ -41,7 +41,8 @@
 	X(NodeKind_For,               33,    ""   ) \
 	X(NodeKind_Defer,             34,    ""   ) \
 	X(NodeKind_Switch,            35,    ""   ) \
-	X(NodeKind_Case,              36,    ""   )
+	X(NodeKind_Case,              36,    ""   ) \
+	X(NodeKind_NullLiteral,       37,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -389,6 +390,11 @@ struct SwitchNode : public Node
 	Node *expr;
 	BumpArray<CaseNode *> cases;
 	Node *defaultBody;
+};
+
+struct NullLiteralNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_NullLiteral;
 };
 
 template <typename T>

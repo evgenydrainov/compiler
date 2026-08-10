@@ -355,6 +355,14 @@ ParseAtom_Inner(Parser *parser,
 		return node;
 	}
 
+	if (parser->current.kind == TokenKind_Null)
+	{
+		NullLiteralNode *node = MakeNode<NullLiteralNode>(parser->current.location, arena);
+		AdvanceToken(parser, lexer);
+
+		return node;
+	}
+
 	if (parser->current.kind == TokenKind_Float64Literal)
 	{
 		Float64LiteralNode *node = MakeNode<Float64LiteralNode>(parser->current.location, arena);

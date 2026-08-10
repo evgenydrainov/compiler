@@ -71,13 +71,14 @@
 	X(TokenKind_Switch,           163,       "switch"         ) \
 	X(TokenKind_Case,             164,       "case"           ) \
 	X(TokenKind_Default,          165,       "default"        ) \
+	X(TokenKind_Null,             166,       "null"           ) \
 	/* other */ \
-	X(TokenKind_Identifier,       166,       "identifier"     ) \
-	X(TokenKind_Int64Literal,     167,       "number"         ) \
-	X(TokenKind_Float32Literal,   168,       "number"         ) \
-	X(TokenKind_Float64Literal,   169,       "number"         ) \
-	X(TokenKind_String,           170,       "string"         ) \
-	X(TokenKind_CString,          171,       "cstring"        )
+	X(TokenKind_Identifier,       167,       "identifier"     ) \
+	X(TokenKind_Int64Literal,     168,       "number"         ) \
+	X(TokenKind_Float32Literal,   169,       "number"         ) \
+	X(TokenKind_Float64Literal,   170,       "number"         ) \
+	X(TokenKind_String,           171,       "string"         ) \
+	X(TokenKind_CString,          172,       "cstring"        )
 
 DEFINE_ENUM_WITH_VALUES(TokenKind, u32, TOKEN_KIND_LIST);
 
