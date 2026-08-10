@@ -57,6 +57,7 @@ struct StructInfo
 	string name;
 	StaticBumpArray<StructField, 32> fields;
 	int size;
+	int alignment;
 };
 
 struct EnumeratorInfo
@@ -225,4 +226,32 @@ IsRegisterSized(Type type)
 			|| size == 2
 			|| size == 4
 			|| size == 8);
+}
+
+inline int
+AlignmentOfType(Type type)
+{
+	int result = 0;
+
+	switch (type.kind)
+	{
+		case TypeKind_Struct:
+		{
+			Assert(type.structInfo && "type was not resolved");
+			result = type.structInfo->alignment;
+		} break;
+
+		case TypeKind_Array:
+		{
+			Assert(type.arrayLength != 0 && "type was not resolved");
+			result = AlignmentOfType(*type.arrayElementType);
+		} break;
+
+		default:
+		{
+			result = SizeOfType(type);
+		} break;
+	}
+
+	return result;
 }

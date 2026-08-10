@@ -1487,7 +1487,7 @@ EarlyAnalyze(Node *baseNode,
 				type->structInfo->name = node->name;
 
 				int offset = 0;
-				int maxAlignment = 0;
+				int maxFieldAlignment = 0;
 
 				for (StructFieldDeclNode *field : node->fields)
 				{
@@ -1500,10 +1500,10 @@ EarlyAnalyze(Node *baseNode,
 						fieldInfo.type = field->type;
 
 						int size = SizeOfType(field->type);
-						int alignment = Min(size, 8);
+						int alignment = AlignmentOfType(field->type);
 
 						offset = (int)align_forward(offset, alignment);
-						maxAlignment = Max(maxAlignment, alignment);
+						maxFieldAlignment = Max(maxFieldAlignment, alignment);
 
 						fieldInfo.offset = offset;
 						offset += size;
@@ -1519,7 +1519,8 @@ EarlyAnalyze(Node *baseNode,
 					}
 				}
 
-				type->structInfo->size = (int)align_forward(offset, maxAlignment);
+				type->structInfo->size = (int)align_forward(offset, maxFieldAlignment);
+				type->structInfo->alignment = maxFieldAlignment;
 			}
 			else
 			{
