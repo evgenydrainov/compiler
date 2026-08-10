@@ -44,10 +44,8 @@ main :: proc() -> i64
 	{
 		v := makeV3(1, 2, 3);
 		if v.x + v.y + v.z != 6 { return 12; }
-		//if sumV3(v) != 6 { return 13; }
+		if sumV3(v) != 6 { return 13; }
 	}
-
-	/*
 
 	// ---- sizes that are not a multiple of 8: the copy needs a tail ----
 	{
@@ -145,8 +143,6 @@ main :: proc() -> i64
 		if v.y != 10 { return 39; }   // 4 + 3 + 2 + 1
 	}
 
-	*/
-
 	return 0;
 }
 
@@ -184,10 +180,35 @@ makeV2 :: proc(x: i64, y: i64) -> V2
 	return v;
 }
 
+sumV2 :: proc(v: V2) -> i64
+{
+	return v.x + v.y;
+}
+
+passThrough :: proc(v: V2) -> V2
+{
+	return v;
+}
+
+clobber :: proc(v: V2)
+{
+	v.x = 999;
+	v.y = 999;
+}
+
 V2 :: struct
 {
 	x: i64;
 	y: i64;
+}
+
+makeNested :: proc(minX: i64, minY: i64,
+				   maxX: i64, maxY: i64) -> Nested
+{
+	n: Nested;
+	n.min = makeV2(minX, minY);
+	n.max = makeV2(maxX, maxY);
+	return n;
 }
 
 Nested :: struct
@@ -205,34 +226,16 @@ makeV3 :: proc(x: i64, y: i64, z: i64) -> V3
 	return v;
 }
 
-V3 :: struct
-{
-	x: i64;
-	y: i64;
-	z: i64;
-}
-
-/*
-
 sumV3 :: proc(v: V3) -> i64
 {
 	return v.x + v.y + v.z;
 }
 
-sumV2 :: proc(v: V2) -> i64
+V3 :: struct
 {
-	return v.x + v.y;
-}
-
-passThrough :: proc(v: V2) -> V2
-{
-	return v;
-}
-
-clobber :: proc(v: V2)
-{
-	v.x = 999;
-	v.y = 999;
+	x: i64;
+	y: i64;
+	z: i64;
 }
 
 makeThree :: proc(a: i8, b: i8, c: i8) -> Three
@@ -249,6 +252,14 @@ sumThree :: proc(t: Three) -> i64
 	return cast(i64) t.a + cast(i64) t.b + cast(i64) t.c;
 }
 
+// 3 bytes: neither register-sized nor a multiple of 8
+Three :: struct
+{
+	a: i8;
+	b: i8;
+	c: i8;
+}
+
 makeTwelve :: proc(a: i32, b: i32, c: i32) -> Twelve
 {
 	w: Twelve;
@@ -263,6 +274,14 @@ sumTwelve :: proc(w: Twelve) -> i64
 	return cast(i64) w.a + cast(i64) w.b + cast(i64) w.c;
 }
 
+// 12 bytes: a copy loop that only moves 8 bytes at a time needs a tail
+Twelve :: struct
+{
+	a: i32;
+	b: i32;
+	c: i32;
+}
+
 makeMixed :: proc(a: i8, b: i64) -> Mixed
 {
 	m: Mixed;
@@ -271,13 +290,11 @@ makeMixed :: proc(a: i8, b: i64) -> Mixed
 	return m;
 }
 
-makeNested :: proc(minX: i64, minY: i64,
-				   maxX: i64, maxY: i64) -> Nested
+// the offset of 'b' depends on whether fields are padded to their alignment
+Mixed :: struct
 {
-	n: Nested;
-	n.min = makeV2(minX, minY);
-	n.max = makeV2(maxX, maxY);
-	return n;
+	a: i8;
+	b: i64;
 }
 
 area :: proc(n: Nested) -> i64
@@ -362,33 +379,8 @@ countdown :: proc(n: i64) -> V2
 	return v;
 }
 
-// 3 bytes: neither register-sized nor a multiple of 8
-Three :: struct
-{
-	a: i8;
-	b: i8;
-	c: i8;
-}
-
-// 12 bytes: a copy loop that only moves 8 bytes at a time needs a tail
-Twelve :: struct
-{
-	a: i32;
-	b: i32;
-	c: i32;
-}
-
-// the offset of 'b' depends on whether fields are padded to their alignment
-Mixed :: struct
-{
-	a: i8;
-	b: i64;
-}
-
 Bag :: struct
 {
 	items: [3]i64;
 	count: i64;
 }
-
-*/

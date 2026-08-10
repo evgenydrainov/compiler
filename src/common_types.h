@@ -124,3 +124,10 @@ align_forward(usize ptr, usize alignment)
 	Assert(is_power_of_two(alignment));
 	return (ptr + (alignment-1)) & ~(alignment-1);
 }
+
+inline usize
+align_downward(usize ptr, usize alignment)
+{
+	Assert(is_power_of_two(alignment));
+	return ptr & ~(alignment-1);
+}

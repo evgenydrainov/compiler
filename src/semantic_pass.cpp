@@ -743,7 +743,17 @@ AnalyzeExpression(Node *baseNode,
 					{
 						Node *expr = node->expressions[i];
 
-						if (!CanImplicitlyCast(function->params[i].type, expr, context))
+						ResolveType(&function->params[i].type, context, node);
+
+						if (CanImplicitlyCast(function->params[i].type, expr, context))
+						{
+							if (!IsRegisterSized(function->params[i].type))
+							{
+								Symbol *symbol = DeclareSymbol(symTable, "$arg", function->params[i].type);
+								expr->paramCopyOffset = symbol->stackOffset;
+							}
+						}
+						else
 						{
 							Error(context, expr,
 								  "cannot pass '%s' as argument %d of " STR_FMT_QUOTED ": expected '%s'",
@@ -754,15 +764,16 @@ AnalyzeExpression(Node *baseNode,
 						}
 					}
 
+					ResolveType(&function->returnType, context, node);
+
 					node->inferredType = function->returnType;
 					node->linkName = function->linkName;
 
-					ResolveType(&node->inferredType, context, node);
-
 					if (!IsRegisterSized(node->inferredType))
 					{
-						// TODO: is this correct?
+						// TODO: is this alignment correct?
 						symTable->stackSize = (int)align_forward(symTable->stackSize, 16);
+
 						node->returnSlotOffset = DeclareSymbol(symTable, "$ret", node->inferredType)->stackOffset;
 					}
 				}
@@ -1341,9 +1352,14 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 			if (!IsRegisterSized(node->returnType))
 			{
-				Symbol *symbol = DeclareSymbol(symTable, "%ret", { .kind = TypeKind_Int64 });
+				local_persist Type voidType = { .kind = TypeKind_Void };
 
-				// TODO: 8 is hardcoded everywhere else
+				Type voidPtrType = { .kind = TypeKind_Pointer, .pointerTo = &voidType };
+
+				// declare the hidden struct pointer, which is the first argument
+				Symbol *symbol = DeclareSymbol(symTable, "%ret", voidPtrType);
+
+				// TODO: [rbp - 8] is hardcoded everywhere else
 				Assert(symbol->stackOffset == 8);
 			}
 
@@ -1355,30 +1371,15 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 				ResolveType(&param->type, context, param);
 
-				int size = SizeOfType(param->type);
-				if (!(size == 1
-					  || size == 2
-					  || size == 4
-					  || size == 8))
+				if (!LookupSymbol(symTable, param->name, 0))
 				{
-					Error(context, param,
-						  "cannot pass parameter " STR_FMT_QUOTED " by value: its size is %d bytes",
-						  STR_ARG(param->name),
-						  size);
-					Note(context, param,
-						 "only types of size 1, 2, 4 or 8 can be passed by value, pass a pointer instead");
-				}
-
-				if (LookupSymbol(symTable, param->name, 0))
-				{
-					Error(context, param, "parameter " STR_FMT_QUOTED " is already declared",
-						  STR_ARG(param->name));
+					Symbol *symbol = DeclareSymbol(symTable, param->name, param->type);
+					param->stackOffset = symbol->stackOffset;
 				}
 				else
 				{
-					Symbol *symbol = DeclareSymbol(symTable, param->name, param->type);
-
-					param->stackOffset = symbol->stackOffset;
+					Error(context, param, "parameter " STR_FMT_QUOTED " is already declared",
+						  STR_ARG(param->name));
 				}
 			}
 

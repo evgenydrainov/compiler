@@ -80,6 +80,8 @@ struct Node
 	SourceLocation location;
 
 	Type inferredType;
+
+	int paramCopyOffset;
 };
 
 struct BinaryNode : public Node

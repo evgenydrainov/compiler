@@ -612,6 +612,44 @@ GenerateBinaryExpression(Node *baseNode,
 }
 
 internal void
+EmitCopyBytes(CodegenContext *context,
+			  char *destReg, char *srcReg, int size)
+{
+	int i = 0;
+
+	while (i < align_downward(size, 8))
+	{
+		if (srcReg)
+		{
+			Emit(context, "    mov rax, qword [%s + %d]", srcReg, i);
+			Emit(context, "    mov qword [%s + %d], rax", destReg, i);
+		}
+		else
+		{
+			Emit(context, "    mov qword [%s + %d], 0", destReg, i);
+		}
+
+		i += 8;
+	}
+
+	// handle the tail
+	while (i < size)
+	{
+		if (srcReg)
+		{
+			Emit(context, "    mov al, byte [%s + %d]", srcReg, i);
+			Emit(context, "    mov byte [%s + %d], al", destReg, i);
+		}
+		else
+		{
+			Emit(context, "    mov byte [%s + %d], 0", destReg, i);
+		}
+
+		i++;
+	}
+}
+
+internal void
 GenerateExpression(Node *baseNode,
 				   CodegenContext *context)
 {
@@ -892,26 +930,95 @@ GenerateExpression(Node *baseNode,
 				context->stackDepth++;
 			}
 
-			for (int i = numExpressions;
-				 i--;)
+			auto GetExpr = [&](int i) -> Node *
 			{
 				if (hiddenReturnArg)
 				{
 					if (i == 0)
 					{
-						Emit(context, "    lea rax, [rbp - %d]", node->returnSlotOffset);
-						Emit(context, "    push rax");
+						return nullptr;
 					}
 					else
 					{
-						GenerateExpression(node->expressions[i-1], context);
+						return node->expressions[i - 1];
 					}
 				}
 				else
 				{
-					GenerateExpression(node->expressions[i], context);
+					return node->expressions[i];
 				}
+			};
 
+			auto GetParamType = [&](int i) -> Type *
+			{
+				if (hiddenReturnArg)
+				{
+					if (i == 0)
+					{
+						return nullptr;
+					}
+					else
+					{
+						int index = i - 1;
+						if (index < function->params.count)
+						{
+							return &function->params[index].type;
+						}
+						else
+						{
+							Assert(function->isVariadic);
+							return &node->expressions[index]->inferredType;
+						}
+					}
+				}
+				else
+				{
+					int index = i;
+					if (index < function->params.count)
+					{
+						return &function->params[index].type;
+					}
+					else
+					{
+						Assert(function->isVariadic);
+						return &node->expressions[index]->inferredType;
+					}
+				}
+			};
+
+			for (int i = numExpressions;
+				 i--;)
+			{
+				Node *expr = GetExpr(i);
+
+				Type *paramType = GetParamType(i);
+
+				if (expr)
+				{
+					if (IsRegisterSized(*paramType))
+					{
+						GenerateExpression(expr, context);
+					}
+					else
+					{
+						Emit(context, "    lea rdi, [rbp - %d]", expr->paramCopyOffset);
+
+						GenerateLValueAddress(expr, context);
+						Emit(context, "    pop rsi");
+
+						EmitCopyBytes(context, "rdi", "rsi", SizeOfType(*paramType));
+
+						Emit(context, "    push rdi");
+					}
+				}
+				else
+				{
+					// pass the first argument: it is the address of the
+					// function's return value
+					Emit(context, "    lea rax, [rbp - %d]", node->returnSlotOffset);
+					Emit(context, "    push rax");
+				}
+						
 				/*
 				if (function->isVariadic)
 				{
@@ -931,39 +1038,7 @@ GenerateExpression(Node *baseNode,
 				 i < numArgumentsInRegs;
 				 i++)
 			{
-				Type *paramType = nullptr;
-
-				if (hiddenReturnArg)
-				{
-					if (i == 0)
-					{
-						// do nothing
-					}
-					else
-					{
-						if (i-1 < function->params.count)
-						{
-							paramType = &function->params[i-1].type;
-						}
-						else
-						{
-							Assert(function->isVariadic);
-							paramType = &node->expressions[i-1]->inferredType;
-						}
-					}
-				}
-				else
-				{
-					if (i < function->params.count)
-					{
-						paramType = &function->params[i].type;
-					}
-					else
-					{
-						Assert(function->isVariadic);
-						paramType = &node->expressions[i]->inferredType;
-					}
-				}
+				Type *paramType = GetParamType(i);
 
 				if (paramType && paramType->kind == TypeKind_Float32)
 				{
@@ -1052,28 +1127,6 @@ GetRegisterForTypeSize(Type type)
 }
 
 internal void
-EmitCopyBytes(CodegenContext *context,
-			  char *destReg, char *srcReg, int size)
-{
-	Assert(size % 8 == 0);
-
-	for (int i = 0;
-		 i < size;
-		 i += 8)
-	{
-		if (srcReg)
-		{
-			Emit(context, "    mov rax, qword [%s + %d]", srcReg, i);
-			Emit(context, "    mov qword [%s + %d], rax", destReg, i);
-		}
-		else
-		{
-			Emit(context, "    mov qword [%s + %d], 0", destReg, i);
-		}
-	}
-}
-
-internal void
 GenerateStatement(Node *baseNode,
 				  CodegenContext *context)
 {
@@ -1110,18 +1163,7 @@ GenerateStatement(Node *baseNode,
 			{
 				// initialize to zero by default
 
-				int size = SizeOfType(varNode.inferredType);
-				if (size > 8)
-				{
-					GenerateLValueAddress(&varNode, context);
-
-					Emit(context, "    pop rdi");
-
-					EmitCopyBytes(context, "rdi", nullptr, size);
-
-					Emit(context, "");
-				}
-				else
+				if (IsRegisterSized(varNode.inferredType))
 				{
 					GenerateLValueAddress(&varNode, context);
 
@@ -1133,6 +1175,18 @@ GenerateStatement(Node *baseNode,
 					Emit(context, "    mov [rcx], %s", reg);
 					Emit(context, "");
 				}
+				else
+				{
+					// TODO: maybe don't take this path for sizes 3/5/6/7
+
+					GenerateLValueAddress(&varNode, context);
+
+					Emit(context, "    pop rdi");
+
+					EmitCopyBytes(context, "rdi", nullptr, SizeOfType(varNode.inferredType));
+
+					Emit(context, "");
+				}
 			}
 		} break;
 
@@ -1140,22 +1194,7 @@ GenerateStatement(Node *baseNode,
 		{
 			AssignNode *node = As<AssignNode>(baseNode);
 
-			int size = SizeOfType(node->lhs->inferredType);
-			if (size > 8)
-			{
-				Assert(SizeOfType(node->lhs->inferredType) == SizeOfType(node->rhs->inferredType));
-
-				GenerateLValueAddress(node->rhs, context);
-				GenerateLValueAddress(node->lhs, context);
-
-				Emit(context, "    pop rdi");
-				Emit(context, "    pop rsi");
-
-				EmitCopyBytes(context, "rdi", "rsi", size);
-
-				Emit(context, "");
-			}
-			else
+			if (IsRegisterSized(node->lhs->inferredType))
 			{
 				GenerateExpression(node->rhs, context);
 				GenerateLValueAddress(node->lhs, context);
@@ -1166,6 +1205,22 @@ GenerateStatement(Node *baseNode,
 				char *reg = GetRegisterForTypeSize(node->lhs->inferredType);
 
 				Emit(context, "    mov [rcx], %s", reg);
+				Emit(context, "");
+			}
+			else
+			{
+				// TODO: maybe don't take this path for sizes 3/5/6/7
+
+				Assert(SizeOfType(node->lhs->inferredType) == SizeOfType(node->rhs->inferredType));
+
+				GenerateLValueAddress(node->rhs, context);
+				GenerateLValueAddress(node->lhs, context);
+
+				Emit(context, "    pop rdi");
+				Emit(context, "    pop rsi");
+
+				EmitCopyBytes(context, "rdi", "rsi", SizeOfType(node->lhs->inferredType));
+
 				Emit(context, "");
 			}
 		} break;
@@ -1504,40 +1559,66 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			int numParamsInRegs = Min(numParams, 4);
 
-			for (int i = 0;
-				 i < numParamsInRegs;
-				 i++)
+			auto GetParam = [&](int i) -> ParamNode *
 			{
-				ParamNode *param = nullptr;
-
 				if (hiddenReturnArg)
 				{
 					if (i == 0)
 					{
-						Emit(context, "    mov [rbp - 8], %s", paramRegs[i]);
-						continue;
+						return nullptr;
 					}
 					else
 					{
-						param = As<ParamNode>(node->params[i-1]);
+						return As<ParamNode>(node->params[i - 1]);
 					}
 				}
 				else
 				{
-					param = As<ParamNode>(node->params[i]);
+					return As<ParamNode>(node->params[i]);
 				}
+			};
 
-				if (param->type.kind == TypeKind_Float32)
+			for (int i = 0;
+				 i < numParamsInRegs;
+				 i++)
+			{
+				ParamNode *param = GetParam(i);
+
+				if (param)
 				{
-					Emit(context, "    movss [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
-				}
-				else if (param->type.kind == TypeKind_Float64)
-				{
-					Emit(context, "    movsd [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
+					if (IsRegisterSized(param->type))
+					{
+						if (param->type.kind == TypeKind_Float32)
+						{
+							Emit(context, "    movss [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
+						}
+						else if (param->type.kind == TypeKind_Float64)
+						{
+							Emit(context, "    movsd [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
+						}
+						else
+						{
+							Emit(context, "    mov [rbp - %d], %s\t\t; unpack argument", param->stackOffset, paramRegs[i]);
+						}
+					}
+					else
+					{
+						// this argument is passed by reference
+
+						// NOTE: this copy is completely redundant
+
+						Emit(context, "    lea rdi, [rbp - %d]", param->stackOffset);
+
+						Emit(context, "    mov rsi, %s", paramRegs[i]);
+
+						EmitCopyBytes(context, "rdi", "rsi", SizeOfType(param->type));
+					}
 				}
 				else
 				{
-					Emit(context, "    mov [rbp - %d], %s\t\t; unpack argument", param->stackOffset, paramRegs[i]);
+					// unpack the first argument, which is the pointer of this
+					// function's return value
+					Emit(context, "    mov [rbp - 8], %s", paramRegs[i]);
 				}
 			}
 
@@ -1545,27 +1626,20 @@ GenerateTopLevelStatement(Node *baseNode,
 				 i < numParams;
 				 i++)
 			{
-				ParamNode *param = nullptr;
+				ParamNode *param = GetParam(i);
 
-				if (hiddenReturnArg)
+				Assert(param);
+
+				if (IsRegisterSized(param->type))
 				{
-					if (i == 0)
-					{
-						Assert(!"unreachable");
-					}
-					else
-					{
-						param = As<ParamNode>(node->params[i-1]);
-					}
+					int callerOffset = 48 + (i - numParamsInRegs)*8;
+					Emit(context, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d", callerOffset, i+1);
+					Emit(context, "    mov [rbp - %d], rax", param->stackOffset);
 				}
 				else
 				{
-					param = As<ParamNode>(node->params[i]);
+					Assert(!"todo");
 				}
-
-				int callerOffset = 48 + (i - numParamsInRegs)*8;
-				Emit(context, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d", callerOffset, i+1);
-				Emit(context, "    mov [rbp - %d], rax", param->stackOffset);
 			}
 			Emit(context, "");
 
