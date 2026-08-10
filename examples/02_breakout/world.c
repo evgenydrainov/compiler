@@ -117,7 +117,7 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 
 			if entities_collide(ball, paddle)
 			{
-				ball.vspeed = -ball.vspeed;
+				ball.vspeed = -fabsf(ball.vspeed);
 			}
 
 			foreach i : 0..<world.num_bricks

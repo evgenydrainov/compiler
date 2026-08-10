@@ -1047,8 +1047,11 @@ GenerateExpression(Node *baseNode,
 
 					if (function->isVariadic)
 					{
-						// TODO: do promotion
-						Assert(false);
+						// do promotion
+						Emit(context, "    cvtss2sd xmm%d, xmm%d", i, i);
+
+						// also copy to regular register
+						Emit(context, "    movq %s, xmm%d", paramRegs[i], i);
 					}
 				}
 				else if (paramType && paramType->kind == TypeKind_Float64)
@@ -1058,7 +1061,8 @@ GenerateExpression(Node *baseNode,
 
 					if (function->isVariadic)
 					{
-						Emit(context, "    mov %s, rax", paramRegs[i]);
+						// also copy to regular register
+						Emit(context, "    movq %s, xmm%d", paramRegs[i], i);
 					}
 				}
 				else
