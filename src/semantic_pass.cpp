@@ -620,7 +620,7 @@ AnalyzeExpression(Node *baseNode,
 
 		case NodeKind_NullLiteral:
 		{
-			local_persist Type voidType = { .kind = TypeKind_Void };
+			local_persist Type voidType = { TypeKind_Void };
 
 			baseNode->inferredType.kind = TypeKind_Pointer;
 			baseNode->inferredType.pointerTo = &voidType;
@@ -786,8 +786,7 @@ AnalyzeExpression(Node *baseNode,
 						{
 							if (!IsRegisterSized(function->params[i].type))
 							{
-								Symbol *symbol = DeclareSymbol(symTable, "$arg", function->params[i].type);
-								expr->paramCopyOffset = symbol->stackOffset;
+								expr->paramCopyOffset = ReserveSpace(symTable, function->params[i].type);;
 							}
 						}
 						else
@@ -811,7 +810,7 @@ AnalyzeExpression(Node *baseNode,
 						// TODO: is this alignment correct?
 						symTable->stackSize = (int)align_forward(symTable->stackSize, 16);
 
-						node->returnSlotOffset = DeclareSymbol(symTable, "$ret", node->inferredType)->stackOffset;
+						node->returnSlotOffset = ReserveSpace(symTable, node->inferredType);
 					}
 				}
 				else
@@ -1399,15 +1398,17 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 			if (!IsRegisterSized(node->returnType))
 			{
-				local_persist Type voidType = { .kind = TypeKind_Void };
+				local_persist Type voidType = { TypeKind_Void };
 
-				Type voidPtrType = { .kind = TypeKind_Pointer, .pointerTo = &voidType };
+				Type voidPtrType = {};
+				voidPtrType.kind = TypeKind_Pointer;
+				voidPtrType.pointerTo = &voidType;
 
 				// declare the hidden struct pointer, which is the first argument
-				Symbol *symbol = DeclareSymbol(symTable, "%ret", voidPtrType);
+				int stackOffset = ReserveSpace(symTable, voidPtrType);
 
 				// TODO: [rbp - 8] is hardcoded everywhere else
-				Assert(symbol->stackOffset == 8);
+				Assert(stackOffset == 8);
 			}
 
 			for (int i = 0;

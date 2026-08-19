@@ -63,3 +63,18 @@ DeclareSymbol(SymbolTable *table,
 
 	return symbol;
 }
+
+inline int
+ReserveSpace(SymbolTable *table,
+			 Type type)
+{
+	int size = SizeOfType(type);
+	size = (int)align_forward(size, 8); // align to 8 for now
+
+	table->stackSize += size;
+
+	table->maxStackSize = Max(table->maxStackSize, table->stackSize);
+
+	int stackOffset = table->stackSize;
+	return stackOffset;
+}

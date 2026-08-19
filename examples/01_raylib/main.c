@@ -57,12 +57,6 @@ Game :: struct
 
 GameUpdate :: proc(game: *Game)
 {
-	KEY_RIGHT : i32 = 262;
-	KEY_LEFT  : i32 = 263;
-	KEY_DOWN  : i32 = 264;
-	KEY_UP    : i32 = 265;
-	KEY_Z     : i32 = 90;
-
 	dirX := 0;
 	if IsKeyDown(KEY_LEFT)
 	{

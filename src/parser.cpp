@@ -231,32 +231,32 @@ ParseType(Parser *parser,
 			if (parser->current.str == "i8")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int8 };
+				return { TypeKind_Int8 };
 			}
 
 			if (parser->current.str == "i16")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int16 };
+				return { TypeKind_Int16 };
 			}
 
 			if (parser->current.str == "i32")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int32 };
+				return { TypeKind_Int32 };
 			}
 
 			if (parser->current.str == "i64")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int64 };
+				return { TypeKind_Int64 };
 			}
 
 			if (parser->current.str == "int")
 			{
 				// 'int' is alias for 'i64'
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Int64 };
+				return { TypeKind_Int64 };
 			}
 		} break;
 
@@ -265,25 +265,25 @@ ParseType(Parser *parser,
 			if (parser->current.str == "u8")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_UInt8 };
+				return { TypeKind_UInt8 };
 			}
 
 			if (parser->current.str == "u16")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_UInt16 };
+				return { TypeKind_UInt16 };
 			}
 
 			if (parser->current.str == "u32")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_UInt32 };
+				return { TypeKind_UInt32 };
 			}
 
 			if (parser->current.str == "u64")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_UInt64 };
+				return { TypeKind_UInt64 };
 			}
 		} break;
 
@@ -292,13 +292,13 @@ ParseType(Parser *parser,
 			if (parser->current.str == "f32")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Float32 };
+				return { TypeKind_Float32 };
 			}
 
 			if (parser->current.str == "f64")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Float64 };
+				return { TypeKind_Float64 };
 			}
 		} break;
 
@@ -307,7 +307,7 @@ ParseType(Parser *parser,
 			if (parser->current.str == "bool")
 			{
 				AdvanceToken(parser, lexer);
-				return { .kind = TypeKind_Bool };
+				return { TypeKind_Bool };
 			}
 		} break;
 	}

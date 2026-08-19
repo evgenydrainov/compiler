@@ -596,12 +596,10 @@ GetToken(Lexer *lexer)
 {
 	SkipWhitespace(lexer);
 
-	SourceLocation location =
-	{
-		.fileName = lexer->fileName,
-		.line     = lexer->line,
-		.column   = (int)(lexer->current - lexer->lineStart + 1),
-	};
+	SourceLocation location = {};
+	location.fileName = lexer->fileName;
+	location.line     = lexer->line;
+	location.column   = (int)(lexer->current - lexer->lineStart + 1);
 
 	if (IsAtEnd(lexer))
 	{
@@ -754,53 +752,59 @@ GetToken(Lexer *lexer)
 	}
 
 	if (c == '#'
-		|| PeekNextChar(lexer) == 'i')
+		&& lexer->current[1] == 'i'
+		&& lexer->current[2] == 'n'
+		&& lexer->current[3] == 'c'
+		&& lexer->current[4] == 'l'
+		&& lexer->current[5] == 'u'
+		&& lexer->current[6] == 'd'
+		&& lexer->current[7] == 'e')
 	{
-		Lexer saveLexer = *lexer;
+		AdvanceChar(lexer, 8); // eat '#include'
 
-		AdvanceChar(lexer); // eat the '#'
-		Token identifier = ParseIdentifier(lexer, {});
+		SkipWhitespace(lexer);
 
-		if (identifier.str == "include")
+		if (PeekChar(lexer) != '"')
 		{
-			SkipWhitespace(lexer);
-
-			if (PeekChar(lexer) != '"')
-			{
-				return ErrorToken(lexer, "expected \"filepath\" after #include", location);
-			}
-
-			Token filePathToken = ParseString(lexer, {});
-
-			Assert(filePathToken.str.count >= 2);
-			string filePath = { filePathToken.str.data + 1, filePathToken.str.count - 2};
-
-			string searchDir = strip_filename(lexer->fileName);
-			string fullFilePath = string_concat(searchDir, filePath);
-
-			return IncludeFile(lexer, location, filePath);
+			return ErrorToken(lexer, "expected \"filepath\" after #include", location);
 		}
 
-		if (identifier.str == "import")
+		Token filePathToken = ParseString(lexer, {});
+
+		Assert(filePathToken.str.count >= 2);
+		string filePath = { filePathToken.str.data + 1, filePathToken.str.count - 2 };
+
+		string searchDir = strip_filename(lexer->fileName);
+		string fullFilePath = string_concat(searchDir, filePath);
+
+		return IncludeFile(lexer, location, filePath);
+	}
+
+	if (c == '#'
+		&& lexer->current[1] == 'i'
+		&& lexer->current[2] == 'm'
+		&& lexer->current[3] == 'p'
+		&& lexer->current[4] == 'o'
+		&& lexer->current[5] == 'r'
+		&& lexer->current[6] == 't')
+	{
+		AdvanceChar(lexer, 7); // eat '#import'
+
+		SkipWhitespace(lexer);
+
+		if (PeekChar(lexer) != '"')
 		{
-			SkipWhitespace(lexer);
-
-			if (PeekChar(lexer) != '"')
-			{
-				return ErrorToken(lexer, "expected \"filepath\" after #import", location);
-			}
-
-			Token filePathToken = ParseString(lexer, {});
-
-			Assert(filePathToken.str.count >= 2);
-			string filePath = { filePathToken.str.data + 1, filePathToken.str.count - 2};
-
-			string fullFilePath = string_concat(lexer->context->modulesDir, filePath);
-
-			return IncludeFile(lexer, location, fullFilePath);
+			return ErrorToken(lexer, "expected \"filepath\" after #import", location);
 		}
 
-		*lexer = saveLexer;
+		Token filePathToken = ParseString(lexer, {});
+
+		Assert(filePathToken.str.count >= 2);
+		string filePath = { filePathToken.str.data + 1, filePathToken.str.count - 2 };
+
+		string fullFilePath = string_concat(lexer->context->modulesDir, filePath);
+
+		return IncludeFile(lexer, location, fullFilePath);
 	}
 
 	if (c == '"')
