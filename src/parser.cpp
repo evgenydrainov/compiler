@@ -209,12 +209,24 @@ ParseType(Parser *parser,
 
 	if (parser->current.kind == TokenKind_OpenBracket)
 	{
+		AdvanceToken(parser, lexer); // eat the '['
+
+		if (parser->current.kind == TokenKind_CloseBracket)
+		{
+			Type type = {};
+			type.kind = TypeKind_Slice;
+			type.arrayElementType = PushStruct<Type>(arena);
+
+			ExpectToken(parser, lexer, TokenKind_CloseBracket);
+
+			*type.arrayElementType = ParseType(parser, lexer, arena);
+
+			return type;
+		}
+
 		Type type = {};
 		type.kind = TypeKind_Array;
 		type.arrayElementType = PushStruct<Type>(arena);
-
-		AdvanceToken(parser, lexer); // eat the '['
-
 		type.arrayLengthExpr = ParseExpression(parser, lexer, 0, arena);
 
 		ExpectToken(parser, lexer, TokenKind_CloseBracket);

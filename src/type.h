@@ -24,7 +24,8 @@
 	X(TypeKind_Pointer,    14,    "pointer"          ) \
 	X(TypeKind_Struct,     15,    "struct"           ) \
 	X(TypeKind_Enum,       16,    "enum"             ) \
-	X(TypeKind_Array,      17,    "array"            )
+	X(TypeKind_Array,      17,    "array"            ) \
+	X(TypeKind_Slice,      18,    "slice"            )
 
 DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
 
@@ -87,6 +88,20 @@ TypesEqual(Type a, Type b)
 		return a.name == b.name;
 	}
 
+	if (a.kind == TypeKind_Array
+		&& b.kind == TypeKind_Array)
+	{
+		return (a.arrayLength != 0
+				&& a.arrayLength == b.arrayLength
+				&& TypesEqual(*a.arrayElementType, *b.arrayElementType));
+	}
+
+	if (a.kind == TypeKind_Slice
+		&& b.kind == TypeKind_Slice)
+	{
+		return TypesEqual(*a.arrayElementType, *b.arrayElementType);
+	}
+
 	return a.kind == b.kind;
 }
 
@@ -113,6 +128,7 @@ SizeOfType(Type type)
 		case TypeKind_Pointer: {result = 8;} break;
 		case TypeKind_Bool:    {result = 8;} break;
 		case TypeKind_Enum:    {result = 8;} break;
+		case TypeKind_Slice:   {result = 16;} break;
 
 		// NOTE: the size of a void type is asked when a function checks if
 		// it has a large struct return value
@@ -133,9 +149,8 @@ SizeOfType(Type type)
 			result = type.arrayLength * elementSize;
 		} break;
 
-		//case TypeKind_Unknown: {} break;
-
-		default:
+		case TypeKind_Unknown:
+		case TypeKind_InferMe:
 		{
 			Assert(false);
 		} break;
@@ -245,6 +260,11 @@ AlignmentOfType(Type type)
 		{
 			Assert(type.arrayLength != 0 && "type was not resolved");
 			result = AlignmentOfType(*type.arrayElementType);
+		} break;
+
+		case TypeKind_Slice:
+		{
+			result = 8;
 		} break;
 
 		default:

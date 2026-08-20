@@ -324,6 +324,10 @@ ResolveType(Type *type,
 	{
 		ResolveType(type->pointerTo, context, nodeForError);
 	}
+	else if (type->kind == TypeKind_Slice)
+	{
+		ResolveType(type->arrayElementType, context, nodeForError);
+	}
 }
 
 internal bool
@@ -586,6 +590,22 @@ AnalyzeBinaryExpression(Node *baseNode,
 	}
 }
 
+template <typename DestType, typename SrcType>
+internal DestType *
+ReinterpretNode(SrcType *node)
+{
+	static_assert(sizeof(DestType) <= sizeof(SrcType));
+
+	SourceLocation location = node->location;
+
+	DestType *newNode = (DestType *)node;
+	*newNode = {};
+	newNode->kind = DestType::KIND;
+	newNode->location = location;
+
+	return newNode;
+}
+
 void
 AnalyzeExpression(Node *baseNode,
 				  SemanticContext *context,
@@ -723,14 +743,7 @@ AnalyzeExpression(Node *baseNode,
 			Constant *constant = LookupConstant(constTable, node->name);
 			if (constant)
 			{
-				static_assert(sizeof(Int64LiteralNode) <= sizeof(VarNode));
-
-				SourceLocation location = node->location;
-
-				Int64LiteralNode *newNode = (Int64LiteralNode *)node;
-				*newNode = {};
-				newNode->kind = NodeKind_Int64Literal;
-				newNode->location = location;
+				Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
 				newNode->inferredType.kind = TypeKind_Int64;
 				newNode->value = constant->value;
 
@@ -883,14 +896,7 @@ AnalyzeExpression(Node *baseNode,
 					EnumeratorInfo *enumerator = FindEnumerator(expectedType.enumInfo, node->fieldName);
 					if (enumerator)
 					{
-						static_assert(sizeof(Int64LiteralNode) <= sizeof(FieldAccessNode));
-
-						SourceLocation location = node->location;
-
-						Int64LiteralNode *newNode = (Int64LiteralNode *)node;
-						*newNode = {};
-						newNode->kind = NodeKind_Int64Literal;
-						newNode->location = location;
+						Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
 						newNode->inferredType = expectedType;
 						newNode->value = enumerator->value;
 					}
@@ -927,14 +933,7 @@ AnalyzeExpression(Node *baseNode,
 					EnumeratorInfo *enumerator = FindEnumerator(type->enumInfo, node->fieldName);
 					if (enumerator)
 					{
-						static_assert(sizeof(Int64LiteralNode) <= sizeof(FieldAccessNode));
-
-						SourceLocation location = node->location;
-
-						Int64LiteralNode *newNode = (Int64LiteralNode *)node;
-						*newNode = {};
-						newNode->kind = NodeKind_Int64Literal;
-						newNode->location = location;
+						Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
 						newNode->inferredType = *type;
 						newNode->value = enumerator->value;
 					}
@@ -995,6 +994,40 @@ AnalyzeExpression(Node *baseNode,
 						  STR_ARG(node->fieldName));
 				}
 			}
+			else if (node->expr->inferredType.kind == TypeKind_Slice)
+			{
+				if (node->fieldName == "data")
+				{
+					node->inferredType.kind = TypeKind_Pointer;
+					node->inferredType.pointerTo = node->expr->inferredType.arrayElementType;
+					node->fieldOffset = 0;
+				}
+				else if (node->fieldName == "count")
+				{
+					node->inferredType.kind = TypeKind_Int64;
+					node->fieldOffset = 8;
+				}
+				else
+				{
+					Error(context, node, "a slice has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
+				}
+			}
+			else if (node->expr->inferredType.kind == TypeKind_Array)
+			{
+				if (node->fieldName == "count")
+				{
+					int arrayLength = node->expr->inferredType.arrayLength;
+					Assert(arrayLength != 0);
+
+					Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
+					newNode->inferredType.kind = TypeKind_Int64;
+					newNode->value = arrayLength;
+				}
+				else
+				{
+					Error(context, node, "an array has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
+				}
+			}
 			else
 			{
 				Error(context, node->expr, "cannot access field " STR_FMT_QUOTED " of '%s': it is not a struct",
@@ -1023,6 +1056,10 @@ AnalyzeExpression(Node *baseNode,
 				node->inferredType = *node->arrayExpr->inferredType.pointerTo;
 			}
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Array)
+			{
+				node->inferredType = *node->arrayExpr->inferredType.arrayElementType;
+			}
+			else if (node->arrayExpr->inferredType.kind == TypeKind_Slice)
 			{
 				node->inferredType = *node->arrayExpr->inferredType.arrayElementType;
 			}

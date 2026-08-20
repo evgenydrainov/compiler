@@ -187,7 +187,8 @@ GenerateLValueAddress(Node *baseNode,
 		{
 			FieldAccessNode *node = As<FieldAccessNode>(baseNode);
 
-			if (node->expr->inferredType.kind == TypeKind_Struct)
+			if (node->expr->inferredType.kind == TypeKind_Struct
+				|| node->expr->inferredType.kind == TypeKind_Slice)
 			{
 				GenerateLValueAddress(node->expr, context);
 			}
@@ -231,6 +232,18 @@ GenerateLValueAddress(Node *baseNode,
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Array)
 			{
 				GenerateLValueAddress(node->arrayExpr, context);
+
+				size = SizeOfType(*node->arrayExpr->inferredType.arrayElementType);
+			}
+			else if (node->arrayExpr->inferredType.kind == TypeKind_Slice)
+			{
+				GenerateLValueAddress(node->arrayExpr, context);
+
+				// load the first 8 bytes of the value, which is the 'data'
+				// field of the slice
+				Emit(context, "    pop rax");
+				Emit(context, "    mov rax, qword [rax]");
+				Emit(context, "    push rax");
 
 				size = SizeOfType(*node->arrayExpr->inferredType.arrayElementType);
 			}
