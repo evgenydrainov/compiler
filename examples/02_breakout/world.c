@@ -50,7 +50,7 @@ world_init :: proc(world: *World)
 	world.lives = 3;
 	world.level = 1;
 
-	foreach i : 0..<world.num_bricks
+	for i in 0..<world.num_bricks
 	{
 		brick := &world.bricks[i];
 
@@ -120,7 +120,7 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 				ball.vspeed = -fabsf(ball.vspeed);
 			}
 
-			foreach i : 0..<world.num_bricks
+			for i in 0..<world.num_bricks
 			{
 				brick := &world.bricks[i];
 
@@ -169,7 +169,7 @@ world_draw :: proc(world: *World)
 {
 	entity_draw(&world.paddle, 0xffffffff);
 
-	foreach i : 0..<world.num_bricks
+	for i in 0..<world.num_bricks
 	{
 		brick := &world.bricks[i];
 

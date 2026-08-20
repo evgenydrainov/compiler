@@ -36,10 +36,10 @@ PrintTree(Node *baseNode,
 
 	printf(" (line=%d)", baseNode->location.line);
 
-	if (baseNode->kind == NodeKind_Number)
+	if (baseNode->kind == NodeKind_Int64Literal)
 	{
-		NumberNode *node = As<NumberNode>(baseNode);
-		printf(" (%lld)", node->int64Value);
+		Int64LiteralNode *node = As<Int64LiteralNode>(baseNode);
+		printf(" (%lld)", node->value);
 	}
 	else if (baseNode->kind == NodeKind_VarDecl)
 	{

@@ -68,6 +68,25 @@ TestCompileError(char *testName)
 }
 
 internal void
+TestCompiles(char *testName)
+{
+	char inputPath[1024];
+	sprintf_s(inputPath, "%s.c", testName);
+
+	if (_spawnl(_P_WAIT,
+				compilerPath,
+				"compiler",
+				inputPath,
+				nullptr) != 0)
+	{
+		fprintf(stderr, "TEST %s FAILED\n", testName);
+		exit(1);
+	}
+
+	printf("Test %s passed\n", testName);
+}
+
+internal void
 run_tests()
 {
 	//TestReturnCode("01_arithmetic", 0);
@@ -91,8 +110,8 @@ run_tests()
 	//TestReturnCode("19_defer", 0);
 	//TestReturnCode("20_switch", 0);
 	//TestReturnCode("21_structs_by_value", 0);
-	TestReturnCode("22_slices", 0);
-	//TestReturnCode("23_slices_foreach", 0);
+	//TestReturnCode("22_slices", 0);
+	TestReturnCode("23_slices_foreach", 0);
 	//TestReturnCode("24_slices_foreach_ptr", 0);
 }
 
@@ -150,6 +169,7 @@ int main()
 	}
 
 	//TestReturnCode("main", 0);
+	//TestCompiles("main");
 
 	if (_chdir("..\\02_breakout") != 0)
 	{
@@ -158,4 +178,5 @@ int main()
 	}
 
 	//TestReturnCode("main", 0);
+	//TestCompiles("main");
 }
