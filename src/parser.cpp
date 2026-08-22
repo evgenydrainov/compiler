@@ -849,6 +849,14 @@ ParseForeachStatement(Parser *parser,
 
 	AdvanceToken(parser, lexer); // eat the 'for'
 
+	bool iterateByPointer = false;
+
+	if (parser->current.kind == TokenKind_Star)
+	{
+		AdvanceToken(parser, lexer); // eat the '*'
+		iterateByPointer = true;
+	}
+
 	string iteratorName = parser->current.str;
 	ExpectToken(parser, lexer, TokenKind_Identifier);
 
@@ -867,6 +875,11 @@ ParseForeachStatement(Parser *parser,
 		//     for it := from; it < $to_copy; it = it + 1
 		//         { body }
 		// }
+
+		if (iterateByPointer)
+		{
+			ErrorAtCurrent(parser, "cannot iterate by pointer in a range-based for loop");
+		}
 
 		AdvanceToken(parser, lexer); // eat the '..<'
 
@@ -1028,8 +1041,19 @@ ParseForeachStatement(Parser *parser,
 
 			VarDeclNode *varDeclNode = MakeNode<VarDeclNode>(parser->current.location, arena);
 			varDeclNode->name = iteratorName;
-			varDeclNode->expr = arrayIndexAccess;
 			varDeclNode->type.kind = TypeKind_InferMe;
+
+			if (iterateByPointer)
+			{
+				AddressOfNode *addressOf = MakeNode<AddressOfNode>(parser->current.location, arena);
+				addressOf->what = arrayIndexAccess;
+
+				varDeclNode->expr = addressOf;
+			}
+			else
+			{
+				varDeclNode->expr = arrayIndexAccess;
+			}
 
 			array_add(&loopBody->statements, (Node *)varDeclNode);
 		}
@@ -1236,8 +1260,11 @@ ParseStatement(Parser *parser,
 
 	if (parser->current.kind == TokenKind_For)
 	{
-		Token peek2 = PeekToken(lexer, 2);
-		if (peek2.kind == TokenKind_In)
+		Token peek0 = PeekToken(lexer, 1);
+		Token peek1 = PeekToken(lexer, 2);
+
+		if (peek1.kind == TokenKind_In
+			|| peek0.kind == TokenKind_Star)
 		{
 			return ParseForeachStatement(parser, lexer, arena);
 		}

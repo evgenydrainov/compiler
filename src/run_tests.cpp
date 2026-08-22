@@ -111,8 +111,8 @@ run_tests()
 	//TestReturnCode("20_switch", 0);
 	//TestReturnCode("21_structs_by_value", 0);
 	//TestReturnCode("22_slices", 0);
-	TestReturnCode("23_slices_foreach", 0);
-	//TestReturnCode("24_slices_foreach_ptr", 0);
+	//TestReturnCode("23_slices_foreach", 0);
+	TestReturnCode("24_slices_foreach_ptr", 0);
 }
 
 internal void
