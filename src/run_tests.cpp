@@ -89,29 +89,29 @@ TestCompiles(char *testName)
 internal void
 run_tests()
 {
-	//TestReturnCode("01_arithmetic", 0);
-	//TestReturnCode("02_variables_scope", 0);
-	//TestReturnCode("03_control_flow", 0);
-	//TestReturnCode("04_functions", 0);
-	//TestReturnCode("05_pointers", 0);
-	//TestReturnCode("06_structs", 0);
-	//TestReturnCode("07_logical_comparison", 0);
-	//TestReturnCode("08_bitwise", 0);
-	//TestReturnCode("09_casts_and_unsigned", 0);
-	//TestReturnCode("10_arrays", 0);
-	//TestReturnCode("11_enums", 0);
-	//TestReturnCode("12_foreign_function", 0);
-	//TestReturnCode("13_coroutine", 0);
-	//TestReturnCode("14_short_circuit", 0);
-	//TestReturnCode("15_break_continue", 0);
-	//TestReturnCode("16_nested_aggregates", 0);
-	//TestReturnCode("17_array_of_structs", 0);
-	//TestReturnCode("18_floats", 0);
-	//TestReturnCode("19_defer", 0);
-	//TestReturnCode("20_switch", 0);
-	//TestReturnCode("21_structs_by_value", 0);
-	//TestReturnCode("22_slices", 0);
-	//TestReturnCode("23_slices_foreach", 0);
+	TestReturnCode("01_arithmetic", 0);
+	TestReturnCode("02_variables_scope", 0);
+	TestReturnCode("03_control_flow", 0);
+	TestReturnCode("04_functions", 0);
+	TestReturnCode("05_pointers", 0);
+	TestReturnCode("06_structs", 0);
+	TestReturnCode("07_logical_comparison", 0);
+	TestReturnCode("08_bitwise", 0);
+	TestReturnCode("09_casts_and_unsigned", 0);
+	TestReturnCode("10_arrays", 0);
+	TestReturnCode("11_enums", 0);
+	TestReturnCode("12_foreign_function", 0);
+	TestReturnCode("13_coroutine", 0);
+	TestReturnCode("14_short_circuit", 0);
+	TestReturnCode("15_break_continue", 0);
+	TestReturnCode("16_nested_aggregates", 0);
+	TestReturnCode("17_array_of_structs", 0);
+	TestReturnCode("18_floats", 0);
+	TestReturnCode("19_defer", 0);
+	TestReturnCode("20_switch", 0);
+	TestReturnCode("21_structs_by_value", 0);
+	TestReturnCode("22_slices", 0);
+	TestReturnCode("23_slices_foreach", 0);
 	TestReturnCode("24_slices_foreach_ptr", 0);
 }
 
@@ -126,13 +126,12 @@ run_failure_tests()
 	TestCompileError("06_wrong_arg_count");
 	TestCompileError("07_address_of_struct_result");
 	TestCompileError("08_assign_to_struct_result");
-
-	//TestCompileError("09_slice_index_float");
-	//TestCompileError("10_slice_element_type_mismatch");
-	//TestCompileError("11_slice_from_non_lvalue");
-	//TestCompileError("12_slice_unknown_field");
-	//TestCompileError("13_slice_data_type_mismatch");
-	//TestCompileError("14_assign_to_array_count");
+	TestCompileError("09_slice_index_float");
+	TestCompileError("10_slice_element_type_mismatch");
+	TestCompileError("11_slice_from_non_lvalue");
+	TestCompileError("12_slice_unknown_field");
+	TestCompileError("13_slice_data_type_mismatch");
+	TestCompileError("14_assign_to_array_count");
 }
 
 int main()
@@ -160,7 +159,7 @@ int main()
 		exit(1);
 	}
 
-	//run_failure_tests();
+	run_failure_tests();
 
 	if (_chdir("..\\..\\examples\\01_raylib") != 0)
 	{
@@ -169,7 +168,7 @@ int main()
 	}
 
 	//TestReturnCode("main", 0);
-	//TestCompiles("main");
+	TestCompiles("main");
 
 	if (_chdir("..\\02_breakout") != 0)
 	{
@@ -178,5 +177,5 @@ int main()
 	}
 
 	//TestReturnCode("main", 0);
-	//TestCompiles("main");
+	TestCompiles("main");
 }
