@@ -704,9 +704,8 @@ AnalyzeExpression(Node *baseNode,
 			int size = SizeOfType(node->what->inferredType);
 
 			Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
+			newNode->inferredType.kind = TypeKind_Int64;
 			newNode->value = size;
-
-			AnalyzeExpression(newNode, context);
 		} break;
 
 		case NodeKind_Binary:
@@ -1079,31 +1078,11 @@ AnalyzeExpression(Node *baseNode,
 
 			AnalyzeExpression(node->expr, context);
 
-			if (node->expr->inferredType.kind == TypeKind_Struct)
+			auto HandleField = [&](Type *type)
 			{
-				StructField *field = FindField(node->expr->inferredType.structInfo, node->fieldName);
-				if (field)
+				if (type->kind == TypeKind_Struct)
 				{
-					node->inferredType = field->type;
-					node->fieldOffset = field->offset;
-				}
-				else
-				{
-					Error(context, node, "struct " STR_FMT_QUOTED " has no field " STR_FMT_QUOTED,
-						  STR_ARG(node->expr->inferredType.structInfo->name),
-						  STR_ARG(node->fieldName));
-				}
-			}
-			else if (node->expr->inferredType.kind == TypeKind_Pointer)
-			{
-				// auto dereference
-				// pointer.field
-
-				if (node->expr->inferredType.pointerTo->kind == TypeKind_Struct)
-				{
-					ResolveType(node->expr->inferredType.pointerTo, context, node->expr);
-
-					StructField *field = FindField(node->expr->inferredType.pointerTo->structInfo, node->fieldName);
+					StructField *field = FindField(type->structInfo, node->fieldName);
 					if (field)
 					{
 						node->inferredType = field->type;
@@ -1112,72 +1091,99 @@ AnalyzeExpression(Node *baseNode,
 					else
 					{
 						Error(context, node, "struct " STR_FMT_QUOTED " has no field " STR_FMT_QUOTED,
-							  STR_ARG(node->expr->inferredType.pointerTo->structInfo->name),
+							  STR_ARG(type->structInfo->name),
 							  STR_ARG(node->fieldName));
 					}
+				}
+				else if (type->kind == TypeKind_Slice)
+				{
+					if (node->fieldName == "data")
+					{
+						node->inferredType.kind = TypeKind_Pointer;
+						node->inferredType.pointerTo = type->arrayElementType;
+						node->fieldOffset = 0;
+					}
+					else if (node->fieldName == "count")
+					{
+						node->inferredType.kind = TypeKind_Int64;
+						node->fieldOffset = 8;
+					}
+					else
+					{
+						Error(context, node, "a slice has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
+					}
+				}
+				else if (type->kind == TypeKind_Array)
+				{
+					if (node->fieldName == "count")
+					{
+						int arrayLength = type->arrayLength;
+						Assert(arrayLength != 0);
+
+						Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
+						newNode->inferredType.kind = TypeKind_Int64;
+						newNode->value = arrayLength;
+					}
+					else
+					{
+						Error(context, node, "an array has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
+					}
+				}
+				else if (type->kind == TypeKind_DynamicArray)
+				{
+					if (node->fieldName == "data")
+					{
+						node->inferredType.kind = TypeKind_Pointer;
+						node->inferredType.pointerTo = type->arrayElementType;
+						node->fieldOffset = 0;
+					}
+					else if (node->fieldName == "count")
+					{
+						node->inferredType.kind = TypeKind_Int64;
+						node->fieldOffset = 8;
+					}
+					else if (node->fieldName == "capacity")
+					{
+						node->inferredType.kind = TypeKind_Int64;
+						node->fieldOffset = 16;
+					}
+					else
+					{
+						Error(context, node, "a dynamic array has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
+					}
+				}
+				else
+				{
+					Assert(false);
+				}
+			};
+
+			if (node->expr->inferredType.kind == TypeKind_Struct
+				|| node->expr->inferredType.kind == TypeKind_Slice
+				|| node->expr->inferredType.kind == TypeKind_Array
+				|| node->expr->inferredType.kind == TypeKind_DynamicArray)
+			{
+				HandleField(&node->expr->inferredType);
+			}
+			else if (node->expr->inferredType.kind == TypeKind_Pointer)
+			{
+				// auto dereference
+				// pointer.field
+
+				if (node->expr->inferredType.pointerTo->kind == TypeKind_Struct
+					|| node->expr->inferredType.pointerTo->kind == TypeKind_Slice
+					|| node->expr->inferredType.pointerTo->kind == TypeKind_Array
+					|| node->expr->inferredType.pointerTo->kind == TypeKind_DynamicArray)
+				{
+					ResolveType(node->expr->inferredType.pointerTo, context, node->expr);
+
+					HandleField(node->expr->inferredType.pointerTo);
 				}
 				else
 				{
 					Error(context, node->expr,
 						  "cannot access field " STR_FMT_QUOTED ": it is not a pointer to a struct",
 						  STR_ARG(node->fieldName));
-				}
-			}
-			else if (node->expr->inferredType.kind == TypeKind_Slice)
-			{
-				if (node->fieldName == "data")
-				{
-					node->inferredType.kind = TypeKind_Pointer;
-					node->inferredType.pointerTo = node->expr->inferredType.arrayElementType;
-					node->fieldOffset = 0;
-				}
-				else if (node->fieldName == "count")
-				{
-					node->inferredType.kind = TypeKind_Int64;
-					node->fieldOffset = 8;
-				}
-				else
-				{
-					Error(context, node, "a slice has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
-				}
-			}
-			else if (node->expr->inferredType.kind == TypeKind_Array)
-			{
-				if (node->fieldName == "count")
-				{
-					int arrayLength = node->expr->inferredType.arrayLength;
-					Assert(arrayLength != 0);
-
-					Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
-					newNode->inferredType.kind = TypeKind_Int64;
-					newNode->value = arrayLength;
-				}
-				else
-				{
-					Error(context, node, "an array has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
-				}
-			}
-			else if (node->expr->inferredType.kind == TypeKind_DynamicArray)
-			{
-				if (node->fieldName == "data")
-				{
-					node->inferredType.kind = TypeKind_Pointer;
-					node->inferredType.pointerTo = node->expr->inferredType.arrayElementType;
-					node->fieldOffset = 0;
-				}
-				else if (node->fieldName == "count")
-				{
-					node->inferredType.kind = TypeKind_Int64;
-					node->fieldOffset = 8;
-				}
-				else if (node->fieldName == "capacity")
-				{
-					node->inferredType.kind = TypeKind_Int64;
-					node->fieldOffset = 16;
-				}
-				else
-				{
-					Error(context, node, "a dynamic array has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
 				}
 			}
 			else
