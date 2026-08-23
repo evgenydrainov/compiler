@@ -760,6 +760,44 @@ ParseBlockOrSingleStatement(Parser *parser,
 }
 
 internal Node *
+ParseCaseBlock(Parser *parser,
+			   Lexer *lexer,
+			   Arena *arena)
+{
+	if (parser->current.kind == TokenKind_OpenBrace)
+	{
+		return ParseBlock(parser, lexer, arena);
+	}
+
+	const int MAX_STATEMENTS = 1024;
+
+	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
+	block->statements = PushBumpArray<Node *>(arena, MAX_STATEMENTS);
+
+	while (parser->current.kind != TokenKind_Case
+		   && parser->current.kind != TokenKind_CloseBrace
+		   && !parser->hadError)
+	{
+		Node *statement = ParseStatement(parser, lexer, arena);
+		if (parser->hadError)
+		{
+			break;
+		}
+
+		if (statement)
+		{
+			array_add(&block->statements, statement);
+		}
+		else
+		{
+			// it's an empty statement - ignore it
+		}
+	}
+
+	return block;
+}
+
+internal Node *
 ParseIfStatement(Parser *parser,
 				 Lexer *lexer,
 				 Arena *arena)
@@ -1104,8 +1142,7 @@ ParseSwitchStatement(Parser *parser,
 
 			ExpectToken(parser, lexer, TokenKind_Colon);
 
-			// TODO: parse multiple statements
-			caseNode->body = ParseBlockOrSingleStatement(parser, lexer, arena);
+			caseNode->body = ParseCaseBlock(parser, lexer, arena);
 
 			array_add(&node->cases, caseNode);
 		}
@@ -1117,8 +1154,7 @@ ParseSwitchStatement(Parser *parser,
 
 				ExpectToken(parser, lexer, TokenKind_Colon);
 
-				// TODO: parse multiple statements
-				node->defaultBody = ParseBlockOrSingleStatement(parser, lexer, arena);
+				node->defaultBody = ParseCaseBlock(parser, lexer, arena);
 			}
 			else
 			{

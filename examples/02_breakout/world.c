@@ -75,58 +75,54 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 
 	switch ball.ball_state
 	{
-		case .stick_to_paddle:
-		{
-			ball.x = paddle.x;
-			ball.y = paddle.y - (paddle.height + ball.height)*0.5;
+	case .stick_to_paddle:
+		ball.x = paddle.x;
+		ball.y = paddle.y - (paddle.height + ball.height)*0.5;
 
-			if IsKeyPressed(KEY_SPACE)
-			{
-				ball.hspeed = 2.0;
-				ball.vspeed = -2.0;
-				ball.ball_state = .move;
-			}
+		if IsKeyPressed(KEY_SPACE)
+		{
+			ball.hspeed = 2.0;
+			ball.vspeed = -2.0;
+			ball.ball_state = .move;
 		}
 
-		case .move:
+	case .move:
+		ball.x += ball.hspeed * delta;
+		ball.y += ball.vspeed * delta;
+
+		if ball.x + ball.width*0.5 >= cast(f32)GAME_WIDTH
 		{
-			ball.x += ball.hspeed * delta;
-			ball.y += ball.vspeed * delta;
+			ball.hspeed = -fabsf(ball.hspeed);
+		}
+		if ball.x - ball.width*0.5 < 0.0
+		{
+			ball.hspeed = fabsf(ball.hspeed);
+		}
 
-			if ball.x + ball.width*0.5 >= cast(f32)GAME_WIDTH
-			{
-				ball.hspeed = -fabsf(ball.hspeed);
-			}
-			if ball.x - ball.width*0.5 < 0.0
-			{
-				ball.hspeed = fabsf(ball.hspeed);
-			}
+		if ball.y - ball.height*0.5 < 0.0
+		{
+			ball.vspeed = fabsf(ball.vspeed);
+		}
 
-			if ball.y - ball.height*0.5 < 0.0
-			{
-				ball.vspeed = fabsf(ball.vspeed);
-			}
+		if ball.y + ball.height*0.5 >= cast(f32)GAME_HEIGHT
+		{
+			world.lives -= 1;
+			ball.ball_state = .stick_to_paddle;
+		}
 
-			if ball.y + ball.height*0.5 >= cast(f32)GAME_HEIGHT
-			{
-				world.lives -= 1;
-				ball.ball_state = .stick_to_paddle;
-			}
+		if entities_collide(ball, paddle)
+		{
+			ball.vspeed = -fabsf(ball.vspeed);
+		}
 
-			if entities_collide(ball, paddle)
+		for *brick in world.bricks
+		{
+			if entities_collide(ball, brick)
 			{
-				ball.vspeed = -fabsf(ball.vspeed);
-			}
-
-			for *brick in world.bricks
-			{
-				if entities_collide(ball, brick)
-				{
-					ball.vspeed = -ball.vspeed;
-					ball.vspeed *= 1.1;
-					ball.hspeed *= 1.1;
-					brick.dead = true;
-				}
+				ball.vspeed = -ball.vspeed;
+				ball.vspeed *= 1.1;
+				ball.hspeed *= 1.1;
+				brick.dead = true;
 			}
 		}
 	}
