@@ -50,54 +50,6 @@ LeftBindingPower(TokenKind type)
 	}
 }
 
-template <typename T>
-internal T *
-MakeNode(SourceLocation location,
-		 Arena *arena)
-{
-	T *node = PushStruct<T>(arena);
-	node->kind = T::KIND;
-	node->location = location;
-
-	return node;
-}
-
-internal BinaryNode *
-MakeBinaryNode(BinaryOp op,
-			   SourceLocation location,
-			   Node *lhs,
-			   Node *rhs,
-			   Arena *arena)
-{
-	BinaryNode *node = MakeNode<BinaryNode>(location, arena);
-	node->op = op;
-	node->lhs = lhs;
-	node->rhs = rhs;
-
-	return node;
-}
-
-internal Int64LiteralNode *
-MakeNumberNode(SourceLocation location,
-			   i64 value,
-			   Arena *arena)
-{
-	Int64LiteralNode *node = MakeNode<Int64LiteralNode>(location, arena);
-	node->value = value;
-
-	return node;
-}
-
-internal VarNode *
-MakeVarNode(SourceLocation location,
-			string varName,
-			Arena *arena)
-{
-	VarNode *node = MakeNode<VarNode>(location, arena);
-	node->name = varName;
-	return node;
-}
-
 internal void
 ErrorAtTokenVA(Parser *parser,
 			   Token token,
@@ -172,8 +124,8 @@ ExpectToken(Parser *parser,
 			{
 				ErrorAtCurrent(parser,
 							   "expected '%s', but got '%s'",
-							   GetTokenKindPrettyName(kind),
-							   GetTokenKindPrettyName(parser->current.kind));
+							   GetTokenKindName(kind),
+							   GetTokenKindName(parser->current.kind));
 			}
 		}
 	}
@@ -189,7 +141,7 @@ UnexpectedCurrentToken(Parser *parser)
 	}
 	else
 	{
-		ErrorAtCurrent(parser, "unexpected token '%s'", GetTokenKindPrettyName(parser->current.kind));
+		ErrorAtCurrent(parser, "unexpected token '%s'", GetTokenKindName(parser->current.kind));
 	}
 }
 
@@ -225,6 +177,21 @@ ParseType(Parser *parser,
 		{
 			Type type = {};
 			type.kind = TypeKind_Slice;
+			type.arrayElementType = PushStruct<Type>(arena);
+
+			ExpectToken(parser, lexer, TokenKind_CloseBracket);
+
+			*type.arrayElementType = ParseType(parser, lexer, arena);
+
+			return type;
+		}
+
+		if (parser->current.kind == TokenKind_DotDot)
+		{
+			AdvanceToken(parser, lexer); // eat the '..'
+
+			Type type = {};
+			type.kind = TypeKind_DynamicArray;
 			type.arrayElementType = PushStruct<Type>(arena);
 
 			ExpectToken(parser, lexer, TokenKind_CloseBracket);
@@ -332,6 +299,15 @@ ParseType(Parser *parser,
 				return { TypeKind_Bool };
 			}
 		} break;
+
+		case 'v':
+		{
+			if (parser->current.str == "void")
+			{
+				AdvanceToken(parser, lexer);
+				return { TypeKind_Void };
+			}
+		} break;
 	}
 	
 	if (parser->current.kind == TokenKind_Identifier)
@@ -361,7 +337,7 @@ ParseAtom_Inner(Parser *parser,
 {
 	if (parser->current.kind == TokenKind_Int64Literal)
 	{
-		Int64LiteralNode *node = MakeNumberNode(parser->current.location, parser->current.int64Value, arena);
+		Int64LiteralNode *node = MakeInt64Literal(parser->current.location, parser->current.int64Value, arena);
 		AdvanceToken(parser, lexer);
 
 		return node;
@@ -1020,7 +996,7 @@ ParseForeachStatement(Parser *parser,
 			BinaryNode *assignRhs = MakeNode<BinaryNode>(parser->current.location, arena);
 			assignRhs->op = BinaryOp_Add;
 			assignRhs->rhs = MakeVarNode(parser->current.location, "$it_index", arena);
-			assignRhs->lhs = MakeNumberNode(parser->current.location, 1, arena);
+			assignRhs->lhs = MakeInt64Literal(parser->current.location, 1, arena);
 
 			AssignNode *assignNode = MakeNode<AssignNode>(parser->current.location, arena);
 			assignNode->lhs = MakeVarNode(parser->current.location, "$it_index", arena);

@@ -430,3 +430,86 @@ struct GenerateStringLiteral
 	string value;
 	int uniqueLabelId;
 };
+
+template <typename T>
+inline T *
+MakeNode(SourceLocation location,
+		 Arena *arena)
+{
+	T *node = PushStruct<T>(arena);
+	node->kind = T::KIND;
+	node->location = location;
+
+	return node;
+}
+
+inline BinaryNode *
+MakeBinaryNode(BinaryOp op,
+			   SourceLocation location,
+			   Node *lhs,
+			   Node *rhs,
+			   Arena *arena)
+{
+	BinaryNode *node = MakeNode<BinaryNode>(location, arena);
+	node->op = op;
+	node->lhs = lhs;
+	node->rhs = rhs;
+
+	return node;
+}
+
+inline Int64LiteralNode *
+MakeInt64Literal(SourceLocation location,
+				 i64 value,
+				 Arena *arena)
+{
+	Int64LiteralNode *node = MakeNode<Int64LiteralNode>(location, arena);
+	node->value = value;
+
+	return node;
+}
+
+inline VarNode *
+MakeVarNode(SourceLocation location,
+			string varName,
+			Arena *arena)
+{
+	VarNode *node = MakeNode<VarNode>(location, arena);
+	node->name = varName;
+	return node;
+}
+
+inline VarDeclNode *
+MakeVarDeclNodeInfer(SourceLocation location,
+					 string varName,
+					 Node *expr,
+					 Arena *arena)
+{
+	VarDeclNode *node = MakeNode<VarDeclNode>(location, arena);
+	node->name = varName;
+	node->expr = expr;
+	node->type.kind = TypeKind_InferMe;
+	return node;
+}
+
+inline CallNode *
+MakeCallNode(SourceLocation location,
+			 string name,
+			 Arena *arena)
+{
+	CallNode *node = MakeNode<CallNode>(location, arena);
+	node->name = name;
+	return node;
+}
+
+inline AssignNode *
+MakeAssignNode(SourceLocation location,
+			   Node *lhs,
+			   Node *rhs,
+			   Arena *arena)
+{
+	AssignNode *node = MakeNode<AssignNode>(location, arena);
+	node->lhs = lhs;
+	node->rhs = rhs;
+	return node;
+}

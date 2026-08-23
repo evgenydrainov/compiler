@@ -324,7 +324,8 @@ ResolveType(Type *type,
 	{
 		ResolveType(type->pointerTo, context, nodeForError);
 	}
-	else if (type->kind == TypeKind_Slice)
+	else if (type->kind == TypeKind_Slice
+			 || type->kind == TypeKind_DynamicArray)
 	{
 		ResolveType(type->arrayElementType, context, nodeForError);
 	}
@@ -476,6 +477,17 @@ CanImplicitlyCast(Type destType,
 		{
 			// allow *void to cast into any pointer for now
 			// foo: *int = null;
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Pointer
+		&& destType.pointerTo->kind == TypeKind_Void)
+	{
+		if (source->inferredType.kind == TypeKind_Pointer)
+		{
+			// allow any pointer to cast into *void for now
+			// foo: *void = &my_value;
 			return true;
 		}
 	}
@@ -766,6 +778,109 @@ AnalyzeExpression(Node *baseNode,
 		{
 			CallNode *node = As<CallNode>(baseNode);
 
+			if (node->name == "array_add")
+			{
+				if (node->numExpressions != 2)
+				{
+					Error(context, node, "");
+					break;
+				}
+
+				Node *arrayExpr = node->expressions[0];
+				Node *valueExpr = node->expressions[1];
+
+				AnalyzeExpression(arrayExpr, context);
+				AnalyzeExpression(valueExpr, context);
+
+				if (!(arrayExpr->inferredType.kind == TypeKind_Pointer
+					  && arrayExpr->inferredType.pointerTo->kind == TypeKind_DynamicArray))
+				{
+					Error(context, node, "");
+					break;
+				}
+
+				Type *valueType = arrayExpr->inferredType.pointerTo->arrayElementType;
+
+				int elemSize = SizeOfType(*valueType);
+
+				VarDeclNode *valueCopyDecl = MakeVarDeclNodeInfer(node->location, "$value_copy", valueExpr, context->arenaForAst);
+
+				VarDeclNode *resultDecl;
+				{
+					Int64LiteralNode *elemSizeLiteral = MakeInt64Literal(node->location, elemSize, context->arenaForAst);
+
+					CallNode *callNode = MakeCallNode(node->location, "__array_grow", context->arenaForAst);
+					callNode->expressions = PushArray<Node *>(context->arenaForAst, 2);
+					callNode->expressions[0] = arrayExpr;
+					callNode->expressions[1] = elemSizeLiteral;
+					callNode->numExpressions = 2;
+
+					resultDecl = MakeVarDeclNodeInfer(node->location, "$result", callNode, context->arenaForAst);
+					resultDecl->type.kind = TypeKind_Pointer;
+					resultDecl->type.pointerTo = valueType;
+				}
+
+				AssignNode *assignNode;
+				{
+					DerefNode *derefNode = MakeNode<DerefNode>(node->location, context->arenaForAst);
+					derefNode->what = MakeVarNode(node->location, "$result", context->arenaForAst);
+
+					VarNode *varNode = MakeVarNode(node->location, "$value_copy", context->arenaForAst);
+
+					assignNode = MakeAssignNode(node->location, derefNode, varNode, context->arenaForAst);
+				}
+
+				BlockNode *blockNode = ReinterpretNode<BlockNode>(node);
+				blockNode->statements = PushBumpArray<Node *>(context->arenaForAst, 3);
+				array_add(&blockNode->statements, (Node *)valueCopyDecl);
+				array_add(&blockNode->statements, (Node *)resultDecl);
+				array_add(&blockNode->statements, (Node *)assignNode);
+
+				AnalyzeBlock(blockNode, context);
+
+				break;
+			}
+
+			if (node->name == "array_reserve")
+			{
+				if (node->numExpressions != 2)
+				{
+					Error(context, node, "");
+					break;
+				}
+
+				Node *arrayExpr = node->expressions[0];
+				Node *capacityExpr = node->expressions[1];
+
+				AnalyzeExpression(arrayExpr, context);
+				AnalyzeExpression(capacityExpr, context);
+
+				if (!(arrayExpr->inferredType.kind == TypeKind_Pointer
+					  && arrayExpr->inferredType.pointerTo->kind == TypeKind_DynamicArray))
+				{
+					Error(context, node, "");
+					break;
+				}
+
+				Type *valueType = arrayExpr->inferredType.pointerTo->arrayElementType;
+
+				int elemSize = SizeOfType(*valueType);
+
+				Int64LiteralNode *elemSizeLiteral = MakeInt64Literal(node->location, elemSize, context->arenaForAst);
+
+				node->expressions = PushArray<Node *>(context->arenaForAst, 3);
+				node->expressions[0] = arrayExpr;
+				node->expressions[1] = elemSizeLiteral;
+				node->expressions[2] = capacityExpr;
+				node->numExpressions = 3;
+
+				node->name = "__array_reserve";
+
+				AnalyzeStatement(node, context);
+
+				break;
+			}
+
 			Function *function = LookupFunction(funcTable, node->name);
 			if (function)
 			{
@@ -1028,6 +1143,29 @@ AnalyzeExpression(Node *baseNode,
 					Error(context, node, "an array has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
 				}
 			}
+			else if (node->expr->inferredType.kind == TypeKind_DynamicArray)
+			{
+				if (node->fieldName == "data")
+				{
+					node->inferredType.kind = TypeKind_Pointer;
+					node->inferredType.pointerTo = node->expr->inferredType.arrayElementType;
+					node->fieldOffset = 0;
+				}
+				else if (node->fieldName == "count")
+				{
+					node->inferredType.kind = TypeKind_Int64;
+					node->fieldOffset = 8;
+				}
+				else if (node->fieldName == "capacity")
+				{
+					node->inferredType.kind = TypeKind_Int64;
+					node->fieldOffset = 16;
+				}
+				else
+				{
+					Error(context, node, "a dynamic array has no field " STR_FMT_QUOTED, STR_ARG(node->fieldName));
+				}
+			}
 			else
 			{
 				Error(context, node->expr, "cannot access field " STR_FMT_QUOTED " of '%s': it is not a struct",
@@ -1055,11 +1193,9 @@ AnalyzeExpression(Node *baseNode,
 			{
 				node->inferredType = *node->arrayExpr->inferredType.pointerTo;
 			}
-			else if (node->arrayExpr->inferredType.kind == TypeKind_Array)
-			{
-				node->inferredType = *node->arrayExpr->inferredType.arrayElementType;
-			}
-			else if (node->arrayExpr->inferredType.kind == TypeKind_Slice)
+			else if (node->arrayExpr->inferredType.kind == TypeKind_Array
+					 || node->arrayExpr->inferredType.kind == TypeKind_Slice
+					 || node->arrayExpr->inferredType.kind == TypeKind_DynamicArray)
 			{
 				node->inferredType = *node->arrayExpr->inferredType.arrayElementType;
 			}

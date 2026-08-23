@@ -643,7 +643,7 @@ GetToken(Lexer *lexer)
 	{
 		case '!':
 		{
-			if (PeekNextChar(lexer) == '=')
+			if (lexer->current[1] == '=')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_BangEqual, location, 2);
 			}
@@ -651,7 +651,7 @@ GetToken(Lexer *lexer)
 
 		case '=':
 		{
-			if (PeekNextChar(lexer) == '=')
+			if (lexer->current[1] == '=')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_EqualEqual, location, 2);
 			}
@@ -659,11 +659,11 @@ GetToken(Lexer *lexer)
 
 		case '>':
 		{
-			if (PeekNextChar(lexer) == '=')
+			if (lexer->current[1] == '=')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_GreaterEqual, location, 2);
 			}
-			if (PeekNextChar(lexer) == '>')
+			if (lexer->current[1] == '>')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_GreaterGreater, location, 2);
 			}
@@ -671,11 +671,11 @@ GetToken(Lexer *lexer)
 
 		case '<':
 		{
-			if (PeekNextChar(lexer) == '=')
+			if (lexer->current[1] == '=')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_LessEqual, location, 2);
 			}
-			if (PeekNextChar(lexer) == '<')
+			if (lexer->current[1] == '<')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_LessLess, location, 2);
 			}
@@ -683,11 +683,11 @@ GetToken(Lexer *lexer)
 
 		case '-':
 		{
-			if (PeekNextChar(lexer) == '>')
+			if (lexer->current[1] == '>')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_Arrow, location, 2);
 			}
-			if (PeekNextChar(lexer) == '=')
+			if (lexer->current[1] == '=')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_MinusEqual, location, 2);
 			}
@@ -695,7 +695,7 @@ GetToken(Lexer *lexer)
 
 		case '&':
 		{
-			if (PeekNextChar(lexer) == '&')
+			if (lexer->current[1] == '&')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_AmpAmp, location, 2);
 			}
@@ -703,7 +703,7 @@ GetToken(Lexer *lexer)
 
 		case '|':
 		{
-			if (PeekNextChar(lexer) == '|')
+			if (lexer->current[1] == '|')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_PipePipe, location, 2);
 			}
@@ -711,7 +711,7 @@ GetToken(Lexer *lexer)
 
 		case '+':
 		{
-			if (PeekNextChar(lexer) == '=')
+			if (lexer->current[1] == '=')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_PlusEqual, location, 2);
 			}
@@ -719,7 +719,7 @@ GetToken(Lexer *lexer)
 
 		case '%':
 		{
-			if (PeekNextChar(lexer) == '=')
+			if (lexer->current[1] == '=')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_PercentEqual, location, 2);
 			}
@@ -727,7 +727,7 @@ GetToken(Lexer *lexer)
 
 		case '*':
 		{
-			if (PeekNextChar(lexer) == '=')
+			if (lexer->current[1] == '=')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_StarEqual, location, 2);
 			}
@@ -735,7 +735,7 @@ GetToken(Lexer *lexer)
 
 		case '/':
 		{
-			if (PeekNextChar(lexer) == '=')
+			if (lexer->current[1] == '=')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_SlashEqual, location, 2);
 			}
@@ -743,10 +743,14 @@ GetToken(Lexer *lexer)
 
 		case '.':
 		{
-			if (PeekNextChar(lexer) == '.'
-				&& PeekNextNextChar(lexer) == '<')
+			if (lexer->current[1] == '.'
+				&& lexer->current[2] == '<')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_DotDotLess, location, 3);
+			}
+			if (lexer->current[1] == '.')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_DotDot, location, 2);
 			}
 		} break;
 	}

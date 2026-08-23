@@ -1,19 +1,25 @@
 string :: struct
 {
 	data: *u8;
-	count: i64;
+	count: int;
 };
 
 CoroutineState :: struct
 {
-	state: i64;
+	state: int;
 };
 
-printf :: proc(format: *u8)           #foreign #variadic;
 fminf  :: proc(a: f32, b: f32) -> f32 #foreign;
 fmaxf  :: proc(a: f32, b: f32) -> f32 #foreign;
 
-fabsf  :: proc(a: f32) -> f32
+printf :: proc(format: *u8) #foreign #variadic;
+
+malloc  :: proc(size: int)             -> *void #foreign;
+calloc  :: proc(count: int, size: int) -> *void #foreign;
+realloc :: proc(ptr: *void, size: int) -> *void #foreign;
+free    :: proc(ptr: *void)                     #foreign;
+
+fabsf :: proc(a: f32) -> f32
 {
 	if a >= 0.0
 	{
@@ -23,4 +29,59 @@ fabsf  :: proc(a: f32) -> f32
 	{
 		return -a;
 	}
+}
+
+Raw_Dynamic_Array :: struct
+{
+	data     : *void;
+	count    : int;
+	capacity : int;
+};
+
+__array_reserve :: proc(_array: *void, elem_size: int, want_capacity: int)
+{
+	array := cast(*Raw_Dynamic_Array)_array;
+
+	if want_capacity <= array.capacity
+	{
+		return;
+	}
+
+	new_capacity := array.capacity;
+	if new_capacity == 0
+	{
+		new_capacity = 8;
+	}
+
+	while new_capacity < want_capacity
+	{
+		new_capacity *= 2;
+	}
+
+	array.data = realloc(array.data, new_capacity*elem_size);
+	array.capacity = new_capacity;
+}
+
+__array_grow :: proc(_array: *void, elem_size: int) -> *void
+{
+	array := cast(*Raw_Dynamic_Array)_array;
+
+	__array_reserve(array, elem_size, array.count + 1);
+
+	data8 := cast(*u8)array.data;
+
+	result := &data8[array.count*elem_size];
+	array.count += 1;
+
+	return result;
+}
+
+array_free :: proc(_array: *void)
+{
+	array := cast(*Raw_Dynamic_Array)_array;
+
+	free(array.data);
+	array.data     = null;
+	array.count    = 0;
+	array.capacity = 0;
 }

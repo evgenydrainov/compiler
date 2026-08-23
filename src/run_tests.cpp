@@ -113,6 +113,7 @@ run_tests()
 	TestReturnCode("22_slices", 0);
 	TestReturnCode("23_slices_foreach", 0);
 	TestReturnCode("24_slices_foreach_ptr", 0);
+	TestReturnCode("25_dynamic_array", 0);
 }
 
 internal void
@@ -132,6 +133,11 @@ run_failure_tests()
 	TestCompileError("12_slice_unknown_field");
 	TestCompileError("13_slice_data_type_mismatch");
 	TestCompileError("14_assign_to_array_count");
+	TestCompileError("15_array_add_missing_address");
+	TestCompileError("16_array_add_wrong_element");
+	TestCompileError("17_array_add_on_slice");
+	TestCompileError("18_dynamic_array_not_a_slice");
+	TestCompileError("19_dynamic_array_unknown_field");
 }
 
 int main()

@@ -3,29 +3,30 @@
 #include "common.h"
 
 #define TYPE_KIND_LIST(X) \
-	X(TypeKind_Unknown,     0,    "unknown type"     ) \
-	X(TypeKind_InferMe,     1,    "not inferred yet" ) \
-	X(TypeKind_Void,        2,    "void"             ) \
+	X(TypeKind_Unknown,       0,    "unknown type"     ) \
+	X(TypeKind_InferMe,       1,    "not inferred yet" ) \
+	X(TypeKind_Void,          2,    "void"             ) \
 	/* integer types */ \
-	X(TypeKind_Int8,        3,    "i8"               ) \
-	X(TypeKind_Int16,       4,    "i16"              ) \
-	X(TypeKind_Int32,       5,    "i32"              ) \
-	X(TypeKind_Int64,       6,    "i64"              ) \
+	X(TypeKind_Int8,          3,    "i8"               ) \
+	X(TypeKind_Int16,         4,    "i16"              ) \
+	X(TypeKind_Int32,         5,    "i32"              ) \
+	X(TypeKind_Int64,         6,    "i64"              ) \
 	/* unsigned integer types */ \
-	X(TypeKind_UInt8,       7,    "u8"               ) \
-	X(TypeKind_UInt16,      8,    "u16"              ) \
-	X(TypeKind_UInt32,      9,    "u32"              ) \
-	X(TypeKind_UInt64,     10,    "u64"              ) \
+	X(TypeKind_UInt8,         7,    "u8"               ) \
+	X(TypeKind_UInt16,        8,    "u16"              ) \
+	X(TypeKind_UInt32,        9,    "u32"              ) \
+	X(TypeKind_UInt64,       10,    "u64"              ) \
 	/* floating point types */ \
-	X(TypeKind_Float32,    11,    "f32"              ) \
-	X(TypeKind_Float64,    12,    "f64"              ) \
+	X(TypeKind_Float32,      11,    "f32"              ) \
+	X(TypeKind_Float64,      12,    "f64"              ) \
 	/* other */ \
-	X(TypeKind_Bool,       13,    "bool"             ) \
-	X(TypeKind_Pointer,    14,    "pointer"          ) \
-	X(TypeKind_Struct,     15,    "struct"           ) \
-	X(TypeKind_Enum,       16,    "enum"             ) \
-	X(TypeKind_Array,      17,    "array"            ) \
-	X(TypeKind_Slice,      18,    "slice"            )
+	X(TypeKind_Bool,         13,    "bool"             ) \
+	X(TypeKind_Pointer,      14,    "pointer"          ) \
+	X(TypeKind_Struct,       15,    "struct"           ) \
+	X(TypeKind_Enum,         16,    "enum"             ) \
+	X(TypeKind_Array,        17,    "array"            ) \
+	X(TypeKind_Slice,        18,    "slice"            ) \
+	X(TypeKind_DynamicArray, 19,    "dynamic array"    )
 
 DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
 
@@ -102,6 +103,12 @@ TypesEqual(Type a, Type b)
 		return TypesEqual(*a.arrayElementType, *b.arrayElementType);
 	}
 
+	if (a.kind == TypeKind_DynamicArray
+		&& b.kind == TypeKind_DynamicArray)
+	{
+		return TypesEqual(*a.arrayElementType, *b.arrayElementType);
+	}
+
 	return a.kind == b.kind;
 }
 
@@ -125,10 +132,11 @@ SizeOfType(Type type)
 		case TypeKind_Float32: {result = 4;} break;
 		case TypeKind_Float64: {result = 8;} break;
 
-		case TypeKind_Pointer: {result = 8;} break;
-		case TypeKind_Bool:    {result = 8;} break;
-		case TypeKind_Enum:    {result = 8;} break;
-		case TypeKind_Slice:   {result = 16;} break;
+		case TypeKind_Pointer:      {result = 8;} break;
+		case TypeKind_Bool:         {result = 8;} break;
+		case TypeKind_Enum:         {result = 8;} break;
+		case TypeKind_Slice:        {result = 16;} break;
+		case TypeKind_DynamicArray: {result = 24;} break;
 
 		// NOTE: the size of a void type is asked when a function checks if
 		// it has a large struct return value
@@ -262,16 +270,19 @@ AlignmentOfType(Type type)
 			result = AlignmentOfType(*type.arrayElementType);
 		} break;
 
-		case TypeKind_Slice:
-		{
-			result = 8;
-		} break;
+		case TypeKind_Slice:        {result = 8;} break;
+		case TypeKind_DynamicArray: {result = 8;} break;
 
 		default:
 		{
 			result = SizeOfType(type);
 		} break;
 	}
+
+	Assert(result == 1
+		   || result == 2
+		   || result == 4
+		   || result == 8);
 
 	return result;
 }

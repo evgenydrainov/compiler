@@ -26,6 +26,8 @@ struct SemanticContext
 
 	BumpArray<GenerateCStringLiteral> cstringLiterals;
 	BumpArray<GenerateStringLiteral> stringLiterals;
+
+	Arena *arenaForAst;
 };
 
 void SemanticPass(Node *_program,
