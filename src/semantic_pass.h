@@ -7,6 +7,7 @@ struct SymbolTable;
 struct FunctionTable;
 struct TypeTable;
 struct ConstantsTable;
+struct MacroTable;
 
 struct SemanticContext
 {
@@ -19,6 +20,7 @@ struct SemanticContext
 	FunctionTable  *funcTable;
 	TypeTable      *typeTable;
 	ConstantsTable *constTable;
+	MacroTable     *macroTable;
 
 	FuncNode *currentFunction;
 
@@ -28,6 +30,8 @@ struct SemanticContext
 	BumpArray<GenerateStringLiteral> stringLiterals;
 
 	Arena *arenaForAst;
+
+	int macroInstantiationUniqueId;
 };
 
 void SemanticPass(Node *_program,

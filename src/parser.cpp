@@ -1429,7 +1429,7 @@ ParseFunctionDefinition(Parser *parser,
 	ExpectToken(parser, lexer, TokenKind_OpenParen);
 
 	while (!parser->hadError
-			&& parser->current.kind != TokenKind_CloseParen)
+		   && parser->current.kind != TokenKind_CloseParen)
 	{
 		if (node->numParams != 0)
 		{
@@ -1509,6 +1509,49 @@ ParseFunctionDefinition(Parser *parser,
 	{
 		ExpectToken(parser, lexer, TokenKind_Semicolon);
 	}
+
+	return node;
+}
+
+internal Node *
+ParseMacroDefinition(Parser *parser,
+					 Lexer *lexer,
+					 Arena *arena)
+{
+	// foo :: macro(a, b, c) { statements; }
+
+	MacroDeclNode *node = MakeNode<MacroDeclNode>(parser->current.location, arena);
+	node->name = parser->current.str;
+
+	// eat the macro name
+	AdvanceToken(parser, lexer);
+
+	ExpectToken(parser, lexer, TokenKind_Colon);
+	ExpectToken(parser, lexer, TokenKind_Colon);
+
+	ExpectToken(parser, lexer, TokenKind_Macro);
+
+	ExpectToken(parser, lexer, TokenKind_OpenParen);
+
+	while (!parser->hadError
+		   && parser->current.kind != TokenKind_CloseParen)
+	{
+		if (node->params.count != 0)
+		{
+			ExpectToken(parser, lexer, TokenKind_Comma);
+		}
+
+		ParamNode *param = MakeNode<ParamNode>(parser->current.location, arena);
+		param->name = parser->current.str;
+
+		ExpectToken(parser, lexer, TokenKind_Identifier); // eat the param name
+
+		array_add(&node->params, param);
+	}
+
+	AdvanceToken(parser, lexer); // eat the ')'
+
+	node->body = ParseBlock(parser, lexer, arena);
 
 	return node;
 }
@@ -1641,6 +1684,11 @@ ParseTopLevelStatement(Parser *parser,
 				if (peekToken2.kind == TokenKind_Enum)
 				{
 					return ParseEnumDefinition(parser, lexer, arena);
+				}
+
+				if (peekToken2.kind == TokenKind_Macro)
+				{
+					return ParseMacroDefinition(parser, lexer, arena);
 				}
 
 				// compile-time constant

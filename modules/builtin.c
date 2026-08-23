@@ -38,10 +38,8 @@ Raw_Dynamic_Array :: struct
 	capacity : int;
 };
 
-__array_reserve :: proc(_array: *void, elem_size: int, want_capacity: int)
+__array_reserve :: proc(array: *Raw_Dynamic_Array, elem_size: int, want_capacity: int)
 {
-	array := cast(*Raw_Dynamic_Array)_array;
-
 	if want_capacity <= array.capacity
 	{
 		return;
@@ -62,26 +60,36 @@ __array_reserve :: proc(_array: *void, elem_size: int, want_capacity: int)
 	array.capacity = new_capacity;
 }
 
-__array_grow :: proc(_array: *void, elem_size: int) -> *void
+__array_free :: proc(array: *Raw_Dynamic_Array)
 {
-	array := cast(*Raw_Dynamic_Array)_array;
-
-	__array_reserve(array, elem_size, array.count + 1);
-
-	data8 := cast(*u8)array.data;
-
-	result := &data8[array.count*elem_size];
-	array.count += 1;
-
-	return result;
+	free(array.data);
+	array.data = null;
+	array.count = 0;
+	array.capacity = 0;
 }
 
-array_free :: proc(_array: *void)
+array_add :: macro(array, value)
 {
-	array := cast(*Raw_Dynamic_Array)_array;
+	__array_reserve(cast(*Raw_Dynamic_Array)array, sizeof(*array.data), array.count+1);
+	array.data[array.count] = value;
+	array.count += 1;
+}
 
-	free(array.data);
-	array.data     = null;
-	array.count    = 0;
-	array.capacity = 0;
+array_reserve :: macro(array, want_capacity)
+{
+	__array_reserve(cast(*Raw_Dynamic_Array)array, sizeof(*array.data), want_capacity);
+}
+
+array_free :: macro(array)
+{
+	__array_free(cast(*Raw_Dynamic_Array)array);
+}
+
+array_unordered_remove :: macro(array, index)
+{
+	if index < array.count-1
+	{
+		array.data[index] = array.data[array.count-1];
+	}
+	array.count -= 1;
 }

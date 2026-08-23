@@ -43,7 +43,8 @@
 	X(NodeKind_Switch,            35,    ""   ) \
 	X(NodeKind_Case,              36,    ""   ) \
 	X(NodeKind_NullLiteral,       37,    ""   ) \
-	X(NodeKind_Sizeof,            38,    ""   )
+	X(NodeKind_Sizeof,            38,    ""   ) \
+	X(NodeKind_MacroDecl,         39,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -403,6 +404,16 @@ struct SizeofNode : public Node
 	static constexpr NodeKind KIND = NodeKind_Sizeof;
 
 	Node *what;
+};
+
+struct MacroDeclNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_MacroDecl;
+
+	string name;
+	Node *body;
+
+	StaticBumpArray<ParamNode *, 32> params;
 };
 
 template <typename T>

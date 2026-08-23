@@ -1723,6 +1723,7 @@ GenerateTopLevelStatement(Node *baseNode,
 		case NodeKind_EnumDecl:
 		case NodeKind_ConstantDecl:
 		case NodeKind_VarDecl:
+		case NodeKind_MacroDecl:
 		{
 			// do nothing
 		} break;

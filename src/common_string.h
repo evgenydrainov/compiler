@@ -3,6 +3,9 @@
 #include "common_types.h"
 #include "common_arena.h"
 
+#include <stdio.h> // for snprintf
+#include <stdarg.h> // for varargs
+
 #define STR_FMT "%.*s"
 #define STR_FMT_QUOTED "'%.*s'"
 #define STR_ARG(str) (int)(str).count, (str).data
@@ -158,4 +161,24 @@ strip_extension(string filepath)
 	}
 
 	return filepath;
+}
+
+inline string
+tprintf(char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	int length = vsnprintf(nullptr, 0, format, args);
+
+	char *buffer = (char *)PushSize(&g_tempMemory, length+1);
+	vsnprintf(buffer, length+1, format, args);
+
+	va_end(args);
+
+	string result;
+	result.data = buffer;
+	result.count = length;
+
+	return result;
 }

@@ -2,16 +2,23 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include <direct.h>
 #include <process.h>
 
 global_variable char compilerPath[1024];
+global_variable char *onlyRunThisTest;
 
 internal void
 TestReturnCode(char *testName, int expectedCode)
 {
+	if (onlyRunThisTest && strcmp(testName, onlyRunThisTest) != 0)
+	{
+		return;
+	}
+
 	//clock_t start = clock();
 
 	{
@@ -51,6 +58,11 @@ TestReturnCode(char *testName, int expectedCode)
 internal void
 TestCompileError(char *testName)
 {
+	if (onlyRunThisTest && strcmp(testName, onlyRunThisTest) != 0)
+	{
+		return;
+	}
+
 	char inputPath[1024];
 	sprintf_s(inputPath, "%s.c", testName);
 
@@ -70,6 +82,11 @@ TestCompileError(char *testName)
 internal void
 TestCompiles(char *testName)
 {
+	if (onlyRunThisTest && strcmp(testName, onlyRunThisTest) != 0)
+	{
+		return;
+	}
+
 	char inputPath[1024];
 	sprintf_s(inputPath, "%s.c", testName);
 
@@ -114,6 +131,7 @@ run_tests()
 	TestReturnCode("23_slices_foreach", 0);
 	TestReturnCode("24_slices_foreach_ptr", 0);
 	TestReturnCode("25_dynamic_array", 0);
+	TestReturnCode("26_macro", 0);
 }
 
 internal void
@@ -142,6 +160,8 @@ run_failure_tests()
 
 int main()
 {
+	//onlyRunThisTest = "26_macro";
+
 	char *currentDir = _getcwd(nullptr, 0);
 	if (!currentDir)
 	{
@@ -156,7 +176,7 @@ int main()
 		fprintf(stderr, "_chdir failed\n");
 		exit(1);
 	}
-	
+
 	run_tests();
 
 	if (_chdir("should_fail") != 0)

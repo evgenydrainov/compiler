@@ -7,7 +7,7 @@ enum TokenKind : u32
 	TokenKind_EOF   = 0,
 	TokenKind_Error = 1,
 
-	/* single-character tokens */ \
+	/* single-character tokens */
 	TokenKind_Bang         = '!',
 	TokenKind_Hash         = '#',
 	TokenKind_Percent      = '%',

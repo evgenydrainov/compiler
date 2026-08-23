@@ -25,8 +25,7 @@ World :: struct
 	paddle: Entity;
 	ball: Entity;
 
-	bricks: [12]Entity;
-	num_bricks: int;
+	bricks: [..]Entity;
 
 	lives: int;
 	level: int;
@@ -45,19 +44,18 @@ world_init :: proc(world: *World)
 	ball.width = 10.0;
 	ball.height = 10.0;
 
-	world.num_bricks = 12;
-
 	world.lives = 3;
 	world.level = 1;
 
-	for i in 0..<world.num_bricks
+	for i in 0..<12
 	{
-		brick := &world.bricks[i];
-
+		brick: Entity;
 		brick.width = 40.0;
 		brick.height = 10.0;
 		brick.x = 35.0 + (brick.width  + 10.0) * cast(f32)(i%6);
 		brick.y = 20.0 + (brick.height + 10.0) * cast(f32)(i/6);
+
+		array_add(&world.bricks, brick);
 	}
 }
 
@@ -120,15 +118,8 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 				ball.vspeed = -fabsf(ball.vspeed);
 			}
 
-			for i in 0..<world.num_bricks
+			for *brick in world.bricks
 			{
-				brick := &world.bricks[i];
-
-				if brick.dead
-				{
-					continue;
-				}
-
 				if entities_collide(ball, brick)
 				{
 					ball.vspeed = -ball.vspeed;
@@ -136,6 +127,22 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 					ball.hspeed *= 1.1;
 					brick.dead = true;
 				}
+			}
+		}
+	}
+
+	// cleanup
+	{
+		i := 0;
+		while i < world.bricks.count
+		{
+			if world.bricks[i].dead
+			{
+				array_unordered_remove(&world.bricks, i);
+			}
+			else
+			{
+				i += 1;
 			}
 		}
 	}
@@ -169,15 +176,8 @@ world_draw :: proc(world: *World)
 {
 	entity_draw(&world.paddle, 0xffffffff);
 
-	for i in 0..<world.num_bricks
+	for *brick in world.bricks
 	{
-		brick := &world.bricks[i];
-
-		if brick.dead
-		{
-			continue;
-		}
-
 		entity_draw(brick, 0xffffffff);
 	}
 

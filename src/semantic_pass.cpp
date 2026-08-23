@@ -4,6 +4,7 @@
 #include "function_table.h"
 #include "type_table.h"
 #include "constants_table.h"
+#include "macro_table.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -88,18 +89,16 @@ internal void
 AnalyzeBlock(Node *baseNode,
 			 SemanticContext *context)
 {
-	SymbolTable *symTable = context->symTable;
-
 	BlockNode *node = As<BlockNode>(baseNode);
 
-	Scope scope = EnterScope(symTable);
+	Scope scope = EnterScope(context->symTable);
 
 	for (Node *it : node->statements)
 	{
 		AnalyzeStatement(it, context);
 	}
 
-	LeaveScope(symTable, scope);
+	LeaveScope(context->symTable, scope);
 }
 
 internal bool
@@ -618,16 +617,380 @@ ReinterpretNode(SrcType *node)
 	return newNode;
 }
 
+struct InstantiateContext
+{
+	Arena *arena;
+	MacroDeclNode *decl;
+	int uniqueId;
+};
+
+internal Node *
+InstantiateMacro(Node *baseNode,
+				 InstantiateContext *context)
+{
+	if (!baseNode)
+	{
+		return nullptr;
+	}
+
+	Arena *arena = context->arena;
+	MacroDeclNode *decl = context->decl;
+
+	switch (baseNode->kind)
+	{
+		default:
+		{
+			Assert(false);
+
+			return nullptr;
+		} break;
+
+		case NodeKind_Binary:
+		{
+			BinaryNode *node = As<BinaryNode>(baseNode);
+
+			BinaryNode *result = MakeNode<BinaryNode>(node->location, arena);
+			result->op = node->op;
+			result->lhs = InstantiateMacro(node->lhs, context);
+			result->rhs = InstantiateMacro(node->rhs, context);
+
+			return result;
+		} break;
+
+		case NodeKind_Assign:
+		{
+			AssignNode *node = As<AssignNode>(baseNode);
+
+			AssignNode *result = MakeNode<AssignNode>(node->location, arena);
+			result->lhs = InstantiateMacro(node->lhs, context);
+			result->rhs = InstantiateMacro(node->rhs, context);
+
+			return result;
+		} break;
+
+		case NodeKind_VarDecl:
+		{
+			VarDeclNode *node = As<VarDeclNode>(baseNode);
+
+			VarDeclNode *result = MakeNode<VarDeclNode>(node->location, arena);
+			result->name = node->name;
+			result->expr = InstantiateMacro(node->expr, context);
+			result->type = node->type;
+
+			return result;
+		} break;
+
+		case NodeKind_Var:
+		{
+			VarNode *node = As<VarNode>(baseNode);
+
+			VarNode *result = MakeNode<VarNode>(node->location, arena);
+			result->name = node->name;
+
+			for (int i = 0; i < (int)decl->params.count; i++)
+			{
+				if (decl->params[i]->name == node->name)
+				{
+					result->name = tprintf("$arg_%d_%d", i, context->uniqueId);
+					break;
+				}
+			}
+
+			return result;
+		} break;
+
+		case NodeKind_Int64Literal:
+		{
+			Int64LiteralNode *node = As<Int64LiteralNode>(baseNode);
+
+			Int64LiteralNode *result = MakeNode<Int64LiteralNode>(node->location, arena);
+			result->value = node->value;
+
+			return result;
+		} break;
+
+		case NodeKind_Float32Literal:
+		{
+			Float32LiteralNode *node = As<Float32LiteralNode>(baseNode);
+
+			Float32LiteralNode *result = MakeNode<Float32LiteralNode>(node->location, arena);
+			result->value = node->value;
+
+			return result;
+		} break;
+
+		case NodeKind_Float64Literal:
+		{
+			Float64LiteralNode *node = As<Float64LiteralNode>(baseNode);
+
+			Float64LiteralNode *result = MakeNode<Float64LiteralNode>(node->location, arena);
+			result->value = node->value;
+
+			return result;
+		} break;
+
+		case NodeKind_Block:
+		{
+			BlockNode *node = As<BlockNode>(baseNode);
+
+			BlockNode *result = MakeNode<BlockNode>(node->location, arena);
+			result->statements = PushBumpArray<Node *>(arena, node->statements.count);
+			for (auto it : node->statements)
+			{
+				Node *statement = InstantiateMacro(it, context);
+				array_add(&result->statements, statement);
+			}
+
+			return result;
+		} break;
+
+		case NodeKind_If:
+		{
+			IfNode *node = As<IfNode>(baseNode);
+
+			IfNode *result = MakeNode<IfNode>(node->location, arena);
+			result->condition = InstantiateMacro(node->condition, context);
+			result->thenBlock = InstantiateMacro(node->thenBlock, context);
+			result->elseBlock = InstantiateMacro(node->elseBlock, context);
+
+			return result;
+		} break;
+
+		case NodeKind_While:
+		{
+			WhileNode *node = As<WhileNode>(baseNode);
+
+			WhileNode *result = MakeNode<WhileNode>(node->location, arena);
+			result->condition = InstantiateMacro(node->condition, context);
+			result->body = InstantiateMacro(node->body, context);
+
+			return result;
+		} break;
+
+		case NodeKind_Print:
+		{
+			PrintNode *node = As<PrintNode>(baseNode);
+
+			PrintNode *result = MakeNode<PrintNode>(node->location, arena);
+			result->expr = InstantiateMacro(node->expr, context);
+
+			return result;
+		} break;
+
+		case NodeKind_Call:
+		{
+			CallNode *node = As<CallNode>(baseNode);
+
+			CallNode *result = MakeNode<CallNode>(node->location, arena);
+			result->name = node->name;
+			result->expressions = PushArray<Node *>(arena, node->numExpressions);
+			result->numExpressions = node->numExpressions;
+			for (int i = 0; i < node->numExpressions; i++)
+			{
+				result->expressions[i] = InstantiateMacro(node->expressions[i], context);
+			}
+
+			return result;
+		} break;
+
+		case NodeKind_Return:
+		{
+			ReturnNode *node = As<ReturnNode>(baseNode);
+
+			ReturnNode *result = MakeNode<ReturnNode>(node->location, arena);
+			result->expr = InstantiateMacro(node->expr, context);
+
+			return result;
+		} break;
+
+		case NodeKind_Bool:
+		{
+			BoolNode *node = As<BoolNode>(baseNode);
+
+			BoolNode *result = MakeNode<BoolNode>(node->location, arena);
+			result->boolValue = node->boolValue;
+
+			return result;
+		} break;
+
+		case NodeKind_AddressOf:
+		{
+			AddressOfNode *node = As<AddressOfNode>(baseNode);
+
+			AddressOfNode *result = MakeNode<AddressOfNode>(node->location, arena);
+			result->what = InstantiateMacro(node->what, context);
+
+			return result;
+		} break;
+
+		case NodeKind_Deref:
+		{
+			DerefNode *node = As<DerefNode>(baseNode);
+
+			DerefNode *result = MakeNode<DerefNode>(node->location, arena);
+			result->what = InstantiateMacro(node->what, context);
+
+			return result;
+		} break;
+
+		case NodeKind_FieldAccess:
+		{
+			FieldAccessNode *node = As<FieldAccessNode>(baseNode);
+
+			FieldAccessNode *result = MakeNode<FieldAccessNode>(node->location, arena);
+			result->expr = InstantiateMacro(node->expr, context);
+			result->fieldName = node->fieldName;
+
+			return result;
+		} break;
+
+		case NodeKind_ArrayIndexAccess:
+		{
+			ArrayIndexAccessNode *node = As<ArrayIndexAccessNode>(baseNode);
+
+			ArrayIndexAccessNode *result = MakeNode<ArrayIndexAccessNode>(node->location, arena);
+			result->arrayExpr = InstantiateMacro(node->arrayExpr, context);
+			result->indexExpr = InstantiateMacro(node->indexExpr, context);
+
+			return result;
+		} break;
+
+		case NodeKind_String:
+		{
+			StringNode *node = As<StringNode>(baseNode);
+
+			StringNode *result = MakeNode<StringNode>(node->location, arena);
+			result->value = node->value;
+
+			return result;
+		} break;
+
+		case NodeKind_CString:
+		{
+			CStringNode *node = As<CStringNode>(baseNode);
+
+			CStringNode *result = MakeNode<CStringNode>(node->location, arena);
+			result->value = node->value;
+
+			return result;
+		} break;
+
+		case NodeKind_Unary:
+		{
+			UnaryNode *node = As<UnaryNode>(baseNode);
+
+			UnaryNode *result = MakeNode<UnaryNode>(node->location, arena);
+			result->op = node->op;
+			result->expr = InstantiateMacro(node->expr, context);
+
+			return result;
+		} break;
+
+		case NodeKind_Cast:
+		{
+			CastNode *node = As<CastNode>(baseNode);
+
+			CastNode *result = MakeNode<CastNode>(node->location, arena);
+			result->what = InstantiateMacro(node->what, context);
+			result->targetType = node->targetType;
+
+			return result;
+		} break;
+
+		case NodeKind_Yield:
+		{
+			YieldNode *node = As<YieldNode>(baseNode);
+
+			YieldNode *result = MakeNode<YieldNode>(node->location, arena);
+
+			return result;
+		} break;
+
+		case NodeKind_Break:
+		{
+			BreakNode *node = As<BreakNode>(baseNode);
+
+			BreakNode *result = MakeNode<BreakNode>(node->location, arena);
+
+			return result;
+		} break;
+
+		case NodeKind_Continue:
+		{
+			ContinueNode *node = As<ContinueNode>(baseNode);
+
+			ContinueNode *result = MakeNode<ContinueNode>(node->location, arena);
+
+			return result;
+		} break;
+
+		case NodeKind_For:
+		{
+			ForNode *node = As<ForNode>(baseNode);
+
+			ForNode *result = MakeNode<ForNode>(node->location, arena);
+			result->init = InstantiateMacro(result->init, context);
+			result->cond = InstantiateMacro(result->cond, context);
+			result->incr = InstantiateMacro(result->incr, context);
+			result->body = InstantiateMacro(result->body, context);
+
+			return result;
+		} break;
+
+		case NodeKind_Defer:
+		{
+			DeferNode *node = As<DeferNode>(baseNode);
+
+			DeferNode *result = MakeNode<DeferNode>(node->location, arena);
+			result->what = InstantiateMacro(result->what, context);
+
+			return result;
+		} break;
+
+		case NodeKind_Case:
+		{
+			CaseNode *node = As<CaseNode>(baseNode);
+
+			CaseNode *result = MakeNode<CaseNode>(node->location, arena);
+			result->label = InstantiateMacro(result->label, context);
+			result->body = InstantiateMacro(result->body, context);
+
+			return result;
+		} break;
+
+		case NodeKind_Switch:
+		{
+			Assert(false);
+
+			return nullptr;
+		} break;
+
+		case NodeKind_NullLiteral:
+		{
+			NullLiteralNode *node = As<NullLiteralNode>(baseNode);
+
+			NullLiteralNode *result = MakeNode<NullLiteralNode>(node->location, arena);
+
+			return result;
+		} break;
+
+		case NodeKind_Sizeof:
+		{
+			SizeofNode *node = As<SizeofNode>(baseNode);
+
+			SizeofNode *result = MakeNode<SizeofNode>(node->location, arena);
+			result->what = InstantiateMacro(node->what, context);
+
+			return result;
+		} break;
+	}
+}
+
 void
 AnalyzeExpression(Node *baseNode,
 				  SemanticContext *context,
 				  Type expectedType)
 {
-	SymbolTable    *symTable   = context->symTable;
-	FunctionTable  *funcTable  = context->funcTable;
-	TypeTable      *typeTable  = context->typeTable;
-	ConstantsTable *constTable = context->constTable;
-
 	switch (baseNode->kind)
 	{
 		default:
@@ -756,7 +1119,7 @@ AnalyzeExpression(Node *baseNode,
 		{
 			VarNode *node = As<VarNode>(baseNode);
 
-			Symbol *symbol = LookupSymbol(symTable, node->name, 0);
+			Symbol *symbol = LookupSymbol(context->symTable, node->name, 0);
 			if (symbol)
 			{
 				node->stackOffset = symbol->stackOffset;
@@ -765,7 +1128,7 @@ AnalyzeExpression(Node *baseNode,
 				break;
 			}
 
-			Constant *constant = LookupConstant(constTable, node->name);
+			Constant *constant = LookupConstant(context->constTable, node->name);
 			if (constant)
 			{
 				Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
@@ -791,110 +1154,7 @@ AnalyzeExpression(Node *baseNode,
 		{
 			CallNode *node = As<CallNode>(baseNode);
 
-			if (node->name == "array_add")
-			{
-				if (node->numExpressions != 2)
-				{
-					Error(context, node, "");
-					break;
-				}
-
-				Node *arrayExpr = node->expressions[0];
-				Node *valueExpr = node->expressions[1];
-
-				AnalyzeExpression(arrayExpr, context);
-				AnalyzeExpression(valueExpr, context);
-
-				if (!(arrayExpr->inferredType.kind == TypeKind_Pointer
-					  && arrayExpr->inferredType.pointerTo->kind == TypeKind_DynamicArray))
-				{
-					Error(context, node, "");
-					break;
-				}
-
-				Type *valueType = arrayExpr->inferredType.pointerTo->arrayElementType;
-
-				int elemSize = SizeOfType(*valueType);
-
-				VarDeclNode *valueCopyDecl = MakeVarDeclNodeInfer(node->location, "$value_copy", valueExpr, context->arenaForAst);
-
-				VarDeclNode *resultDecl;
-				{
-					Int64LiteralNode *elemSizeLiteral = MakeInt64Literal(node->location, elemSize, context->arenaForAst);
-
-					CallNode *callNode = MakeCallNode(node->location, "__array_grow", context->arenaForAst);
-					callNode->expressions = PushArray<Node *>(context->arenaForAst, 2);
-					callNode->expressions[0] = arrayExpr;
-					callNode->expressions[1] = elemSizeLiteral;
-					callNode->numExpressions = 2;
-
-					resultDecl = MakeVarDeclNodeInfer(node->location, "$result", callNode, context->arenaForAst);
-					resultDecl->type.kind = TypeKind_Pointer;
-					resultDecl->type.pointerTo = valueType;
-				}
-
-				AssignNode *assignNode;
-				{
-					DerefNode *derefNode = MakeNode<DerefNode>(node->location, context->arenaForAst);
-					derefNode->what = MakeVarNode(node->location, "$result", context->arenaForAst);
-
-					VarNode *varNode = MakeVarNode(node->location, "$value_copy", context->arenaForAst);
-
-					assignNode = MakeAssignNode(node->location, derefNode, varNode, context->arenaForAst);
-				}
-
-				BlockNode *blockNode = ReinterpretNode<BlockNode>(node);
-				blockNode->statements = PushBumpArray<Node *>(context->arenaForAst, 3);
-				array_add(&blockNode->statements, (Node *)valueCopyDecl);
-				array_add(&blockNode->statements, (Node *)resultDecl);
-				array_add(&blockNode->statements, (Node *)assignNode);
-
-				AnalyzeBlock(blockNode, context);
-
-				break;
-			}
-
-			if (node->name == "array_reserve")
-			{
-				if (node->numExpressions != 2)
-				{
-					Error(context, node, "");
-					break;
-				}
-
-				Node *arrayExpr = node->expressions[0];
-				Node *capacityExpr = node->expressions[1];
-
-				AnalyzeExpression(arrayExpr, context);
-				AnalyzeExpression(capacityExpr, context);
-
-				if (!(arrayExpr->inferredType.kind == TypeKind_Pointer
-					  && arrayExpr->inferredType.pointerTo->kind == TypeKind_DynamicArray))
-				{
-					Error(context, node, "");
-					break;
-				}
-
-				Type *valueType = arrayExpr->inferredType.pointerTo->arrayElementType;
-
-				int elemSize = SizeOfType(*valueType);
-
-				Int64LiteralNode *elemSizeLiteral = MakeInt64Literal(node->location, elemSize, context->arenaForAst);
-
-				node->expressions = PushArray<Node *>(context->arenaForAst, 3);
-				node->expressions[0] = arrayExpr;
-				node->expressions[1] = elemSizeLiteral;
-				node->expressions[2] = capacityExpr;
-				node->numExpressions = 3;
-
-				node->name = "__array_reserve";
-
-				AnalyzeStatement(node, context);
-
-				break;
-			}
-
-			Function *function = LookupFunction(funcTable, node->name);
+			Function *function = LookupFunction(context->funcTable, node->name);
 			if (function)
 			{
 				bool good = (node->numExpressions == function->params.count);
@@ -927,7 +1187,7 @@ AnalyzeExpression(Node *baseNode,
 						{
 							if (!IsRegisterSized(function->params[i].type))
 							{
-								expr->paramCopyOffset = ReserveSpace(symTable, function->params[i].type);;
+								expr->paramCopyOffset = ReserveSpace(context->symTable, function->params[i].type);
 							}
 						}
 						else
@@ -949,9 +1209,9 @@ AnalyzeExpression(Node *baseNode,
 					if (!IsRegisterSized(node->inferredType))
 					{
 						// TODO: is this alignment correct?
-						symTable->stackSize = (int)align_forward(symTable->stackSize, 16);
+						context->symTable->stackSize = (int)align_forward(context->symTable->stackSize, 16);
 
-						node->returnSlotOffset = ReserveSpace(symTable, node->inferredType);
+						node->returnSlotOffset = ReserveSpace(context->symTable, node->inferredType);
 					}
 				}
 				else
@@ -965,11 +1225,46 @@ AnalyzeExpression(Node *baseNode,
 						  node->numExpressions,
 						  (node->numExpressions == 1) ? "was" : "were");
 				}
+
+				break;
 			}
-			else
+
+			Macro *macro = LookupMacro(context->macroTable, node->name);
+			if (macro)
 			{
-				Error(context, node, "undeclared procedure " STR_FMT_QUOTED, STR_ARG(node->name));
+				InstantiateContext instContext;
+				instContext.arena = context->arenaForAst;
+				instContext.decl = macro->decl;
+				instContext.uniqueId = ++context->macroInstantiationUniqueId;
+
+				auto statements = PushBumpArray<Node *>(context->arenaForAst, node->numExpressions + 1);
+
+				for (int i = 0; i < node->numExpressions; i++)
+				{
+					string name = tprintf("$arg_%d_%d", i, instContext.uniqueId);
+
+					VarDeclNode *varDecl = MakeNode<VarDeclNode>(node->location, context->arenaForAst);
+					varDecl->name = name;
+					varDecl->expr = node->expressions[i];
+					varDecl->type.kind = TypeKind_InferMe;
+
+					array_add(&statements, (Node *)varDecl);
+				}
+
+				{
+					Node *instantiated = InstantiateMacro(macro->decl->body, &instContext);
+					array_add(&statements, instantiated);
+				}
+
+				BlockNode *newNode = ReinterpretNode<BlockNode>(node);
+				newNode->statements = statements;
+
+				AnalyzeBlock(newNode, context);
+
+				break;
 			}
+			
+			Error(context, node, "undeclared procedure " STR_FMT_QUOTED, STR_ARG(node->name));
 		} break;
 
 		case NodeKind_AddressOf:
@@ -1055,7 +1350,7 @@ AnalyzeExpression(Node *baseNode,
 
 			if (node->expr->kind == NodeKind_Var)
 			{
-				Type *type = LookupType(typeTable, As<VarNode>(node->expr)->name);
+				Type *type = LookupType(context->typeTable, As<VarNode>(node->expr)->name);
 				if (type && type->kind == TypeKind_Enum)
 				{
 					EnumeratorInfo *enumerator = FindEnumerator(type->enumInfo, node->fieldName);
@@ -1362,8 +1657,6 @@ internal void
 AnalyzeStatement(Node *baseNode,
 				 SemanticContext *context)
 {
-	SymbolTable *symTable = context->symTable;
-
 	switch (baseNode->kind)
 	{
 		case NodeKind_VarDecl:
@@ -1384,9 +1677,9 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->type.kind != TypeKind_Void)
 			{
-				if (!LookupSymbol(symTable, node->name, symTable->scopeStart))
+				if (!LookupSymbol(context->symTable, node->name, context->symTable->scopeStart))
 				{
-					Symbol *symbol = DeclareSymbol(symTable, node->name, node->type);
+					Symbol *symbol = DeclareSymbol(context->symTable, node->name, node->type);
 
 					node->stackOffset = symbol->stackOffset;
 
@@ -1489,7 +1782,7 @@ AnalyzeStatement(Node *baseNode,
 		{
 			ForNode *node = As<ForNode>(baseNode);
 
-			Scope scope = EnterScope(symTable);
+			Scope scope = EnterScope(context->symTable);
 
 			AnalyzeStatement(node->init, context);
 			AnalyzeExpression(node->cond, context);
@@ -1502,7 +1795,7 @@ AnalyzeStatement(Node *baseNode,
 
 			context->currentLoop = saveCurrentLoop;
 
-			LeaveScope(symTable, scope);
+			LeaveScope(context->symTable, scope);
 
 			if (node->cond->inferredType.kind != TypeKind_Bool)
 			{
@@ -1577,8 +1870,6 @@ internal void
 AnalyzeTopLevelStatement(Node *baseNode,
 						 SemanticContext *context)
 {
-	SymbolTable *symTable = context->symTable;
-
 	switch (baseNode->kind)
 	{
 		case NodeKind_Func:
@@ -1587,7 +1878,7 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 			ResolveType(&node->returnType, context, node);
 
-			Scope scope = EnterScope(symTable);
+			Scope scope = EnterScope(context->symTable);
 
 			if (!IsRegisterSized(node->returnType))
 			{
@@ -1598,7 +1889,7 @@ AnalyzeTopLevelStatement(Node *baseNode,
 				voidPtrType.pointerTo = &voidType;
 
 				// declare the hidden struct pointer, which is the first argument
-				int stackOffset = ReserveSpace(symTable, voidPtrType);
+				int stackOffset = ReserveSpace(context->symTable, voidPtrType);
 
 				// TODO: [rbp - 8] is hardcoded everywhere else
 				Assert(stackOffset == 8);
@@ -1612,9 +1903,9 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 				ResolveType(&param->type, context, param);
 
-				if (!LookupSymbol(symTable, param->name, 0))
+				if (!LookupSymbol(context->symTable, param->name, 0))
 				{
-					Symbol *symbol = DeclareSymbol(symTable, param->name, param->type);
+					Symbol *symbol = DeclareSymbol(context->symTable, param->name, param->type);
 					param->stackOffset = symbol->stackOffset;
 				}
 				else
@@ -1638,7 +1929,7 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 			context->currentFunction = saveCurrentFunction;
 
-			LeaveScope(symTable, scope);
+			LeaveScope(context->symTable, scope);
 		} break;
 
 		default:
@@ -1834,6 +2125,21 @@ EarlyAnalyze(Node *baseNode,
 		{
 			// do nothing
 		} break;
+
+		case NodeKind_MacroDecl:
+		{
+			MacroDeclNode *node = As<MacroDeclNode>(baseNode);
+
+			if (!LookupMacro(context->macroTable, node->name))
+			{
+				Macro *macro = DeclareMacro(context->macroTable, node->name);
+				macro->decl = node;
+			}
+			else
+			{
+				Error(context, node, "redefinition of macro " STR_FMT_QUOTED, STR_ARG(node->name));
+			}
+		} break;
 	}
 }
 
@@ -1850,6 +2156,7 @@ SemanticPass(Node *_program,
 	context->globalTable = PushStruct<SymbolTable>(arena);
 	context->typeTable   = PushStruct<TypeTable>(arena);
 	context->constTable  = PushStruct<ConstantsTable>(arena);
+	context->macroTable  = PushStruct<MacroTable>(arena);
 
 	BlockNode *program = As<BlockNode>(_program);
 	for (Node *it : program->statements)

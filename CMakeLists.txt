@@ -25,6 +25,7 @@ add_executable(
     src/function_table.h
     src/lexer.cpp
     src/lexer.h
+    src/macro_table.h
     src/main.cpp
     src/parser.cpp
     src/parser.h
