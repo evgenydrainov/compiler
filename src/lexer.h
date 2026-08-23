@@ -78,6 +78,8 @@ enum TokenKind : u32
 	TokenKind_Case,
 	TokenKind_Default,
 	TokenKind_Null,
+	TokenKind_Macro,
+	TokenKind_Sizeof,
 
 	/* other */
 	TokenKind_Identifier,
@@ -159,6 +161,8 @@ GetTokenKindName(TokenKind kind)
 		case TokenKind_Case:           return "case";
 		case TokenKind_Default:        return "default";
 		case TokenKind_Null:           return "null";
+		case TokenKind_Macro:          return "macro";
+		case TokenKind_Sizeof:         return "sizeof";
 		case TokenKind_Identifier:     return "identifier";
 		case TokenKind_Int64Literal:   return "number";
 		case TokenKind_Float32Literal: return "number";

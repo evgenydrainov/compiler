@@ -189,6 +189,14 @@ IdentifierType(string str)
 			}
 		} break;
 
+		case 'm':
+		{
+			if (str == "macro")
+			{
+				result = TokenKind_Macro;
+			}
+		} break;
+
 		case 'n':
 		{
 			if (str == "null")
@@ -226,6 +234,10 @@ IdentifierType(string str)
 			else if (str == "switch")
 			{
 				result = TokenKind_Switch;
+			}
+			else if (str == "sizeof")
+			{
+				result = TokenKind_Sizeof;
 			}
 		} break;
 

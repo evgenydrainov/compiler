@@ -408,6 +408,21 @@ ParseAtom_Inner(Parser *parser,
 		return node;
 	}
 	
+	if (parser->current.kind == TokenKind_Sizeof)
+	{
+		SizeofNode *node = MakeNode<SizeofNode>(parser->current.location, arena);
+
+		AdvanceToken(parser, lexer);
+
+		ExpectToken(parser, lexer, TokenKind_OpenParen);
+
+		node->what = ParseExpression(parser, lexer, 0, arena);
+
+		ExpectToken(parser, lexer, TokenKind_CloseParen);
+
+		return node;
+	}
+
 	if (parser->current.kind == TokenKind_Minus)
 	{
 		// unary minus

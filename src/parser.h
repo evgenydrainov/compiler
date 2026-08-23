@@ -42,7 +42,8 @@
 	X(NodeKind_Defer,             34,    ""   ) \
 	X(NodeKind_Switch,            35,    ""   ) \
 	X(NodeKind_Case,              36,    ""   ) \
-	X(NodeKind_NullLiteral,       37,    ""   )
+	X(NodeKind_NullLiteral,       37,    ""   ) \
+	X(NodeKind_Sizeof,            38,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -395,6 +396,13 @@ struct SwitchNode : public Node
 struct NullLiteralNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_NullLiteral;
+};
+
+struct SizeofNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Sizeof;
+
+	Node *what;
 };
 
 template <typename T>

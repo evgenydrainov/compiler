@@ -695,6 +695,20 @@ AnalyzeExpression(Node *baseNode,
 			baseNode->inferredType.kind = TypeKind_Bool;
 		} break;
 
+		case NodeKind_Sizeof:
+		{
+			SizeofNode *node = As<SizeofNode>(baseNode);
+
+			AnalyzeExpression(node->what, context);
+
+			int size = SizeOfType(node->what->inferredType);
+
+			Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
+			newNode->value = size;
+
+			AnalyzeExpression(newNode, context);
+		} break;
+
 		case NodeKind_Binary:
 		{
 			AnalyzeBinaryExpression(baseNode, context);
