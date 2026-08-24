@@ -324,8 +324,8 @@ GenerateBinaryExpression(Node *baseNode,
 
 			if (node->inferredType.kind == TypeKind_Float32)
 			{
-				Emit(context, "    movq xmm1, rcx");
-				Emit(context, "    movq xmm0, rax");
+				Emit(context, "    movd xmm1, ecx");
+				Emit(context, "    movd xmm0, eax");
 
 				if (node->op == BinaryOp_Add)
 				{
@@ -341,14 +341,14 @@ GenerateBinaryExpression(Node *baseNode,
 				}
 				else if (node->op == BinaryOp_Divide)
 				{
-					Emit(context, "    divss xmm0, xmm1\t; perform multiplication");
+					Emit(context, "    divss xmm0, xmm1\t; perform division");
 				}
 				else
 				{
 					Assert(false);
 				}
 
-				Emit(context, "    movq rax, xmm0");
+				Emit(context, "    movd eax, xmm0");
 			}
 			else if (node->inferredType.kind == TypeKind_Float64)
 			{
@@ -369,7 +369,7 @@ GenerateBinaryExpression(Node *baseNode,
 				}
 				else if (node->op == BinaryOp_Divide)
 				{
-					Emit(context, "    divsd xmm0, xmm1\t; perform multiplication");
+					Emit(context, "    divsd xmm0, xmm1\t; perform division");
 				}
 				else
 				{

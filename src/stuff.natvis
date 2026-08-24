@@ -24,4 +24,18 @@
     </Expand>
   </Type>
 
+  <Type Name="StaticBumpArray&lt;*,*&gt;">
+    <DisplayString>{{ size={count} }}</DisplayString>
+    
+    <Expand>
+      <Item Name="[size]">count</Item>
+      <Item Name="[capacity]">$T2</Item>
+      
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
 </AutoVisualizer>

@@ -414,6 +414,8 @@ struct MacroDeclNode : public Node
 	Node *body;
 
 	StaticBumpArray<ParamNode *, 32> params;
+
+	bool dontBind;
 };
 
 template <typename T>

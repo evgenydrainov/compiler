@@ -123,6 +123,12 @@ IsLValue(Node *_node)
 			result = IsLValue(node->arrayExpr);
 		} break;
 
+		case NodeKind_Cast:
+		{
+			CastNode *node = As<CastNode>(_node);
+			result = IsLValue(node->what);
+		} break;
+
 		default: {} break;
 	}
 
@@ -622,6 +628,8 @@ struct InstantiateContext
 	Arena *arena;
 	MacroDeclNode *decl;
 	int uniqueId;
+
+	Node **arguments;
 };
 
 internal Node *
@@ -684,18 +692,32 @@ InstantiateMacro(Node *baseNode,
 		{
 			VarNode *node = As<VarNode>(baseNode);
 
-			VarNode *result = MakeNode<VarNode>(node->location, arena);
-			result->name = node->name;
-
-			for (int i = 0; i < (int)decl->params.count; i++)
+			if (decl)
 			{
-				if (decl->params[i]->name == node->name)
+				for (int i = 0; i < (int)decl->params.count; i++)
 				{
-					result->name = tprintf("$arg_%d_%d", i, context->uniqueId);
-					break;
+					if (decl->params[i]->name == node->name)
+					{
+						if (decl->dontBind)
+						{
+							InstantiateContext context2 = *context;
+							context2.decl = nullptr;
+
+							Node *result = InstantiateMacro(context->arguments[i], &context2);
+							return result;
+						}
+						else
+						{
+							VarNode *result = MakeNode<VarNode>(node->location, arena);
+							result->name = tprintf("$arg_%d_%d", i, context->uniqueId);
+							return result;
+						}
+					}
 				}
 			}
 
+			VarNode *result = MakeNode<VarNode>(node->location, arena);
+			result->name = node->name;
 			return result;
 		} break;
 
@@ -929,10 +951,10 @@ InstantiateMacro(Node *baseNode,
 			ForNode *node = As<ForNode>(baseNode);
 
 			ForNode *result = MakeNode<ForNode>(node->location, arena);
-			result->init = InstantiateMacro(result->init, context);
-			result->cond = InstantiateMacro(result->cond, context);
-			result->incr = InstantiateMacro(result->incr, context);
-			result->body = InstantiateMacro(result->body, context);
+			result->init = InstantiateMacro(node->init, context);
+			result->cond = InstantiateMacro(node->cond, context);
+			result->incr = InstantiateMacro(node->incr, context);
+			result->body = InstantiateMacro(node->body, context);
 
 			return result;
 		} break;
@@ -942,7 +964,7 @@ InstantiateMacro(Node *baseNode,
 			DeferNode *node = As<DeferNode>(baseNode);
 
 			DeferNode *result = MakeNode<DeferNode>(node->location, arena);
-			result->what = InstantiateMacro(result->what, context);
+			result->what = InstantiateMacro(node->what, context);
 
 			return result;
 		} break;
@@ -952,8 +974,8 @@ InstantiateMacro(Node *baseNode,
 			CaseNode *node = As<CaseNode>(baseNode);
 
 			CaseNode *result = MakeNode<CaseNode>(node->location, arena);
-			result->label = InstantiateMacro(result->label, context);
-			result->body = InstantiateMacro(result->body, context);
+			result->label = InstantiateMacro(node->label, context);
+			result->body = InstantiateMacro(node->body, context);
 
 			return result;
 		} break;
@@ -1236,19 +1258,29 @@ AnalyzeExpression(Node *baseNode,
 				instContext.arena = context->arenaForAst;
 				instContext.decl = macro->decl;
 				instContext.uniqueId = ++context->macroInstantiationUniqueId;
+				instContext.arguments = node->expressions;
 
-				auto statements = PushBumpArray<Node *>(context->arenaForAst, node->numExpressions + 1);
-
-				for (int i = 0; i < node->numExpressions; i++)
+				int numStatements = node->numExpressions + 1;
+				if (!macro->decl->dontBind)
 				{
-					string name = tprintf("$arg_%d_%d", i, instContext.uniqueId);
+					numStatements = 1;
+				}
 
-					VarDeclNode *varDecl = MakeNode<VarDeclNode>(node->location, context->arenaForAst);
-					varDecl->name = name;
-					varDecl->expr = node->expressions[i];
-					varDecl->type.kind = TypeKind_InferMe;
+				auto statements = PushBumpArray<Node *>(context->arenaForAst, numStatements);
 
-					array_add(&statements, (Node *)varDecl);
+				if (!macro->decl->dontBind)
+				{
+					for (int i = 0; i < node->numExpressions; i++)
+					{
+						string name = tprintf("$arg_%d_%d", i, instContext.uniqueId);
+
+						VarDeclNode *varDecl = MakeNode<VarDeclNode>(node->location, context->arenaForAst);
+						varDecl->name = name;
+						varDecl->expr = node->expressions[i];
+						varDecl->type.kind = TypeKind_InferMe;
+
+						array_add(&statements, (Node *)varDecl);
+					}
 				}
 
 				{

@@ -1,0 +1,135 @@
+Entity :: struct
+{
+	x: f32;
+	y: f32;
+
+	vel_x: f32;
+	vel_y: f32;
+
+	acc_x: f32;
+	acc_y: f32;
+
+	width: f32;
+	height: f32;
+
+	coroutine: Coroutine;
+};
+
+wait :: macro(co, time) #no_bind
+{
+	for co.i = 0; co.i < time; co.i += 1
+	{
+		yield;
+	}
+}
+
+enemy_script :: proc(co: *Coroutine) #coroutine
+{
+	while true
+	{
+		wait(co, 60);
+
+		launch_towards_point(co.userdata,
+							 cast(f32)(rand()%GAME_WIDTH),
+							 cast(f32)(rand()%GAME_HEIGHT),
+							 0.1);
+	}
+}
+
+World :: struct
+{
+	player: Entity;
+
+	boss: Entity;
+};
+
+world_init :: proc(world: *World)
+{
+	player := &world.player;
+	boss := &world.boss;
+
+	player.x = cast(f32)(GAME_WIDTH / 2);
+	player.y = cast(f32)(GAME_HEIGHT / 4 * 3);
+	player.width = 32.0;
+	player.height = 32.0;
+
+	boss.x = cast(f32)(GAME_WIDTH / 2);
+	boss.y = cast(f32)(GAME_HEIGHT / 4);
+	boss.width = 32.0;
+	boss.height = 32.0;
+}
+
+world_update :: proc(world: *World, delta: f32)
+{
+	player := &world.player;
+	boss := &world.boss;
+
+	player_update(player, delta);
+
+	boss.coroutine.userdata = boss;
+	enemy_script(&boss.coroutine);
+
+	physics_update(player, delta);
+	physics_update(boss, delta);
+}
+
+player_update :: proc(player: *Entity, delta: f32)
+{
+	dir_x := 0.0;
+	dir_y := 0.0;
+
+	if IsKeyDown(KEY_UP)
+	{
+		dir_y -= 1.0;
+	}
+	if IsKeyDown(KEY_DOWN)
+	{
+		dir_y += 1.0;
+	}
+	if IsKeyDown(KEY_LEFT)
+	{
+		dir_x -= 1.0;
+	}
+	if IsKeyDown(KEY_RIGHT)
+	{
+		dir_x += 1.0;
+	}
+
+	if dir_x != 0.0 && dir_y != 0.0
+	{
+		dir_x *= 0.70710678118654752440084436210485;
+		dir_y *= 0.70710678118654752440084436210485;
+	}
+
+	move_speed := 4.5;
+
+	player.vel_x = dir_x*move_speed;
+	player.vel_y = dir_y*move_speed;
+}
+
+physics_update :: proc(entity: *Entity, delta: f32)
+{
+	entity.x += entity.vel_x*delta;
+	entity.y += entity.vel_y*delta;
+
+	entity.vel_x += entity.acc_x*delta;
+	entity.vel_y += entity.acc_y*delta;
+}
+
+world_draw :: proc(world: *World)
+{
+	player := &world.player;
+	boss := &world.boss;
+
+	entity_draw(player, 0xffffffff);
+	entity_draw(boss, 0xffffffff);
+}
+
+entity_draw :: proc(entity: *Entity, color: u32)
+{
+	DrawRectangle(cast(i32)(entity.x - entity.width*0.5),
+				  cast(i32)(entity.y - entity.height*0.5),
+				  cast(i32)entity.width,
+				  cast(i32)entity.height,
+				  GetColor(color));
+}

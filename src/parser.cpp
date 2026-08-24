@@ -1410,7 +1410,7 @@ ParseStatement(Parser *parser,
 			{TokenKind_MinusEqual,   BinaryOp_Subtract},
 			{TokenKind_PercentEqual, BinaryOp_Modulo},
 			{TokenKind_StarEqual,    BinaryOp_Multiply},
-			{TokenKind_SlashEqual,   BinaryOp_Multiply},
+			{TokenKind_SlashEqual,   BinaryOp_Divide},
 		};
 
 		for (auto &it : operators)
@@ -1586,6 +1586,21 @@ ParseMacroDefinition(Parser *parser,
 	}
 
 	AdvanceToken(parser, lexer); // eat the ')'
+
+	while (parser->current.kind == TokenKind_Hash)
+	{
+		AdvanceToken(parser, lexer); // eat the '#'
+
+		if (parser->current.str == "no_bind")
+		{
+			ExpectToken(parser, lexer, TokenKind_Identifier);
+			node->dontBind = true;
+		}
+		else
+		{
+			UnexpectedCurrentToken(parser);
+		}
+	}
 
 	node->body = ParseBlock(parser, lexer, arena);
 

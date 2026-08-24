@@ -1,4 +1,4 @@
-foo :: proc(state: *CoroutineState) #coroutine
+foo :: proc(coroutine: *Coroutine) #coroutine
 {
 	print 1;
 	yield;
@@ -11,11 +11,11 @@ foo :: proc(state: *CoroutineState) #coroutine
 
 main :: proc() -> int
 {
-	state: CoroutineState;
+	coroutine: Coroutine;
 
-	foo(&state);
-	foo(&state);
-	foo(&state);
+	foo(&coroutine);
+	foo(&coroutine);
+	foo(&coroutine);
 
 	return 0;
 }
