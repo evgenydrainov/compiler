@@ -1261,7 +1261,7 @@ AnalyzeExpression(Node *baseNode,
 				instContext.arguments = node->expressions;
 
 				int numStatements = node->numExpressions + 1;
-				if (!macro->decl->dontBind)
+				if (macro->decl->dontBind)
 				{
 					numStatements = 1;
 				}

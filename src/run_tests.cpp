@@ -204,4 +204,13 @@ int main()
 
 	//TestReturnCode("main", 0);
 	TestCompiles("main");
+
+	if (_chdir("..\\03_bullet_hell") != 0)
+	{
+		fprintf(stderr, "_chdir failed\n");
+		exit(1);
+	}
+
+	//TestReturnCode("main", 0);
+	TestCompiles("main");
 }

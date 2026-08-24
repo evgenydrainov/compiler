@@ -133,7 +133,7 @@ SizeOfType(Type type)
 		case TypeKind_Float64: {result = 8;} break;
 
 		case TypeKind_Pointer:      {result = 8;} break;
-		case TypeKind_Bool:         {result = 8;} break;
+		case TypeKind_Bool:         {result = 1;} break;
 		case TypeKind_Enum:         {result = 8;} break;
 		case TypeKind_Slice:        {result = 16;} break;
 		case TypeKind_DynamicArray: {result = 24;} break;
