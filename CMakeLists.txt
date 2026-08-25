@@ -14,6 +14,7 @@ add_executable(
     src/base/base_defer.h
     src/base/base_enum.h
     src/base/base_file.h
+    src/base/base_list.h
     src/base/base_slice.h
     src/base/base_static_bump_array.h
     src/base/base_string.h

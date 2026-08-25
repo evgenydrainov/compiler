@@ -614,11 +614,13 @@ ReinterpretNode(SrcType *node)
 	static_assert(sizeof(DestType) <= sizeof(SrcType));
 
 	SourceLocation location = node->location;
+	Node *next = node->next;
 
 	DestType *newNode = (DestType *)node;
 	*newNode = {};
 	newNode->kind = DestType::KIND;
 	newNode->location = location;
+	newNode->next = next;
 
 	return newNode;
 }
@@ -756,11 +758,10 @@ InstantiateMacro(Node *baseNode,
 			BlockNode *node = As<BlockNode>(baseNode);
 
 			BlockNode *result = MakeNode<BlockNode>(node->location, arena);
-			result->statements = push_bump_array<Node *>(arena, node->statements.count);
-			for (auto it : node->statements)
+			for (Node *it : node->statements)
 			{
 				Node *statement = InstantiateMacro(it, context);
-				array_add(&result->statements, statement);
+				list_append(&result->statements, statement);
 			}
 
 			return result;
@@ -1266,7 +1267,7 @@ AnalyzeExpression(Node *baseNode,
 					numStatements = 1;
 				}
 
-				auto statements = push_bump_array<Node *>(context->arenaForAst, numStatements);
+				list<Node> statements = {};
 
 				if (!macro->decl->dontBind)
 				{
@@ -1279,13 +1280,13 @@ AnalyzeExpression(Node *baseNode,
 						varDecl->expr = node->expressions[i];
 						varDecl->type.kind = TypeKind_InferMe;
 
-						array_add(&statements, (Node *)varDecl);
+						list_append(&statements, (Node *)varDecl);
 					}
 				}
 
 				{
 					Node *instantiated = InstantiateMacro(macro->decl->body, &instContext);
-					array_add(&statements, instantiated);
+					list_append(&statements, instantiated);
 				}
 
 				BlockNode *newNode = ReinterpretNode<BlockNode>(node);

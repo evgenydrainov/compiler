@@ -85,6 +85,8 @@ struct Node
 	Type inferredType;
 
 	int paramCopyOffset;
+
+	Node *next;
 };
 
 struct BinaryNode : public Node
@@ -148,7 +150,8 @@ struct BlockNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_Block;
 
-	bump_array<Node *> statements;
+	list<Node> statements;
+
 	int stackSize;
 };
 

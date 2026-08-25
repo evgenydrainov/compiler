@@ -687,14 +687,9 @@ ParseBlock(Parser *parser,
 		   Lexer *lexer,
 		   Arena *arena)
 {
-	const int MAX_STATEMENTS = 1024;
-
-	SourceLocation openBraceTokenLocation = parser->current.location;
+	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
 
 	ExpectToken(parser, lexer, TokenKind_OpenBrace);
-
-	BlockNode *block = MakeNode<BlockNode>(openBraceTokenLocation, arena);
-	block->statements = push_bump_array<Node *>(arena, MAX_STATEMENTS);
 
 	while (parser->current.kind != TokenKind_CloseBrace
 		   && !parser->hadError)
@@ -707,7 +702,7 @@ ParseBlock(Parser *parser,
 
 		if (statement)
 		{
-			array_add(&block->statements, statement);
+			list_append(&block->statements, statement);
 		}
 		else
 		{
@@ -769,10 +764,7 @@ ParseCaseBlock(Parser *parser,
 		return ParseBlock(parser, lexer, arena);
 	}
 
-	const int MAX_STATEMENTS = 1024;
-
 	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
-	block->statements = push_bump_array<Node *>(arena, MAX_STATEMENTS);
 
 	while (parser->current.kind != TokenKind_Case
 		   && parser->current.kind != TokenKind_CloseBrace
@@ -786,7 +778,7 @@ ParseCaseBlock(Parser *parser,
 
 		if (statement)
 		{
-			array_add(&block->statements, statement);
+			list_append(&block->statements, statement);
 		}
 		else
 		{
@@ -874,7 +866,6 @@ ParseForeachStatement(Parser *parser,
 					  Arena *arena)
 {
 	BlockNode *blockNode = MakeNode<BlockNode>(parser->current.location, arena);
-	blockNode->statements = push_bump_array<Node *>(arena, 2);
 
 	AdvanceToken(parser, lexer); // eat the 'for'
 
@@ -922,7 +913,7 @@ ParseForeachStatement(Parser *parser,
 			varDeclNode->expr = to;
 			varDeclNode->type.kind = TypeKind_InferMe;
 
-			array_add(&blockNode->statements, (Node *)varDeclNode);
+			list_append(&blockNode->statements, (Node *)varDeclNode);
 		}
 
 		ForNode *forNode = MakeNode<ForNode>(parser->current.location, arena);
@@ -981,7 +972,7 @@ ParseForeachStatement(Parser *parser,
 
 		forNode->body = ParseBlock(parser, lexer, arena);
 
-		array_add(&blockNode->statements, (Node *)forNode);
+		list_append(&blockNode->statements, (Node *)forNode);
 
 		return blockNode;
 	}
@@ -1009,7 +1000,7 @@ ParseForeachStatement(Parser *parser,
 			varDeclNode->expr = thing;
 			varDeclNode->type.kind = TypeKind_InferMe;
 
-			array_add(&blockNode->statements, (Node *)varDeclNode);
+			list_append(&blockNode->statements, (Node *)varDeclNode);
 		}
 
 		ForNode *forNode = MakeNode<ForNode>(parser->current.location, arena);
@@ -1059,7 +1050,6 @@ ParseForeachStatement(Parser *parser,
 		}
 
 		BlockNode *loopBody = MakeNode<BlockNode>(parser->current.location, arena);
-		loopBody->statements = push_bump_array<Node *>(arena, 2);
 
 		{
 			// it := $thing_copy[$it_index];
@@ -1084,17 +1074,17 @@ ParseForeachStatement(Parser *parser,
 				varDeclNode->expr = arrayIndexAccess;
 			}
 
-			array_add(&loopBody->statements, (Node *)varDeclNode);
+			list_append(&loopBody->statements, (Node *)varDeclNode);
 		}
 
 		{
 			Node *actualLoopBody = ParseBlock(parser, lexer, arena);
-			array_add(&loopBody->statements, actualLoopBody);
+			list_append(&loopBody->statements, actualLoopBody);
 		}
 
 		forNode->body = loopBody;
 
-		array_add(&blockNode->statements, (Node *)forNode);
+		list_append(&blockNode->statements, (Node *)forNode);
 
 		return blockNode;
 	}
@@ -1775,10 +1765,7 @@ ParseProgram(Parser *parser,
 			 Lexer *lexer,
 			 Arena *arena)
 {
-	const int MAX_STATEMENTS = 1024;
-
-	BlockNode *block = MakeNode<BlockNode>({}, arena);
-	block->statements = push_bump_array<Node *>(arena, MAX_STATEMENTS);
+	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
 
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_EOF)
@@ -1791,7 +1778,7 @@ ParseProgram(Parser *parser,
 
 		if (statement)
 		{
-			array_add(&block->statements, statement);
+			list_append(&block->statements, statement);
 		}
 		else
 		{
