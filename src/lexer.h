@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "base/base.h"
 
 enum TokenKind : u32
 {
@@ -219,7 +219,7 @@ struct Lexer
 	char *lineStart;
 	int line;
 
-	StaticBumpArray<LexerFrame, MAX_INCLUDE_DEPTH> includeStack;
+	static_bump_array<LexerFrame, MAX_INCLUDE_DEPTH> includeStack;
 
 	LexerContext *context;
 };

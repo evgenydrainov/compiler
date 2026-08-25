@@ -9,16 +9,18 @@ project(compiler)
 
 add_executable(
     compiler
+    src/base/base_arena.h
+    src/base/base_bump_array.h
+    src/base/base_defer.h
+    src/base/base_enum.h
+    src/base/base_file.h
+    src/base/base_slice.h
+    src/base/base_static_bump_array.h
+    src/base/base_string.h
+    src/base/base_types.h
+    src/base/base.h
     src/codegen.cpp
     src/codegen.h
-    src/common.h
-    src/common_arena.h
-    src/common_array.h
-    src/common_defer.h
-    src/common_file.cpp
-    src/common_file.h
-    src/common_string.h
-    src/common_types.h
     src/compiler.cpp
     src/compiler.h
     src/constants_table.h

@@ -1,11 +1,6 @@
 #pragma once
 
-#include "common_arena.h"
-#include "common_array.h"
-#include "common_defer.h"
-#include "common_file.h"
-#include "common_string.h"
-#include "common_types.h"
+#include "base_types.h"
 
 #define DEFINE_ENUM_WITH_VALUES(Type, Underlying, List) \
 	enum Type : Underlying                              \

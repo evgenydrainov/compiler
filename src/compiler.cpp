@@ -377,7 +377,7 @@ Compile(CompileOptions *options)
 	codegenContext.funcTable = semanticContext.funcTable;
 	codegenContext.cstringLiterals = semanticContext.cstringLiterals;
 	codegenContext.stringLiterals = semanticContext.stringLiterals;
-	codegenContext.deferStack = PushBumpArray<Node *>(&arena, 256);
+	codegenContext.deferStack = push_bump_array<Node *>(&arena, 256);
 
 	string asmFilePath = string_concat(options->outputFilePath, ".asm");
 	string objFilePath = string_concat(options->outputFilePath, ".obj");

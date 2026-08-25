@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "base/base.h"
 #include "type.h"
 
 struct TypeTable

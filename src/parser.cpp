@@ -160,7 +160,7 @@ ParseType(Parser *parser,
 	{
 		Type type = {};
 		type.kind = TypeKind_Pointer;
-		type.pointerTo = PushStruct<Type>(arena);
+		type.pointerTo = push_struct<Type>(arena);
 
 		AdvanceToken(parser, lexer); // eat the '*'
 
@@ -177,7 +177,7 @@ ParseType(Parser *parser,
 		{
 			Type type = {};
 			type.kind = TypeKind_Slice;
-			type.arrayElementType = PushStruct<Type>(arena);
+			type.arrayElementType = push_struct<Type>(arena);
 
 			ExpectToken(parser, lexer, TokenKind_CloseBracket);
 
@@ -192,7 +192,7 @@ ParseType(Parser *parser,
 
 			Type type = {};
 			type.kind = TypeKind_DynamicArray;
-			type.arrayElementType = PushStruct<Type>(arena);
+			type.arrayElementType = push_struct<Type>(arena);
 
 			ExpectToken(parser, lexer, TokenKind_CloseBracket);
 
@@ -203,7 +203,7 @@ ParseType(Parser *parser,
 
 		Type type = {};
 		type.kind = TypeKind_Array;
-		type.arrayElementType = PushStruct<Type>(arena);
+		type.arrayElementType = push_struct<Type>(arena);
 		type.arrayLengthExpr = ParseExpression(parser, lexer, 0, arena);
 
 		ExpectToken(parser, lexer, TokenKind_CloseBracket);
@@ -479,7 +479,7 @@ ParseAtom_Inner(Parser *parser,
 
 			CallNode *node = MakeNode<CallNode>(parser->current.location, arena);
 			node->name = parser->current.str;
-			node->expressions = PushArray<Node *>(arena, MAX_ARGUMENTS);
+			node->expressions = push_array<Node *>(arena, MAX_ARGUMENTS);
 			node->numExpressions = 0;
 
 			AdvanceToken(parser, lexer); // eat the function name
@@ -694,7 +694,7 @@ ParseBlock(Parser *parser,
 	ExpectToken(parser, lexer, TokenKind_OpenBrace);
 
 	BlockNode *block = MakeNode<BlockNode>(openBraceTokenLocation, arena);
-	block->statements = PushBumpArray<Node *>(arena, MAX_STATEMENTS);
+	block->statements = push_bump_array<Node *>(arena, MAX_STATEMENTS);
 
 	while (parser->current.kind != TokenKind_CloseBrace
 		   && !parser->hadError)
@@ -772,7 +772,7 @@ ParseCaseBlock(Parser *parser,
 	const int MAX_STATEMENTS = 1024;
 
 	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
-	block->statements = PushBumpArray<Node *>(arena, MAX_STATEMENTS);
+	block->statements = push_bump_array<Node *>(arena, MAX_STATEMENTS);
 
 	while (parser->current.kind != TokenKind_Case
 		   && parser->current.kind != TokenKind_CloseBrace
@@ -874,7 +874,7 @@ ParseForeachStatement(Parser *parser,
 					  Arena *arena)
 {
 	BlockNode *blockNode = MakeNode<BlockNode>(parser->current.location, arena);
-	blockNode->statements = PushBumpArray<Node *>(arena, 2);
+	blockNode->statements = push_bump_array<Node *>(arena, 2);
 
 	AdvanceToken(parser, lexer); // eat the 'for'
 
@@ -1059,7 +1059,7 @@ ParseForeachStatement(Parser *parser,
 		}
 
 		BlockNode *loopBody = MakeNode<BlockNode>(parser->current.location, arena);
-		loopBody->statements = PushBumpArray<Node *>(arena, 2);
+		loopBody->statements = push_bump_array<Node *>(arena, 2);
 
 		{
 			// it := $thing_copy[$it_index];
@@ -1127,7 +1127,7 @@ ParseSwitchStatement(Parser *parser,
 
 	ExpectToken(parser, lexer, TokenKind_OpenBrace);
 
-	node->cases = PushBumpArray<CaseNode *>(arena, 64);
+	node->cases = push_bump_array<CaseNode *>(arena, 64);
 
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseBrace)
@@ -1451,7 +1451,7 @@ ParseFunctionDefinition(Parser *parser,
 
 	FuncNode *node = MakeNode<FuncNode>(parser->current.location, arena);
 	node->name = parser->current.str;
-	node->params = PushArray<Node *>(arena, MAX_ARGUMENTS);
+	node->params = push_array<Node *>(arena, MAX_ARGUMENTS);
 	node->numParams = 0;
 
 	// eat the function name
@@ -1616,7 +1616,7 @@ ParseStructDefinition(Parser *parser,
 
 	StructDeclNode *node = MakeNode<StructDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
-	node->fields = PushBumpArray<StructFieldDeclNode *>(arena, MAX_STRUCT_FIELDS);
+	node->fields = push_bump_array<StructFieldDeclNode *>(arena, MAX_STRUCT_FIELDS);
 
 	AdvanceToken(parser, lexer); // eat the struct name
 
@@ -1658,7 +1658,7 @@ ParseEnumDefinition(Parser *parser,
 
 	EnumDeclNode *node = MakeNode<EnumDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
-	node->enumerators = PushBumpArray<EnumeratorDeclNode *>(arena, MAX_ENUMERATORS);
+	node->enumerators = push_bump_array<EnumeratorDeclNode *>(arena, MAX_ENUMERATORS);
 
 	AdvanceToken(parser, lexer); // eat the enum name
 
@@ -1778,7 +1778,7 @@ ParseProgram(Parser *parser,
 	const int MAX_STATEMENTS = 1024;
 
 	BlockNode *block = MakeNode<BlockNode>({}, arena);
-	block->statements = PushBumpArray<Node *>(arena, MAX_STATEMENTS);
+	block->statements = push_bump_array<Node *>(arena, MAX_STATEMENTS);
 
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_EOF)

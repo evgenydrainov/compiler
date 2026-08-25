@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "base/base.h"
 
 struct Constant
 {
@@ -10,7 +10,7 @@ struct Constant
 
 struct ConstantsTable
 {
-	StaticBumpArray<Constant, 256> constants;
+	static_bump_array<Constant, 256> constants;
 };
 
 inline Constant *

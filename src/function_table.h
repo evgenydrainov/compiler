@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "base/base.h"
 #include "type.h"
 
 struct Parameter
@@ -12,7 +12,7 @@ struct Function
 {
 	string name;
 
-	StaticBumpArray<Parameter, 32> params;
+	static_bump_array<Parameter, 32> params;
 
 	Type returnType;
 

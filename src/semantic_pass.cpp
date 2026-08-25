@@ -756,7 +756,7 @@ InstantiateMacro(Node *baseNode,
 			BlockNode *node = As<BlockNode>(baseNode);
 
 			BlockNode *result = MakeNode<BlockNode>(node->location, arena);
-			result->statements = PushBumpArray<Node *>(arena, node->statements.count);
+			result->statements = push_bump_array<Node *>(arena, node->statements.count);
 			for (auto it : node->statements)
 			{
 				Node *statement = InstantiateMacro(it, context);
@@ -805,7 +805,7 @@ InstantiateMacro(Node *baseNode,
 
 			CallNode *result = MakeNode<CallNode>(node->location, arena);
 			result->name = node->name;
-			result->expressions = PushArray<Node *>(arena, node->numExpressions);
+			result->expressions = push_array<Node *>(arena, node->numExpressions);
 			result->numExpressions = node->numExpressions;
 			for (int i = 0; i < node->numExpressions; i++)
 			{
@@ -1266,7 +1266,7 @@ AnalyzeExpression(Node *baseNode,
 					numStatements = 1;
 				}
 
-				auto statements = PushBumpArray<Node *>(context->arenaForAst, numStatements);
+				auto statements = push_bump_array<Node *>(context->arenaForAst, numStatements);
 
 				if (!macro->decl->dontBind)
 				{
@@ -2029,7 +2029,7 @@ EarlyAnalyze(Node *baseNode,
 				Type *type = DeclareType(context->typeTable, node->name);
 
 				type->kind = TypeKind_Struct;
-				type->structInfo = PushStruct<StructInfo>(arena);
+				type->structInfo = push_struct<StructInfo>(arena);
 				type->structInfo->name = node->name;
 
 				int offset = 0;
@@ -2085,7 +2085,7 @@ EarlyAnalyze(Node *baseNode,
 				Type *type = DeclareType(context->typeTable, node->name);
 
 				type->kind = TypeKind_Enum;
-				type->enumInfo = PushStruct<EnumInfo>(arena);
+				type->enumInfo = push_struct<EnumInfo>(arena);
 				type->enumInfo->name = node->name;
 
 				i64 enumeratorValue = 0;
@@ -2180,15 +2180,15 @@ SemanticPass(Node *_program,
 			 SemanticContext *context,
 			 Arena *arena)
 {
-	context->cstringLiterals = PushBumpArray<GenerateCStringLiteral>(arena, 32);
-	context->stringLiterals  = PushBumpArray<GenerateStringLiteral>(arena, 32);
+	context->cstringLiterals = push_bump_array<GenerateCStringLiteral>(arena, 32);
+	context->stringLiterals  = push_bump_array<GenerateStringLiteral>(arena, 32);
 
-	context->funcTable   = PushStruct<FunctionTable>(arena);
-	context->symTable    = PushStruct<SymbolTable>(arena);
-	context->globalTable = PushStruct<SymbolTable>(arena);
-	context->typeTable   = PushStruct<TypeTable>(arena);
-	context->constTable  = PushStruct<ConstantsTable>(arena);
-	context->macroTable  = PushStruct<MacroTable>(arena);
+	context->funcTable   = push_struct<FunctionTable>(arena);
+	context->symTable    = push_struct<SymbolTable>(arena);
+	context->globalTable = push_struct<SymbolTable>(arena);
+	context->typeTable   = push_struct<TypeTable>(arena);
+	context->constTable  = push_struct<ConstantsTable>(arena);
+	context->macroTable  = push_struct<MacroTable>(arena);
 
 	BlockNode *program = As<BlockNode>(_program);
 	for (Node *it : program->statements)

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common_types.h"
-#include "common_arena.h"
+#include "base_types.h"
+#include "base_arena.h"
 
 #include <stdio.h> // for snprintf
 #include <stdarg.h> // for varargs
@@ -120,7 +120,7 @@ string_concat(string a, string b)
 {
 	string result;
 	result.count = a.count + b.count;
-	result.data = (char *)PushSize(&g_tempMemory, result.count);
+	result.data = (char *)push_size(&g_tempMemory, result.count);
 
 	MemCpy(result.data, a.data, a.count);
 
@@ -132,7 +132,7 @@ string_concat(string a, string b)
 inline char *
 to_cstring(string str)
 {
-	char *result = (char *)PushSize(&g_tempMemory, str.count + 1);
+	char *result = (char *)push_size(&g_tempMemory, str.count + 1);
 
 	MemCpy(result, str.data, str.count);
 
@@ -171,7 +171,7 @@ tprintf(char *format, ...)
 
 	int length = vsnprintf(nullptr, 0, format, args);
 
-	char *buffer = (char *)PushSize(&g_tempMemory, length+1);
+	char *buffer = (char *)push_size(&g_tempMemory, length+1);
 	vsnprintf(buffer, length+1, format, args);
 
 	va_end(args);

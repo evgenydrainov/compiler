@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common_types.h"
+#include "base_types.h"
 
 template <typename T>
 struct ExitScope

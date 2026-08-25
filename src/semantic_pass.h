@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "base/base.h"
 #include "parser.h"
 
 struct SymbolTable;
@@ -26,8 +26,8 @@ struct SemanticContext
 
 	Node *currentLoop;
 
-	BumpArray<GenerateCStringLiteral> cstringLiterals;
-	BumpArray<GenerateStringLiteral> stringLiterals;
+	bump_array<GenerateCStringLiteral> cstringLiterals;
+	bump_array<GenerateStringLiteral> stringLiterals;
 
 	Arena *arenaForAst;
 

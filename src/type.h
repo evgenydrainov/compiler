@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "base/base.h"
 
 #define TYPE_KIND_LIST(X) \
 	X(TypeKind_Unknown,       0,    "unknown type"     ) \
@@ -57,7 +57,7 @@ struct StructField
 struct StructInfo
 {
 	string name;
-	StaticBumpArray<StructField, 32> fields;
+	static_bump_array<StructField, 32> fields;
 	int size;
 	int alignment;
 };
@@ -71,7 +71,7 @@ struct EnumeratorInfo
 struct EnumInfo
 {
 	string name;
-	StaticBumpArray<EnumeratorInfo, 32> enumerators;
+	static_bump_array<EnumeratorInfo, 32> enumerators;
 };
 
 inline bool

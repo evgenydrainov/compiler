@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "base/base.h"
 #include "lexer.h"
 #include "type.h"
 
@@ -148,7 +148,7 @@ struct BlockNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_Block;
 
-	BumpArray<Node *> statements;
+	bump_array<Node *> statements;
 	int stackSize;
 };
 
@@ -260,7 +260,7 @@ struct StructDeclNode : public Node
 	static constexpr NodeKind KIND = NodeKind_StructDecl;
 
 	string name;
-	BumpArray<StructFieldDeclNode *> fields;
+	bump_array<StructFieldDeclNode *> fields;
 };
 
 struct FieldAccessNode : public Node
@@ -323,7 +323,7 @@ struct EnumDeclNode : public Node
 	static constexpr NodeKind KIND = NodeKind_EnumDecl;
 
 	string name;
-	BumpArray<EnumeratorDeclNode *> enumerators;
+	bump_array<EnumeratorDeclNode *> enumerators;
 };
 
 struct CastNode : public Node
@@ -390,7 +390,7 @@ struct SwitchNode : public Node
 	static constexpr NodeKind KIND = NodeKind_Switch;
 
 	Node *expr;
-	BumpArray<CaseNode *> cases;
+	bump_array<CaseNode *> cases;
 	Node *defaultBody;
 };
 
@@ -413,7 +413,7 @@ struct MacroDeclNode : public Node
 	string name;
 	Node *body;
 
-	StaticBumpArray<ParamNode *, 32> params;
+	static_bump_array<ParamNode *, 32> params;
 
 	bool dontBind;
 };
@@ -457,7 +457,7 @@ inline T *
 MakeNode(SourceLocation location,
 		 Arena *arena)
 {
-	T *node = PushStruct<T>(arena);
+	T *node = push_struct<T>(arena);
 	node->kind = T::KIND;
 	node->location = location;
 

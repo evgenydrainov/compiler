@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "base/base.h"
 #include "parser.h"
 #include <stdio.h>
 
@@ -20,10 +20,10 @@ struct CodegenContext
 
 	Type currentReturnType;
 
-	BumpArray<GenerateCStringLiteral> cstringLiterals;
-	BumpArray<GenerateStringLiteral> stringLiterals;
+	bump_array<GenerateCStringLiteral> cstringLiterals;
+	bump_array<GenerateStringLiteral> stringLiterals;
 
-	BumpArray<Node *> deferStack;
+	bump_array<Node *> deferStack;
 };
 
 void Generate_x86_64(Node *_program,

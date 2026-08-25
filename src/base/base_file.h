@@ -1,7 +1,10 @@
 #pragma once
 
-#include "common_types.h"
-#include "common_string.h"
+#include "base_types.h"
+#include "base_string.h"
+
+#include <stdlib.h> // for malloc
+#include <stdio.h> // for fopen
 
 #ifdef _WIN32
 
@@ -22,7 +25,7 @@ GetFullPathNameA(char *lpFileName,
 inline string
 get_executable_filepath()
 {
-	char *buf = (char *)PushSize(&g_tempMemory, 260);
+	char *buf = (char *)push_size(&g_tempMemory, 260);
 
 	u32 size = GetModuleFileNameA(nullptr, buf, 260);
 	Assert(size != 0);
@@ -45,7 +48,7 @@ get_absolute_filepath(string relative_path)
 		return {};
 	}
 
-	char *absolute_path = (char *)PushSize(&g_tempMemory, absolute_path_size);
+	char *absolute_path = (char *)push_size(&g_tempMemory, absolute_path_size);
 
 	u32 written = GetFullPathNameA(relative_path_cstr, absolute_path_size, absolute_path, nullptr);
 	if (!(written != 0 && written < absolute_path_size))
@@ -66,16 +69,46 @@ get_absolute_filepath(string relative_path)
 
 #endif
 
-string read_entire_file(char *filepath);
+inline string
+read_entire_file(char *filepath)
+{
+	string result = {};
+	
+	FILE *file;
+	fopen_s(&file, filepath, "rb");
+	if (file)
+	{
+		fseek(file, 0, SEEK_END);
+		usize fileSize = ftell(file);
 
-string read_entire_file(string filepath);
+		char *fileData = (char *)malloc(fileSize + 1);
+		if (fileData)
+		{
+			fseek(file, 0, SEEK_SET);
+			if (fread(fileData, 1, fileSize, file) == fileSize)
+			{
+				fileData[fileSize] = 0;
+				result = {fileData, fileSize};
+			}
+		}
+		
+		fclose(file);
+	}
+
+	return result;
+}
+
+inline string
+read_entire_file(string filepath)
+{
+	char *cstr = to_cstring(filepath);
+	return read_entire_file(cstr);
+}
 
 inline string
 get_executable_dir()
 {
-	string executableFilePath = get_executable_filepath();
-
-	string executableFileDir = strip_filename(executableFilePath);
-
-	return executableFileDir;
+	string exe_file_path = get_executable_filepath();
+	string exe_file_dir = strip_filename(exe_file_path);
+	return exe_file_dir;
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common_types.h"
+#include "base_types.h"
 
 constexpr usize DEFAULT_ALIGNMENT = 2 * sizeof(void *);
 
@@ -14,9 +14,9 @@ struct Arena
 extern Arena g_tempMemory;
 
 inline void *
-PushSize(Arena *arena,
-		 usize size,
-		 usize alignment = DEFAULT_ALIGNMENT)
+push_size(Arena *arena,
+		  usize size,
+		  usize alignment = DEFAULT_ALIGNMENT)
 {
 	usize alignedPos = align_forward(arena->pos, alignment);
 
@@ -41,25 +41,25 @@ PushSize(Arena *arena,
 
 template <typename T>
 inline T *
-PushStruct(Arena *arena)
+push_struct(Arena *arena)
 {
-	T *result = (T *)PushSize(arena, sizeof(T));
+	T *result = (T *)push_size(arena, sizeof(T));
 	return result;
 }
 
 template <typename T>
 inline T *
-PushArray(Arena *arena, usize count)
+push_array(Arena *arena, usize count)
 {
-	T *result = (T *)PushSize(arena, count*sizeof(T));
+	T *result = (T *)push_size(arena, count*sizeof(T));
 	return result;
 }
 
 inline Arena
-PushArena(Arena *arena, usize capacity)
+push_arena(Arena *arena, usize capacity)
 {
 	Arena result = {};
-	result.data = (u8 *)PushSize(arena, capacity);
+	result.data = (u8 *)push_size(arena, capacity);
 	result.capacity = capacity;
 
 	return result;

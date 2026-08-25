@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "base/base.h"
 
 struct MacroDeclNode;
 
@@ -12,7 +12,7 @@ struct Macro
 
 struct MacroTable
 {
-	StaticBumpArray<Macro, 128> macros;
+	static_bump_array<Macro, 128> macros;
 };
 
 inline Macro *
