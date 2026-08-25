@@ -2145,6 +2145,8 @@ EarlyAnalyze(Node *baseNode,
 
 			if (!LookupSymbol(context->globalTable, node->name, 0))
 			{
+				ResolveType(&node->type, context, node);
+
 				DeclareSymbol(context->globalTable, node->name, node->type);
 
 				if (node->expr)
