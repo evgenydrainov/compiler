@@ -3,22 +3,12 @@
 #include "base/base.h"
 #include "type.h"
 
-struct Parameter
-{
-	Type type;
-};
-
 struct Function
 {
 	string name;
-
-	static_bump_array<Parameter, 32> params;
-
-	Type returnType;
-
 	string linkName;
 
-	bool isVariadic;
+	ProcInfo *info;
 };
 
 struct FunctionTable

@@ -44,7 +44,9 @@
 	X(NodeKind_Case,              36,    ""   ) \
 	X(NodeKind_NullLiteral,       37,    ""   ) \
 	X(NodeKind_Sizeof,            38,    ""   ) \
-	X(NodeKind_MacroDecl,         39,    ""   )
+	X(NodeKind_MacroDecl,         39,    ""   ) \
+	X(NodeKind_ProcRef,           40,    ""   ) \
+	X(NodeKind_MacroRef,          41,    ""   )
 
 DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
@@ -179,19 +181,28 @@ struct PrintNode : public Node
 	Node *expr;
 };
 
+struct ParamNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Param;
+
+	string name;
+	int stackOffset;
+	Type type;
+};
+
 struct FuncNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_Func;
 
 	string name;
+	string linkName;
+
 	Node *body;
 	Type returnType;
 
-	Node **params;
-	int numParams;
+	slice<ParamNode *> params;
 
 	bool isForeign;
-	string foreignLinkName;
 
 	bool isCoroutine;
 	int yieldIndex;
@@ -203,14 +214,14 @@ struct CallNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_Call;
 
-	string name;
+	Node *callee;
 
-	Node **expressions;
-	int numExpressions;
-
-	string linkName;
+	slice<Node *> arguments;
 
 	int returnSlotOffset;
+	
+	ProcInfo *signature;
+	int calleeSlotOffset;
 };
 
 struct ReturnNode : public Node
@@ -218,15 +229,6 @@ struct ReturnNode : public Node
 	static constexpr NodeKind KIND = NodeKind_Return;
 
 	Node *expr;
-};
-
-struct ParamNode : public Node
-{
-	static constexpr NodeKind KIND = NodeKind_Param;
-
-	string name;
-	int stackOffset;
-	Type type;
 };
 
 struct BoolNode : public Node
@@ -421,6 +423,22 @@ struct MacroDeclNode : public Node
 	bool dontBind;
 };
 
+struct ProcRefNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_ProcRef;
+
+	string linkName;
+};
+
+struct Macro;
+
+struct MacroRefNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_MacroRef;
+
+	Macro *macro;
+};
+
 template <typename T>
 inline T *
 As(Node *node)
@@ -513,16 +531,6 @@ MakeVarDeclNodeInfer(SourceLocation location,
 	node->name = varName;
 	node->expr = expr;
 	node->type.kind = TypeKind_InferMe;
-	return node;
-}
-
-inline CallNode *
-MakeCallNode(SourceLocation location,
-			 string name,
-			 Arena *arena)
-{
-	CallNode *node = MakeNode<CallNode>(location, arena);
-	node->name = name;
 	return node;
 }
 

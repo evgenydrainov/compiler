@@ -160,11 +160,11 @@ ParseType(Parser *parser,
 	{
 		Type type = {};
 		type.kind = TypeKind_Pointer;
-		type.pointerTo = push_struct<Type>(arena);
+		type.pointee = push_struct<Type>(arena);
 
 		AdvanceToken(parser, lexer); // eat the '*'
 
-		*type.pointerTo = ParseType(parser, lexer, arena);
+		*type.pointee = ParseType(parser, lexer, arena);
 
 		return type;
 	}
@@ -209,6 +209,44 @@ ParseType(Parser *parser,
 		ExpectToken(parser, lexer, TokenKind_CloseBracket);
 
 		*type.arrayElementType = ParseType(parser, lexer, arena);
+
+		return type;
+	}
+
+	if (parser->current.kind == TokenKind_Proc)
+	{
+		AdvanceToken(parser, lexer); // eat the 'proc'
+
+		static_bump_array<Type, 32> params = {};
+
+		ExpectToken(parser, lexer, TokenKind_OpenParen);
+
+		while (!parser->hadError
+			   && parser->current.kind != TokenKind_CloseParen)
+		{
+			if (params.count != 0)
+			{
+				ExpectToken(parser, lexer, TokenKind_Comma);
+			}
+
+			Type param = ParseType(parser, lexer, arena);
+			array_add(&params, param);
+		}
+
+		ExpectToken(parser, lexer, TokenKind_CloseParen);
+
+		Type type = {};
+		type.kind = TypeKind_Proc;
+		type.procInfo = push_struct<ProcInfo>(arena);
+		type.procInfo->returnType.kind = TypeKind_Void;
+		type.procInfo->params = copy_into_slice(params, arena);
+
+		if (parser->current.kind == TokenKind_Arrow)
+		{
+			AdvanceToken(parser, lexer); // eat the '->'
+
+			type.procInfo->returnType = ParseType(parser, lexer, arena);
+		}
 
 		return type;
 	}
@@ -323,6 +361,33 @@ ParseType(Parser *parser,
 
 	UnexpectedCurrentToken(parser);
 	return {};
+}
+
+internal void
+ParseCallArguments(Parser *parser,
+				   Lexer *lexer,
+				   CallNode *node,
+				   Arena *arena)
+{
+	static_bump_array<Node *, 32> arguments = {};
+
+	AdvanceToken(parser, lexer); // eat the '('
+
+	while (!parser->hadError
+		   && parser->current.kind != TokenKind_CloseParen)
+	{
+		if (arguments.count != 0)
+		{
+			ExpectToken(parser, lexer, TokenKind_Comma);
+		}
+
+		Node *argument = ParseExpression(parser, lexer, 0, arena);
+		array_add(&arguments, argument);
+	}
+
+	node->arguments = copy_into_slice(arguments, arena);
+
+	ExpectToken(parser, lexer, TokenKind_CloseParen);
 }
 
 internal Node *
@@ -467,53 +532,17 @@ ParseAtom_Inner(Parser *parser,
 
 		return node;
 	}
-			
+
 	if (parser->current.kind == TokenKind_Identifier)
 	{
-		if (PeekToken(lexer).kind == TokenKind_OpenParen)
-		{
-			// function call
-			// foo(a, b, c)
+		// variable access
 
-			const int MAX_ARGUMENTS = 32;
+		VarNode *node = MakeNode<VarNode>(parser->current.location, arena);
+		node->name = parser->current.str;
 
-			CallNode *node = MakeNode<CallNode>(parser->current.location, arena);
-			node->name = parser->current.str;
-			node->expressions = push_array<Node *>(arena, MAX_ARGUMENTS);
-			node->numExpressions = 0;
+		AdvanceToken(parser, lexer);
 
-			AdvanceToken(parser, lexer); // eat the function name
-			AdvanceToken(parser, lexer); // eat the '('
-
-			while (!parser->hadError
-					&& parser->current.kind != TokenKind_CloseParen)
-			{
-				if (node->numExpressions != 0)
-				{
-					ExpectToken(parser, lexer, TokenKind_Comma);
-				}
-
-				Assert(node->numExpressions < MAX_ARGUMENTS);
-				node->expressions[node->numExpressions] = ParseExpression(parser, lexer, 0, arena);
-
-				node->numExpressions++;
-			}
-
-			ExpectToken(parser, lexer, TokenKind_CloseParen);
-
-			return node;
-		}
-		else
-		{
-			// variable access
-
-			VarNode *node = MakeNode<VarNode>(parser->current.location, arena);
-			node->name = parser->current.str;
-
-			AdvanceToken(parser, lexer);
-
-			return node;
-		}
+		return node;
 	}
 
 	if (parser->current.kind == TokenKind_True)
@@ -588,7 +617,8 @@ ParseAtom(Parser *parser,
 	}
 
 	while (parser->current.kind == TokenKind_Dot
-		   || parser->current.kind == TokenKind_OpenBracket)
+		   || parser->current.kind == TokenKind_OpenBracket
+		   || parser->current.kind == TokenKind_OpenParen)
 	{
 		if (parser->current.kind == TokenKind_Dot)
 		{
@@ -613,6 +643,15 @@ ParseAtom(Parser *parser,
 			node->indexExpr = ParseExpression(parser, lexer, 0, arena);
 
 			ExpectToken(parser, lexer, TokenKind_CloseBracket);
+
+			result = node;
+		}
+		else if (parser->current.kind == TokenKind_OpenParen)
+		{
+			CallNode *node = MakeNode<CallNode>(parser->current.location, arena);
+			node->callee = result;
+
+			ParseCallArguments(parser, lexer, node, arena);
 
 			result = node;
 		}
@@ -1437,12 +1476,10 @@ ParseFunctionDefinition(Parser *parser,
 	// function definition
 	// main :: proc(foo: int) -> i64 { statements; }
 
-	const int MAX_ARGUMENTS = 32;
+	static_bump_array<ParamNode *, 32> params = {};
 
 	FuncNode *node = MakeNode<FuncNode>(parser->current.location, arena);
 	node->name = parser->current.str;
-	node->params = push_array<Node *>(arena, MAX_ARGUMENTS);
-	node->numParams = 0;
 
 	// eat the function name
 	AdvanceToken(parser, lexer);
@@ -1457,7 +1494,7 @@ ParseFunctionDefinition(Parser *parser,
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseParen)
 	{
-		if (node->numParams != 0)
+		if (params.count != 0)
 		{
 			ExpectToken(parser, lexer, TokenKind_Comma);
 		}
@@ -1471,11 +1508,10 @@ ParseFunctionDefinition(Parser *parser,
 
 		param->type = ParseType(parser, lexer, arena);
 
-		Assert(node->numParams < MAX_ARGUMENTS);
-		node->params[node->numParams] = param;
-
-		node->numParams++;
+		array_add(&params, param);
 	}
+
+	node->params = copy_into_slice(params, arena);
 
 	AdvanceToken(parser, lexer); // eat the ')'
 
@@ -1488,6 +1524,8 @@ ParseFunctionDefinition(Parser *parser,
 		node->returnType = ParseType(parser, lexer, arena);
 	}
 
+	node->linkName = node->name;
+
 	while (parser->current.kind == TokenKind_Hash)
 	{
 		AdvanceToken(parser, lexer); // eat the '#'
@@ -1498,11 +1536,11 @@ ParseFunctionDefinition(Parser *parser,
 
 			if (parser->current.kind == TokenKind_String)
 			{
-				node->foreignLinkName = parser->current.str;
+				node->linkName = parser->current.str;
 
-				Assert(node->foreignLinkName.count >= 2);
-				node->foreignLinkName.data++;
-				node->foreignLinkName.count -= 2;
+				Assert(node->linkName.count >= 2);
+				node->linkName.data++;
+				node->linkName.count -= 2;
 
 				AdvanceToken(parser, lexer);
 			}

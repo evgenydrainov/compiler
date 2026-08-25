@@ -4,16 +4,12 @@
 #include "parser.h"
 #include <stdio.h>
 
-struct FunctionTable;
-
 struct CodegenContext
 {
 	FILE *out;
 
 	int uniqueLabelId;
 	int stackDepth;
-
-	FunctionTable *funcTable;
 
 	int currentLoopUniqueId;
 	usize currentLoopDeferFloor;

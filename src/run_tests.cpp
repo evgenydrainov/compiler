@@ -132,6 +132,7 @@ run_tests()
 	TestReturnCode("24_slices_foreach_ptr", 0);
 	TestReturnCode("25_dynamic_array", 0);
 	TestReturnCode("26_macro", 0);
+	TestReturnCode("27_function_pointers", 0);
 }
 
 internal void

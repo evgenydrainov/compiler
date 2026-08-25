@@ -1,5 +1,4 @@
 #include "codegen.h"
-#include "function_table.h"
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -228,7 +227,7 @@ GenerateLValueAddress(Node *baseNode,
 			{
 				GenerateExpression(node->arrayExpr, context);
 
-				size = SizeOfType(*node->arrayExpr->inferredType.pointerTo);
+				size = SizeOfType(*node->arrayExpr->inferredType.pointee);
 			}
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Array)
 			{
@@ -731,6 +730,17 @@ GenerateExpression(Node *baseNode,
 			Emit(context, "");
 		} break;
 
+		case NodeKind_ProcRef:
+		{
+			ProcRefNode *node = As<ProcRefNode>(baseNode);
+
+			Emit(context, "    lea rax, [" STR_FMT "]\t; load address of procedure " STR_FMT_QUOTED,
+				 STR_ARG(node->linkName),
+				 STR_ARG(node->linkName));
+			Emit(context, "    push rax");
+			Emit(context, "");
+		} break;
+
 		case NodeKind_Binary:
 		{
 			GenerateBinaryExpression(baseNode, context);
@@ -931,19 +941,22 @@ GenerateExpression(Node *baseNode,
 				"r9",
 			};
 
-			Function *function = LookupFunction(context->funcTable, node->name);
-			Assert(function);
-
 			bool hiddenReturnArg = !IsRegisterSized(node->inferredType);
 
-			int numExpressions = node->numExpressions;
+			int numArguments = (int)node->arguments.count;
 			if (hiddenReturnArg)
 			{
-				numExpressions++;
+				numArguments++;
 			}
 
-			int numArgumentsInRegs = Min(numExpressions, 4);
-			int numArgumentsOnStack = numExpressions - numArgumentsInRegs;
+			int numArgumentsInRegs = Min(numArguments, 4);
+			int numArgumentsOnStack = numArguments - numArgumentsInRegs;
+
+			GenerateExpression(node->callee, context);
+
+			Emit(context, "    pop rax");
+			Emit(context, "    mov qword [rbp - %d], rax\t; save the call target",
+				 node->calleeSlotOffset);
 
 			int padding = ((context->stackDepth + numArgumentsOnStack) % 2) ? 8 : 0;
 			if (padding)
@@ -962,12 +975,12 @@ GenerateExpression(Node *baseNode,
 					}
 					else
 					{
-						return node->expressions[i - 1];
+						return node->arguments[i - 1];
 					}
 				}
 				else
 				{
-					return node->expressions[i];
+					return node->arguments[i];
 				}
 			};
 
@@ -982,33 +995,33 @@ GenerateExpression(Node *baseNode,
 					else
 					{
 						int index = i - 1;
-						if (index < function->params.count)
+						if (index < node->signature->params.count)
 						{
-							return &function->params[index].type;
+							return &node->signature->params[index];
 						}
 						else
 						{
-							Assert(function->isVariadic);
-							return &node->expressions[index]->inferredType;
+							Assert(node->signature->isVariadic);
+							return &node->arguments[index]->inferredType;
 						}
 					}
 				}
 				else
 				{
 					int index = i;
-					if (index < function->params.count)
+					if (index < node->signature->params.count)
 					{
-						return &function->params[index].type;
+						return &node->signature->params[index];
 					}
 					else
 					{
-						Assert(function->isVariadic);
-						return &node->expressions[index]->inferredType;
+						Assert(node->signature->isVariadic);
+						return &node->arguments[index]->inferredType;
 					}
 				}
 			};
 
-			for (int i = numExpressions;
+			for (int i = numArguments;
 				 i--;)
 			{
 				Node *expr = GetExpr(i);
@@ -1067,7 +1080,7 @@ GenerateExpression(Node *baseNode,
 					Emit(context, "    pop rax\t\t\t; put argument");
 					Emit(context, "    movd xmm%d, eax", i);
 
-					if (function->isVariadic)
+					if (node->signature->isVariadic)
 					{
 						// do promotion
 						Emit(context, "    cvtss2sd xmm%d, xmm%d", i, i);
@@ -1081,7 +1094,7 @@ GenerateExpression(Node *baseNode,
 					Emit(context, "    pop rax\t\t\t; put argument");
 					Emit(context, "    movq xmm%d, rax", i);
 
-					if (function->isVariadic)
+					if (node->signature->isVariadic)
 					{
 						// also copy to regular register
 						Emit(context, "    movq %s, xmm%d", paramRegs[i], i);
@@ -1095,7 +1108,9 @@ GenerateExpression(Node *baseNode,
 			Emit(context, "");
 
 			Emit(context, "    sub rsp, 32\t\t; reserve shadow space");
-			Emit(context, "    call " STR_FMT, STR_ARG(node->linkName));
+
+			Emit(context, "    call qword [rbp - %d]", node->calleeSlotOffset);
+
 			Emit(context, "    add rsp, 32\t\t; free shadow space");
 
 			if (numArgumentsOnStack + padding/8 > 0)
@@ -1577,7 +1592,7 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			bool hiddenReturnArg = !IsRegisterSized(node->returnType);
 
-			int numParams = node->numParams;
+			int numParams = (int)node->params.count;
 			if (hiddenReturnArg)
 			{
 				numParams++;
@@ -1824,22 +1839,13 @@ Generate_x86_64(Node *_program,
 		{
 			FuncNode *node = As<FuncNode>(it);
 
-			string linkName = node->name;
 			if (node->isForeign)
 			{
-				if (node->foreignLinkName.count > 0)
-				{
-					linkName = node->foreignLinkName;
-				}
-			}
-
-			if (node->isForeign)
-			{
-				fprintf(out, "extern " STR_FMT "\n", STR_ARG(linkName));
+				fprintf(out, "extern " STR_FMT "\n", STR_ARG(node->linkName));
 			}
 			else
 			{
-				fprintf(out, "global " STR_FMT "\n", STR_ARG(linkName));
+				fprintf(out, "global " STR_FMT "\n", STR_ARG(node->linkName));
 			}
 		}
 	}

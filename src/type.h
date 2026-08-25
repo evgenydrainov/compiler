@@ -26,22 +26,34 @@
 	X(TypeKind_Enum,         16,    "enum"             ) \
 	X(TypeKind_Array,        17,    "array"            ) \
 	X(TypeKind_Slice,        18,    "slice"            ) \
-	X(TypeKind_DynamicArray, 19,    "dynamic array"    )
+	X(TypeKind_DynamicArray, 19,    "dynamic array"    ) \
+	X(TypeKind_Proc,         20,    "proc"             )
 
 DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
 
 struct StructInfo;
 struct EnumInfo;
+struct ProcInfo;
 struct Node;
 
 struct Type
 {
 	TypeKind kind;
 	string name;
-	Type *pointerTo;
+
+	// TypeKind_Pointer
+	Type *pointee;
+
+	// TypeKind_Struct
 	StructInfo *structInfo;
+
+	// TypeKind_Enum
 	EnumInfo *enumInfo;
 
+	// TypeKind_Proc
+	ProcInfo *procInfo;
+
+	// TypeKind_Array, TypeKind_Slice, TypeKind_DynamicArray
 	Type *arrayElementType;
 	Node *arrayLengthExpr;
 	int arrayLength;
@@ -74,13 +86,54 @@ struct EnumInfo
 	static_bump_array<EnumeratorInfo, 32> enumerators;
 };
 
+struct ProcInfo
+{
+	slice<Type> params;
+	Type returnType;
+	bool isVariadic;
+};
+
+inline bool
+TypesEqual(Type a, Type b);
+
+inline bool
+AreEqual(ProcInfo *a, ProcInfo *b)
+{
+	if (a->params.count != b->params.count)
+	{
+		return false;
+	}
+
+	if (a->isVariadic != b->isVariadic)
+	{
+		return false;
+	}
+
+	if (!TypesEqual(a->returnType, b->returnType))
+	{
+		return false;
+	}
+
+	for (usize i = 0;
+		 i < a->params.count;
+		 i++)
+	{
+		if (!TypesEqual(a->params[i], b->params[i]))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 inline bool
 TypesEqual(Type a, Type b)
 {
 	if (a.kind == TypeKind_Pointer
 		&& b.kind == TypeKind_Pointer)
 	{
-		return TypesEqual(*a.pointerTo, *b.pointerTo);
+		return TypesEqual(*a.pointee, *b.pointee);
 	}
 
 	if (a.kind == TypeKind_Struct
@@ -109,6 +162,12 @@ TypesEqual(Type a, Type b)
 		return TypesEqual(*a.arrayElementType, *b.arrayElementType);
 	}
 
+	if (a.kind == TypeKind_Proc
+		&& b.kind == TypeKind_Proc)
+	{
+		return AreEqual(a.procInfo, b.procInfo);
+	}
+
 	return a.kind == b.kind;
 }
 
@@ -132,11 +191,12 @@ SizeOfType(Type type)
 		case TypeKind_Float32: {result = 4;} break;
 		case TypeKind_Float64: {result = 8;} break;
 
-		case TypeKind_Pointer:      {result = 8;} break;
-		case TypeKind_Bool:         {result = 1;} break;
-		case TypeKind_Enum:         {result = 8;} break;
+		case TypeKind_Pointer:      {result = 8;}  break;
+		case TypeKind_Bool:         {result = 1;}  break;
+		case TypeKind_Enum:         {result = 8;}  break;
 		case TypeKind_Slice:        {result = 16;} break;
 		case TypeKind_DynamicArray: {result = 24;} break;
+		case TypeKind_Proc:         {result = 8;}  break;
 
 		// NOTE: the size of a void type is asked when a function checks if
 		// it has a large struct return value

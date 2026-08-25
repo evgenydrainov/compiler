@@ -327,12 +327,25 @@ ResolveType(Type *type,
 	}
 	else if (type->kind == TypeKind_Pointer)
 	{
-		ResolveType(type->pointerTo, context, nodeForError);
+		ResolveType(type->pointee, context, nodeForError);
 	}
 	else if (type->kind == TypeKind_Slice
 			 || type->kind == TypeKind_DynamicArray)
 	{
 		ResolveType(type->arrayElementType, context, nodeForError);
+	}
+	else if (type->kind == TypeKind_Proc)
+	{
+		Assert(type->procInfo);
+
+		for (usize i = 0;
+			 i < type->procInfo->params.count;
+			 i++)
+		{
+			ResolveType(&type->procInfo->params[i], context, nodeForError);
+		}
+
+		ResolveType(&type->procInfo->returnType, context, nodeForError);
 	}
 }
 
@@ -475,10 +488,11 @@ CanImplicitlyCast(Type destType,
 		}
 	}
 
-	if (destType.kind == TypeKind_Pointer)
+	if (destType.kind == TypeKind_Pointer
+		|| destType.kind == TypeKind_Proc)
 	{
 		if (source->inferredType.kind == TypeKind_Pointer
-			&& source->inferredType.pointerTo->kind == TypeKind_Void)
+			&& source->inferredType.pointee->kind == TypeKind_Void)
 		{
 			// allow *void to cast into any pointer for now
 			// foo: *int = null;
@@ -487,7 +501,7 @@ CanImplicitlyCast(Type destType,
 	}
 
 	if (destType.kind == TypeKind_Pointer
-		&& destType.pointerTo->kind == TypeKind_Void)
+		&& destType.pointee->kind == TypeKind_Void)
 	{
 		if (source->inferredType.kind == TypeKind_Pointer)
 		{
@@ -631,7 +645,7 @@ struct InstantiateContext
 	MacroDeclNode *decl;
 	int uniqueId;
 
-	Node **arguments;
+	slice<Node *> arguments;
 };
 
 internal Node *
@@ -696,7 +710,7 @@ InstantiateMacro(Node *baseNode,
 
 			if (decl)
 			{
-				for (int i = 0; i < (int)decl->params.count; i++)
+				for (int i = 0; i < decl->params.count; i++)
 				{
 					if (decl->params[i]->name == node->name)
 					{
@@ -805,12 +819,11 @@ InstantiateMacro(Node *baseNode,
 			CallNode *node = As<CallNode>(baseNode);
 
 			CallNode *result = MakeNode<CallNode>(node->location, arena);
-			result->name = node->name;
-			result->expressions = push_array<Node *>(arena, node->numExpressions);
-			result->numExpressions = node->numExpressions;
-			for (int i = 0; i < node->numExpressions; i++)
+			result->callee = InstantiateMacro(node->callee, context);
+			result->arguments = push_slice<Node *>(arena, node->arguments.count);
+			for (usize i = 0; i < node->arguments.count; i++)
 			{
-				result->expressions[i] = InstantiateMacro(node->expressions[i], context);
+				result->arguments[i] = InstantiateMacro(node->arguments[i], context);
 			}
 
 			return result;
@@ -1041,7 +1054,7 @@ AnalyzeExpression(Node *baseNode,
 			local_persist Type voidType = { TypeKind_Void };
 
 			baseNode->inferredType.kind = TypeKind_Pointer;
-			baseNode->inferredType.pointerTo = &voidType;
+			baseNode->inferredType.pointee = &voidType;
 		} break;
 
 		case NodeKind_String:
@@ -1065,7 +1078,7 @@ AnalyzeExpression(Node *baseNode,
 			baseNode->inferredType.kind = TypeKind_Pointer;
 
 			local_persist Type uint8Type = { TypeKind_UInt8 };
-			baseNode->inferredType.pointerTo = &uint8Type;
+			baseNode->inferredType.pointee = &uint8Type;
 
 			CStringNode *node = As<CStringNode>(baseNode);
 
@@ -1170,84 +1183,13 @@ AnalyzeExpression(Node *baseNode,
 				break;
 			}
 
-			Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
-		} break;
-
-		case NodeKind_Call:
-		{
-			CallNode *node = As<CallNode>(baseNode);
-
 			Function *function = LookupFunction(context->funcTable, node->name);
 			if (function)
 			{
-				bool good = (node->numExpressions == function->params.count);
-
-				if (function->isVariadic)
-				{
-					good = (node->numExpressions >= function->params.count);
-				}
-
-				if (good)
-				{
-					for (int i = 0;
-						 i < node->numExpressions;
-						 i++)
-					{
-						Node *expr = node->expressions[i];
-
-						AnalyzeExpression(expr, context);
-					}
-
-					for (usize i = 0;
-						 i < function->params.count;
-						 i++)
-					{
-						Node *expr = node->expressions[i];
-
-						ResolveType(&function->params[i].type, context, node);
-
-						if (CanImplicitlyCast(function->params[i].type, expr, context))
-						{
-							if (!IsRegisterSized(function->params[i].type))
-							{
-								expr->paramCopyOffset = ReserveSpace(context->symTable, function->params[i].type);
-							}
-						}
-						else
-						{
-							Error(context, expr,
-								  "cannot pass '%s' as argument %d of " STR_FMT_QUOTED ": expected '%s'",
-								  GetTypeKindPrettyName(expr->inferredType.kind),
-								  (int)(i + 1),
-								  STR_ARG(function->name),
-								  GetTypeKindPrettyName(function->params[i].type.kind));
-						}
-					}
-
-					ResolveType(&function->returnType, context, node);
-
-					node->inferredType = function->returnType;
-					node->linkName = function->linkName;
-
-					if (!IsRegisterSized(node->inferredType))
-					{
-						// TODO: is this alignment correct?
-						context->symTable->stackSize = (int)align_forward(context->symTable->stackSize, 16);
-
-						node->returnSlotOffset = ReserveSpace(context->symTable, node->inferredType);
-					}
-				}
-				else
-				{
-					Error(context, node,
-						  "cannot call " STR_FMT_QUOTED ": it takes %s%d argument%s, but %d %s given",
-						  STR_ARG(function->name),
-						  function->isVariadic ? "at least " : "",
-						  (int)function->params.count,
-						  (function->params.count == 1) ? "" : "s",
-						  node->numExpressions,
-						  (node->numExpressions == 1) ? "was" : "were");
-				}
+				ProcRefNode *newNode = ReinterpretNode<ProcRefNode>(node);
+				newNode->linkName = function->linkName;
+				newNode->inferredType.kind = TypeKind_Proc;
+				newNode->inferredType.procInfo = function->info;
 
 				break;
 			}
@@ -1255,29 +1197,42 @@ AnalyzeExpression(Node *baseNode,
 			Macro *macro = LookupMacro(context->macroTable, node->name);
 			if (macro)
 			{
+				MacroRefNode *newNode = ReinterpretNode<MacroRefNode>(node);
+				newNode->macro = macro;
+
+				break;
+			}
+
+			Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
+		} break;
+
+		case NodeKind_Call:
+		{
+			CallNode *node = As<CallNode>(baseNode);
+
+			AnalyzeExpression(node->callee, context);
+
+			if (node->callee->kind == NodeKind_MacroRef)
+			{
+				Macro *macro = As<MacroRefNode>(node->callee)->macro;
+
 				InstantiateContext instContext;
 				instContext.arena = context->arenaForAst;
 				instContext.decl = macro->decl;
 				instContext.uniqueId = ++context->macroInstantiationUniqueId;
-				instContext.arguments = node->expressions;
-
-				int numStatements = node->numExpressions + 1;
-				if (macro->decl->dontBind)
-				{
-					numStatements = 1;
-				}
+				instContext.arguments = node->arguments;
 
 				list<Node> statements = {};
 
 				if (!macro->decl->dontBind)
 				{
-					for (int i = 0; i < node->numExpressions; i++)
+					for (int i = 0; i < node->arguments.count; i++)
 					{
 						string name = tprintf("$arg_%d_%d", i, instContext.uniqueId);
 
 						VarDeclNode *varDecl = MakeNode<VarDeclNode>(node->location, context->arenaForAst);
 						varDecl->name = name;
-						varDecl->expr = node->expressions[i];
+						varDecl->expr = node->arguments[i];
 						varDecl->type.kind = TypeKind_InferMe;
 
 						list_append(&statements, (Node *)varDecl);
@@ -1296,8 +1251,73 @@ AnalyzeExpression(Node *baseNode,
 
 				break;
 			}
-			
-			Error(context, node, "undeclared procedure " STR_FMT_QUOTED, STR_ARG(node->name));
+
+			if (node->callee->inferredType.kind != TypeKind_Proc)
+			{
+				Error(context, node->callee, "cannot call a value of type '%s'",
+					  GetTypeKindPrettyName(node->callee->inferredType.kind));
+				break;
+			}
+
+			node->signature = node->callee->inferredType.procInfo;
+			node->calleeSlotOffset = ReserveSpace(context->symTable, node->callee->inferredType);
+
+			bool good = ((node->signature->isVariadic)
+						 ? (node->arguments.count >= node->signature->params.count)
+						 : (node->arguments.count == node->signature->params.count));
+			if (!good)
+			{
+				Error(context, node,
+					  "cannot call: expected %s%d argument%s, but %d %s given",
+					  node->signature->isVariadic ? "at least " : "",
+					  (int)node->signature->params.count,
+					  (node->signature->params.count == 1) ? "" : "s",
+					  (int)node->arguments.count,
+					  (node->arguments.count == 1) ? "was" : "were");
+				break;
+			}
+
+			for (Node *expr : node->arguments)
+			{
+				AnalyzeExpression(expr, context);
+			}
+
+			for (usize i = 0;
+				 i < node->signature->params.count;
+				 i++)
+			{
+				Node *expr = node->arguments[i];
+
+				ResolveType(&node->signature->params[i], context, node);
+
+				if (CanImplicitlyCast(node->signature->params[i], expr, context))
+				{
+					if (!IsRegisterSized(node->signature->params[i]))
+					{
+						expr->paramCopyOffset = ReserveSpace(context->symTable, node->signature->params[i]);
+					}
+				}
+				else
+				{
+					Error(context, expr,
+						  "cannot pass '%s' as argument %d: expected '%s'",
+						  GetTypeKindPrettyName(expr->inferredType.kind),
+						  (int)(i + 1),
+						  GetTypeKindPrettyName(node->signature->params[i].kind));
+				}
+			}
+
+			ResolveType(&node->signature->returnType, context, node);
+
+			node->inferredType = node->signature->returnType;
+
+			if (!IsRegisterSized(node->inferredType))
+			{
+				// TODO: is this alignment correct?
+				context->symTable->stackSize = (int)align_forward(context->symTable->stackSize, 16);
+
+				node->returnSlotOffset = ReserveSpace(context->symTable, node->inferredType);
+			}
 		} break;
 
 		case NodeKind_AddressOf:
@@ -1309,7 +1329,7 @@ AnalyzeExpression(Node *baseNode,
 			if (IsLValue(node->what))
 			{
 				node->inferredType.kind = TypeKind_Pointer;
-				node->inferredType.pointerTo = &node->what->inferredType;
+				node->inferredType.pointee = &node->what->inferredType;
 			}
 			else
 			{
@@ -1327,7 +1347,7 @@ AnalyzeExpression(Node *baseNode,
 
 			if (node->what->inferredType.kind == TypeKind_Pointer)
 			{
-				node->inferredType = *node->what->inferredType.pointerTo;
+				node->inferredType = *node->what->inferredType.pointee;
 
 				ResolveType(&node->inferredType, context, node);
 			}
@@ -1428,7 +1448,7 @@ AnalyzeExpression(Node *baseNode,
 					if (node->fieldName == "data")
 					{
 						node->inferredType.kind = TypeKind_Pointer;
-						node->inferredType.pointerTo = type->arrayElementType;
+						node->inferredType.pointee = type->arrayElementType;
 						node->fieldOffset = 0;
 					}
 					else if (node->fieldName == "count")
@@ -1462,7 +1482,7 @@ AnalyzeExpression(Node *baseNode,
 					if (node->fieldName == "data")
 					{
 						node->inferredType.kind = TypeKind_Pointer;
-						node->inferredType.pointerTo = type->arrayElementType;
+						node->inferredType.pointee = type->arrayElementType;
 						node->fieldOffset = 0;
 					}
 					else if (node->fieldName == "count")
@@ -1498,14 +1518,14 @@ AnalyzeExpression(Node *baseNode,
 				// auto dereference
 				// pointer.field
 
-				if (node->expr->inferredType.pointerTo->kind == TypeKind_Struct
-					|| node->expr->inferredType.pointerTo->kind == TypeKind_Slice
-					|| node->expr->inferredType.pointerTo->kind == TypeKind_Array
-					|| node->expr->inferredType.pointerTo->kind == TypeKind_DynamicArray)
+				if (node->expr->inferredType.pointee->kind == TypeKind_Struct
+					|| node->expr->inferredType.pointee->kind == TypeKind_Slice
+					|| node->expr->inferredType.pointee->kind == TypeKind_Array
+					|| node->expr->inferredType.pointee->kind == TypeKind_DynamicArray)
 				{
-					ResolveType(node->expr->inferredType.pointerTo, context, node->expr);
+					ResolveType(node->expr->inferredType.pointee, context, node->expr);
 
-					HandleField(node->expr->inferredType.pointerTo);
+					HandleField(node->expr->inferredType.pointee);
 				}
 				else
 				{
@@ -1539,7 +1559,7 @@ AnalyzeExpression(Node *baseNode,
 
 			if (node->arrayExpr->inferredType.kind == TypeKind_Pointer)
 			{
-				node->inferredType = *node->arrayExpr->inferredType.pointerTo;
+				node->inferredType = *node->arrayExpr->inferredType.pointee;
 			}
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Array
 					 || node->arrayExpr->inferredType.kind == TypeKind_Slice
@@ -1919,7 +1939,7 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 				Type voidPtrType = {};
 				voidPtrType.kind = TypeKind_Pointer;
-				voidPtrType.pointerTo = &voidType;
+				voidPtrType.pointee = &voidType;
 
 				// declare the hidden struct pointer, which is the first argument
 				int stackOffset = ReserveSpace(context->symTable, voidPtrType);
@@ -1928,12 +1948,8 @@ AnalyzeTopLevelStatement(Node *baseNode,
 				Assert(stackOffset == 8);
 			}
 
-			for (int i = 0;
-				 i < node->numParams;
-				 i++)
+			for (ParamNode *param : node->params)
 			{
-				ParamNode *param = As<ParamNode>(node->params[i]);
-
 				ResolveType(&param->type, context, param);
 
 				if (!LookupSymbol(context->symTable, param->name, 0))
@@ -1991,28 +2007,16 @@ EarlyAnalyze(Node *baseNode,
 			if (!LookupFunction(context->funcTable, node->name))
 			{
 				Function *func = DeclareFunction(context->funcTable, node->name);
-				func->returnType = node->returnType;
-				func->linkName = node->name;
-				func->isVariadic = node->isVariadic;
+				func->linkName = node->linkName;
 
-				if (node->isForeign)
+				func->info = push_struct<ProcInfo>(arena);
+				func->info->returnType = node->returnType;
+				func->info->isVariadic = node->isVariadic;
+				func->info->params = push_slice<Type>(arena, node->params.count);
+
+				for (usize i = 0; i < node->params.count; i++)
 				{
-					if (node->foreignLinkName.count > 0)
-					{
-						func->linkName = node->foreignLinkName;
-					}
-				}
-
-				for (int paramIndex = 0;
-					 paramIndex < node->numParams;
-					 paramIndex++)
-				{
-					ParamNode *paramNode = As<ParamNode>(node->params[paramIndex]);
-
-					Parameter parameter = {};
-					parameter.type = paramNode->type;
-
-					array_add(&func->params, parameter);
+					func->info->params[i] = node->params[i]->type;
 				}
 			}
 			else

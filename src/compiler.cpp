@@ -374,7 +374,6 @@ Compile(CompileOptions *options)
 	//}
 
 	CodegenContext codegenContext = {};
-	codegenContext.funcTable = semanticContext.funcTable;
 	codegenContext.cstringLiterals = semanticContext.cstringLiterals;
 	codegenContext.stringLiterals = semanticContext.stringLiterals;
 	codegenContext.deferStack = push_bump_array<Node *>(&arena, 256);
