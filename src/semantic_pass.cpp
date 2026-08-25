@@ -2012,6 +2012,7 @@ EarlyAnalyze(Node *baseNode,
 				func->info = push_struct<ProcInfo>(arena);
 				func->info->returnType = node->returnType;
 				func->info->isVariadic = node->isVariadic;
+				func->info->isForeign = node->isForeign;
 				func->info->params = push_slice<Type>(arena, node->params.count);
 
 				for (usize i = 0; i < node->params.count; i++)

@@ -91,6 +91,7 @@ struct ProcInfo
 	slice<Type> params;
 	Type returnType;
 	bool isVariadic;
+	bool isForeign;
 };
 
 inline bool
@@ -105,6 +106,11 @@ AreEqual(ProcInfo *a, ProcInfo *b)
 	}
 
 	if (a->isVariadic != b->isVariadic)
+	{
+		return false;
+	}
+
+	if (a->isForeign != b->isForeign)
 	{
 		return false;
 	}

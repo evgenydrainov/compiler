@@ -734,7 +734,15 @@ GenerateExpression(Node *baseNode,
 		{
 			ProcRefNode *node = As<ProcRefNode>(baseNode);
 
-			Emit(context, "    lea rax, [" STR_FMT "]\t; load address of procedure " STR_FMT_QUOTED,
+			char *prefix = "proc_";
+			if (node->inferredType.procInfo->isForeign
+				|| node->linkName == "main")
+			{
+				prefix = "";
+			}
+
+			Emit(context, "    lea rax, [%s" STR_FMT "]\t; load address of procedure " STR_FMT_QUOTED,
+				 prefix,
 				 STR_ARG(node->linkName),
 				 STR_ARG(node->linkName));
 			Emit(context, "    push rax");
@@ -1572,7 +1580,13 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			context->currentReturnType = node->returnType;
 
-			Emit(context, STR_FMT ":", STR_ARG(node->name));
+			char *prefix = "proc_";
+			if (node->linkName == "main")
+			{
+				prefix = "";
+			}
+
+			Emit(context, "%s" STR_FMT ":", prefix, STR_ARG(node->linkName));
 
 			// doesn't affect stack depth
 			Emit(context, "    push rbp");
@@ -1839,13 +1853,20 @@ Generate_x86_64(Node *_program,
 		{
 			FuncNode *node = As<FuncNode>(it);
 
+			char *prefix = "proc_";
+			if (node->isForeign
+				|| node->linkName == "main")
+			{
+				prefix = "";
+			}
+
 			if (node->isForeign)
 			{
-				fprintf(out, "extern " STR_FMT "\n", STR_ARG(node->linkName));
+				fprintf(out, "extern %s" STR_FMT "\n", prefix, STR_ARG(node->linkName));
 			}
 			else
 			{
-				fprintf(out, "global " STR_FMT "\n", STR_ARG(node->linkName));
+				fprintf(out, "global %s" STR_FMT "\n", prefix, STR_ARG(node->linkName));
 			}
 		}
 	}
