@@ -427,6 +427,7 @@ Compile(CompileOptions *options)
 					"/SUBSYSTEM:CONSOLE",
 					objFilePathCStr,
 					"raylib_x86-64_vs2022_mt.lib",
+					"minicoro_x86-64_vs2022_mt.lib",
 					"libcmt.lib",
 					"legacy_stdio_definitions.lib",
 					"kernel32.lib", "user32.lib", "gdi32.lib", "shell32.lib", "winmm.lib",
@@ -434,6 +435,7 @@ Compile(CompileOptions *options)
 					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\"",
 					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"",
 					"/LIBPATH:\"C:\\Users\\Username\\source\\repos\\compiler\\modules\\raylib\"",
+					"/LIBPATH:\"C:\\Users\\Username\\source\\repos\\compiler\\modules\\minicoro\"",
 					nullptr) != 0)
 		{
 			return CompileResult_LinkerError;

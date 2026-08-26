@@ -12,24 +12,28 @@ Entity :: struct
 	width: f32;
 	height: f32;
 
-	coroutine: Coroutine;
+	co: *mco_coro;
+
+	wait_timer: f32;
 };
 
-wait :: macro(co, time) #no_bind
+wait :: proc(co: *mco_coro, time: f32)
 {
-	for co.i = 0; co.i < time; co.i += 1
+	(cast(*Entity)co.user_data).wait_timer += time;
+	while (cast(*Entity)co.user_data).wait_timer >= 1.0
 	{
-		yield;
+		mco_yield(co);
+		(cast(*Entity)co.user_data).wait_timer -= 1.0;
 	}
 }
 
-enemy_script :: proc(co: *Coroutine) #coroutine
+enemy_script :: proc(co: *mco_coro)
 {
 	while true
 	{
-		wait(co, 60);
+		wait(co, 60.0);
 
-		launch_towards_point(co.userdata,
+		launch_towards_point(co.user_data,
 							 cast(f32)(rand()%GAME_WIDTH),
 							 cast(f32)(rand()%GAME_HEIGHT),
 							 0.1);
@@ -57,6 +61,9 @@ world_init :: proc(world: *World)
 	boss.y = cast(f32)(GAME_HEIGHT / 4);
 	boss.width = 32.0;
 	boss.height = 32.0;
+
+	desc := mco_desc_init(enemy_script, 0);
+	mco_create(&boss.co, &desc);
 }
 
 world_update :: proc(world: *World, delta: f32)
@@ -66,8 +73,8 @@ world_update :: proc(world: *World, delta: f32)
 
 	player_update(player, delta);
 
-	boss.coroutine.userdata = boss;
-	enemy_script(&boss.coroutine);
+	boss.co.user_data = boss;
+	mco_resume(boss.co);
 
 	physics_update(player, delta);
 	physics_update(boss, delta);
