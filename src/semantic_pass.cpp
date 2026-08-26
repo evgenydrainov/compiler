@@ -129,6 +129,12 @@ IsLValue(Node *_node)
 			result = IsLValue(node->what);
 		} break;
 
+		case NodeKind_Proxy:
+		{
+			ProxyNode *node = As<ProxyNode>(_node);
+			result = IsLValue(node->proxy);
+		} break;
+
 		default: {} break;
 	}
 
@@ -623,8 +629,10 @@ AnalyzeBinaryExpression(Node *baseNode,
 
 template <typename DestType, typename SrcType>
 internal DestType *
-ReinterpretNode(SrcType *node)
+ReinterpretNode(SrcType *&node)
 {
+	static_assert(!is_same<SrcType, Node>::value);
+
 	static_assert(sizeof(DestType) <= sizeof(SrcType));
 
 	SourceLocation location = node->location;
@@ -635,6 +643,8 @@ ReinterpretNode(SrcType *node)
 	newNode->kind = DestType::KIND;
 	newNode->location = location;
 	newNode->next = next;
+
+	node = nullptr;
 
 	return newNode;
 }
@@ -1197,10 +1207,46 @@ AnalyzeExpression(Node *baseNode,
 			Macro *macro = LookupMacro(context->macroTable, node->name);
 			if (macro)
 			{
-				MacroRefNode *newNode = ReinterpretNode<MacroRefNode>(node);
-				newNode->macro = macro;
+				if (macro->decl->isExpressionMacro)
+				{
+					InstantiateContext instContext = {};
+					instContext.arena = context->arenaForAst;
+					instContext.decl = macro->decl;
+					instContext.uniqueId = ++context->macroInstantiationUniqueId;
 
-				break;
+					Node *instantiated = InstantiateMacro(macro->decl->body, &instContext);
+
+#if 1
+					ProxyNode *newNode = ReinterpretNode<ProxyNode>(node);
+					newNode->proxy = instantiated;
+
+					AnalyzeExpression(newNode, context, expectedType);
+#else
+					usize destSize = SizeOfNode(node->kind);
+					usize sourceSize = SizeOfNode(instantiated->kind);
+
+					Assert(destSize >= sourceSize);
+
+					SourceLocation location = node->location;
+					Node *next = node->next;
+
+					MemCpy(node, instantiated, sourceSize);
+
+					node->location = location;
+					node->next = next;
+
+					AnalyzeExpression(node, context, expectedType);
+#endif
+
+					break;
+				}
+				else
+				{
+					MacroRefNode *newNode = ReinterpretNode<MacroRefNode>(node);
+					newNode->macro = macro;
+
+					break;
+				}
 			}
 
 			Error(context, node, STR_FMT_QUOTED ": undeclared identifier", STR_ARG(node->name));
@@ -1216,7 +1262,7 @@ AnalyzeExpression(Node *baseNode,
 			{
 				Macro *macro = As<MacroRefNode>(node->callee)->macro;
 
-				InstantiateContext instContext;
+				InstantiateContext instContext = {};
 				instContext.arena = context->arenaForAst;
 				instContext.decl = macro->decl;
 				instContext.uniqueId = ++context->macroInstantiationUniqueId;
@@ -1702,6 +1748,15 @@ AnalyzeExpression(Node *baseNode,
 			{
 				Error(context, node->expr, "switch expression must be an integer or an enum");
 			}
+		} break;
+
+		case NodeKind_Proxy:
+		{
+			ProxyNode *node = As<ProxyNode>(baseNode);
+
+			AnalyzeExpression(node->proxy, context, expectedType);
+
+			node->inferredType = node->proxy->inferredType;
 		} break;
 	}
 }

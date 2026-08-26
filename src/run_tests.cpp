@@ -31,7 +31,7 @@ TestReturnCode(char *testName, int expectedCode)
 					inputPath,
 					nullptr) != 0)
 		{
-			fprintf(stderr, "TEST %s FAILED: compilation error\n", testName);
+			fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": compilation error\n", testName);
 			exit(1);
 		}
 	}
@@ -43,11 +43,11 @@ TestReturnCode(char *testName, int expectedCode)
 		int code = (int)_spawnl(_P_WAIT, exePath, testName, nullptr);
 		if (code != expectedCode)
 		{
-			fprintf(stderr, "TEST %s FAILED: result is %d, but expected %d\n", testName, code, expectedCode);
+			fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": result is %d, but expected %d\n", testName, code, expectedCode);
 			exit(1);
 		}
 
-		printf("Test %s passed (result=%d)\n", testName, code);
+		printf("Test %s " ANSI_COLOR_GREEN "passed" ANSI_COLOR_RESET " (result=%d)\n", testName, code);
 	}
 
 	//clock_t end = clock();
@@ -72,11 +72,11 @@ TestCompileError(char *testName)
 				inputPath,
 				nullptr) == 0)
 	{
-		fprintf(stderr, "TEST %s FAILED: the program compiled, but it was not supposed to.\n", testName);
+		fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": the program compiled, but it was not supposed to.\n", testName);
 		exit(1);
 	}
 
-	printf("Test %s passed\n", testName);
+	printf("Test %s " ANSI_COLOR_GREEN "passed" ANSI_COLOR_RESET "\n", testName);
 }
 
 internal void
@@ -96,11 +96,11 @@ TestCompiles(char *testName)
 				inputPath,
 				nullptr) != 0)
 	{
-		fprintf(stderr, "TEST %s FAILED\n", testName);
+		fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": compilation error\n", testName);
 		exit(1);
 	}
 
-	printf("Test %s passed\n", testName);
+	printf("Test %s " ANSI_COLOR_GREEN "passed" ANSI_COLOR_RESET "\n", testName);
 }
 
 internal void

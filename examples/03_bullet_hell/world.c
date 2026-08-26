@@ -17,13 +17,15 @@ Entity :: struct
 	wait_timer: f32;
 };
 
+this :: macro cast(*Entity)co.user_data;
+
 wait :: proc(co: *mco_coro, time: f32)
 {
-	(cast(*Entity)co.user_data).wait_timer += time;
-	while (cast(*Entity)co.user_data).wait_timer >= 1.0
+	this.wait_timer += time;
+	while this.wait_timer >= 1.0
 	{
 		mco_yield(co);
-		(cast(*Entity)co.user_data).wait_timer -= 1.0;
+		this.wait_timer -= 1.0;
 	}
 }
 

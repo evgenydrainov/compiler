@@ -5,50 +5,56 @@
 #include "type.h"
 
 #define NODE_KIND_LIST(X) \
-	X(NodeKind_Binary,            0,     ""   ) \
-	X(NodeKind_Int64Literal,      1,     ""   ) \
-	X(NodeKind_Float32Literal,    2,     ""   ) \
-	X(NodeKind_Float64Literal,    3,     ""   ) \
-	X(NodeKind_Var,               4,     ""   ) \
-	X(NodeKind_Assign,            5,     ""   ) \
-	X(NodeKind_VarDecl,           6,     ""   ) \
-	X(NodeKind_Block,             7,     ""   ) \
-	X(NodeKind_If,                8,     ""   ) \
-	X(NodeKind_While,             9,     ""   ) \
-	X(NodeKind_Print,             10,    ""   ) \
-	X(NodeKind_Func,              11,    ""   ) \
-	X(NodeKind_Call,              12,    ""   ) \
-	X(NodeKind_Return,            13,    ""   ) \
-	X(NodeKind_Param,             14,    ""   ) \
-	X(NodeKind_Bool,              15,    ""   ) \
-	X(NodeKind_AddressOf,         16,    ""   ) \
-	X(NodeKind_Deref,             17,    ""   ) \
-	X(NodeKind_StructDecl,        18,    ""   ) \
-	X(NodeKind_StructFieldDecl,   19,    ""   ) \
-	X(NodeKind_FieldAccess,       20,    ""   ) \
-	X(NodeKind_ArrayIndexAccess,  21,    ""   ) \
-	X(NodeKind_String,            22,    ""   ) \
-	X(NodeKind_CString,           23,    ""   ) \
-	X(NodeKind_Unary,             24,    ""   ) \
-	X(NodeKind_Asm,               25,    ""   ) \
-	X(NodeKind_EnumDecl,          26,    ""   ) \
-	X(NodeKind_EnumeratorDecl,    27,    ""   ) \
-	X(NodeKind_Cast,              28,    ""   ) \
-	X(NodeKind_ConstantDecl,      29,    ""   ) \
-	X(NodeKind_Yield,             30,    ""   ) \
-	X(NodeKind_Break,             31,    ""   ) \
-	X(NodeKind_Continue,          32,    ""   ) \
-	X(NodeKind_For,               33,    ""   ) \
-	X(NodeKind_Defer,             34,    ""   ) \
-	X(NodeKind_Switch,            35,    ""   ) \
-	X(NodeKind_Case,              36,    ""   ) \
-	X(NodeKind_NullLiteral,       37,    ""   ) \
-	X(NodeKind_Sizeof,            38,    ""   ) \
-	X(NodeKind_MacroDecl,         39,    ""   ) \
-	X(NodeKind_ProcRef,           40,    ""   ) \
-	X(NodeKind_MacroRef,          41,    ""   )
+	X(Binary) \
+	X(Int64Literal) \
+	X(Float32Literal) \
+	X(Float64Literal) \
+	X(Var) \
+	X(Assign) \
+	X(VarDecl) \
+	X(Block) \
+	X(If) \
+	X(While) \
+	X(Print) \
+	X(Func) \
+	X(Call) \
+	X(Return) \
+	X(Param) \
+	X(Bool) \
+	X(AddressOf) \
+	X(Deref) \
+	X(StructDecl) \
+	X(StructFieldDecl) \
+	X(FieldAccess) \
+	X(ArrayIndexAccess) \
+	X(String) \
+	X(CString) \
+	X(Unary) \
+	X(Asm) \
+	X(EnumDecl) \
+	X(EnumeratorDecl) \
+	X(Cast) \
+	X(ConstantDecl) \
+	X(Yield) \
+	X(Break) \
+	X(Continue) \
+	X(For) \
+	X(Defer) \
+	X(Switch) \
+	X(Case) \
+	X(NullLiteral) \
+	X(Sizeof) \
+	X(MacroDecl) \
+	X(ProcRef) \
+	X(MacroRef) \
+	X(Proxy)
 
-DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
+#define GENERATE_NODE_KIND_ENUM(Name) NodeKind_##Name,
+
+enum NodeKind : u32
+{
+	NODE_KIND_LIST(GENERATE_NODE_KIND_ENUM)
+};
 
 #define BINARY_OP_LIST(X) \
 	X(BinaryOp_Add,            0,    "add"          ) \
@@ -72,12 +78,12 @@ DEFINE_ENUM_WITH_VALUES(NodeKind, u32, NODE_KIND_LIST);
 
 DEFINE_ENUM_WITH_VALUES(BinaryOp, u32, BINARY_OP_LIST);
 
-#define UNARY_OP_LIST(X) \
-	X(UnaryOp_Negate,          0,    ""  ) \
-	X(UnaryOp_LogicalNot,      1,    ""  ) \
-	X(UnaryOp_BitNegate,       2,    ""  )
-
-DEFINE_ENUM_WITH_VALUES(UnaryOp, u32, UNARY_OP_LIST);
+enum UnaryOp : u32
+{
+	UnaryOp_Negate,
+	UnaryOp_LogicalNot,
+	UnaryOp_BitNegate,
+};
 
 struct Node
 {
@@ -125,6 +131,8 @@ struct VarNode : public Node
 	string name;
 	int stackOffset;
 	bool isGlobal;
+
+	// u8 dummy[64];
 };
 
 struct Int64LiteralNode : public Node
@@ -421,6 +429,7 @@ struct MacroDeclNode : public Node
 	static_bump_array<ParamNode *, 32> params;
 
 	bool dontBind;
+	bool isExpressionMacro;
 };
 
 struct ProcRefNode : public Node
@@ -439,12 +448,32 @@ struct MacroRefNode : public Node
 	Macro *macro;
 };
 
+struct ProxyNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Proxy;
+
+	Node *proxy;
+};
+
 template <typename T>
 inline T *
 As(Node *node)
 {
 	Assert(node->kind == T::KIND);
 	return static_cast<T *>(node);
+}
+
+#define GENERATE_NODE_KIND_ENUM_SIZE(Name) case NodeKind_##Name: return sizeof(Name##Node);
+
+inline usize
+SizeOfNode(NodeKind kind)
+{
+	switch (kind)
+	{
+		NODE_KIND_LIST(GENERATE_NODE_KIND_ENUM_SIZE)
+	}
+	Assert(false);
+	return 0;
 }
 
 struct Parser

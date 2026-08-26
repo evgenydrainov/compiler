@@ -1147,6 +1147,13 @@ GenerateExpression(Node *baseNode,
 
 			GenerateLValueAddress(node->what, context);
 		} break;
+
+		case NodeKind_Proxy:
+		{
+			ProxyNode *node = As<ProxyNode>(baseNode);
+
+			GenerateExpression(node->proxy, context);
+		} break;
 	}
 }
 
