@@ -1565,7 +1565,7 @@ ParseFunctionDefinition(Parser *parser,
 		}
 	}
 
-	if (!node->isForeign)
+	if (parser->current.kind == TokenKind_OpenBrace)
 	{
 		node->body = ParseBlock(parser, lexer, arena);
 	}

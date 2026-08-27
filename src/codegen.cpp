@@ -1578,7 +1578,7 @@ GenerateTopLevelStatement(Node *baseNode,
 		{
 			FuncNode *node = As<FuncNode>(baseNode);
 
-			if (node->isForeign)
+			if (!node->body)
 			{
 				break;
 			}
@@ -1588,7 +1588,8 @@ GenerateTopLevelStatement(Node *baseNode,
 			context->currentReturnType = node->returnType;
 
 			char *prefix = "proc_";
-			if (node->linkName == "main")
+			if (node->isForeign
+				|| node->linkName == "main")
 			{
 				prefix = "";
 			}
