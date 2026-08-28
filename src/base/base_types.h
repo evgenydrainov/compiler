@@ -144,6 +144,12 @@ struct is_same<T, T>
 	static constexpr bool value = true;
 };
 
+template <typename T>
+struct identity
+{
+	typedef T type;
+};
+
 #define ANSI_COLOR_RESET   "\x1b[0m"
 #define ANSI_COLOR_BLACK   "\x1b[30m"
 #define ANSI_COLOR_RED     "\x1b[31m"

@@ -1,3 +1,5 @@
+#link_library "raylib_x86-64_vs2022_mt.lib";
+
 // Vector2, 2 components
 Vector2 :: struct {
     x : f32;                // Vector x component

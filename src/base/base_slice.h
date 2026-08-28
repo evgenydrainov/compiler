@@ -3,10 +3,17 @@
 #include "base_types.h"
 
 template <typename T>
+struct dynamic_array;
+
+template <typename T>
 struct slice
 {
 	T *data;
 	usize count;
+
+	slice() = default;
+
+	slice(dynamic_array<T> array);
 
 	T &operator[](usize index)
 	{

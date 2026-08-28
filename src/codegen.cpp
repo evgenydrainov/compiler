@@ -1480,7 +1480,7 @@ GenerateStatement(Node *baseNode,
 			YieldNode *node = As<YieldNode>(baseNode);
 
 			Emit(context, "    mov rax, [rbp - 8]");
-			Emit(context, "    mov [rax], %d", node->yieldIndex);
+			Emit(context, "    mov qword [rax], %d", node->yieldIndex);
 			Emit(context, "    jmp .epilogue");
 			Emit(context, ".coroutine_state_%d:", node->yieldIndex);
 			Emit(context, "");

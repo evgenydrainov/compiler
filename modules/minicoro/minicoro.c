@@ -1,3 +1,5 @@
+#link_library "minicoro_x86-64_vs2022_mt.lib";
+
 /* Coroutine states. */
 MCO_DEAD      :: 0;  /* The coroutine has finished normally or was uninitialized before finishing. */
 MCO_NORMAL    :: 1;  /* The coroutine is active but not running (that is, it has resumed another coroutine). */

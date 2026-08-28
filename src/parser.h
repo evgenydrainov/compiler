@@ -476,6 +476,8 @@ SizeOfNode(NodeKind kind)
 	return 0;
 }
 
+struct CompileOptions;
+
 struct Parser
 {
 	Token current;
@@ -484,6 +486,8 @@ struct Parser
 	int uniqueLabelId;
 
 	int numInsertSemicolons;
+
+	CompileOptions *options;
 };
 
 Node *ParseProgram(Parser *parser,

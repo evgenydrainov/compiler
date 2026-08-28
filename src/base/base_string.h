@@ -182,3 +182,26 @@ tprintf(char *format, ...)
 
 	return result;
 }
+
+inline bool
+is_path_absolute(string path)
+{
+	if (path.count >= 1)
+	{
+		if (path[0] == '/' || path[0] == '\\')
+		{
+			return true;
+		}
+	}
+
+	if (path.count >= 3)
+	{
+		if (path[1] == ':'
+			&& (path[2] == '/' || path[2] == '\\'))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}

@@ -1,4 +1,5 @@
 build/
+distrib/
 .probe/
 compiler.exe
 compiler.pdb

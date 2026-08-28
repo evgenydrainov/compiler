@@ -12,6 +12,7 @@ add_executable(
     src/base/base_arena.h
     src/base/base_bump_array.h
     src/base/base_defer.h
+    src/base/base_dynamic_array.h
     src/base/base_enum.h
     src/base/base_file.h
     src/base/base_list.h
@@ -30,6 +31,7 @@ add_executable(
     src/lexer.h
     src/macro_table.h
     src/main.cpp
+    src/microsoft_craziness.h
     src/parser.cpp
     src/parser.h
     src/semantic_pass.cpp
@@ -62,13 +64,31 @@ set_target_properties(compiler PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
 )
 
-if(MSVC)
-    set(FLAGS
-        /fp:fast /Oi /W4 /WX
-        /wd4201 /wd4100 /wd4189 /wd4127 /wd4505 /wd4200
-        /we4062 /we5262
-        /Zc:strictStrings-
-    )
-    target_compile_options(compiler PRIVATE ${FLAGS})
-    target_compile_options(run_tests PRIVATE ${FLAGS})
-endif()
+set(FLAGS
+    /fp:fast /Oi /W4 /WX
+    /wd4201 /wd4100 /wd4189 /wd4127 /wd4505 /wd4200
+    /we4062 /we5262
+    /Zc:strictStrings-
+)
+target_compile_options(compiler PRIVATE ${FLAGS})
+target_compile_options(run_tests PRIVATE ${FLAGS})
+
+target_compile_options(
+    compiler PRIVATE
+    /MT
+)
+
+set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/distrib)
+
+install(TARGETS compiler
+    RUNTIME DESTINATION .
+)
+install(DIRECTORY examples/
+    DESTINATION examples
+    PATTERN "*.asm" EXCLUDE
+    PATTERN "*.obj" EXCLUDE
+    PATTERN "*.exe" EXCLUDE
+    PATTERN "*.pdb" EXCLUDE
+)
+install(DIRECTORY modules/ DESTINATION modules)
+install(DIRECTORY vendor/ DESTINATION vendor)

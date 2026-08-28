@@ -6,17 +6,15 @@
 #include <stdlib.h> // for malloc
 #include <stdio.h> // for fopen
 
-#ifdef _WIN32
-
 extern "C"
 {
 __declspec(dllimport) unsigned long __stdcall
-GetModuleFileNameA(void *hModule,
+GetModuleFileNameA(struct HINSTANCE__ *hModule,
 				   char *lpFilename,
 				   unsigned long nSize);
 
 __declspec(dllimport) unsigned long __stdcall
-GetFullPathNameA(char *lpFileName,
+GetFullPathNameA(const char *lpFileName,
 				 unsigned long nBufferLength,
 				 char *lpBuffer,
 				 char **lpFilePart);
@@ -62,12 +60,6 @@ get_absolute_filepath(string relative_path)
 
 	return result;
 }
-
-#else
-
-#error TODO
-
-#endif
 
 inline string
 read_entire_file(char *filepath)

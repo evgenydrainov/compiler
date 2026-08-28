@@ -5,6 +5,13 @@
 #include "codegen.h"
 #include "semantic_pass.h"
 
+#pragma warning(push, 0)
+#define MICROSOFT_CRAZINESS_IMPLEMENTATION
+#include "microsoft_craziness.h"
+#pragma warning(pop)
+
+#include "subprocess.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -14,303 +21,141 @@
 #include <io.h>
 #include <process.h>
 
-#if 0
-internal void
-PrintTree(Node *baseNode,
-		  char *prefix,
-		  bool isLeft)
+internal char *
+FindNasm(CompileOptions *options)
 {
-	if (!baseNode)
+	string nasmPath = tprintf(STR_FMT "\\vendor\\nasm\\nasm.exe", STR_ARG(options->exeFileDir));
+
+	if (_access(nasmPath.data, 0) == 0)
 	{
-		return;
+		return nasmPath.data;
 	}
-
-	{
-		char *name = GetNodeKindName(baseNode->kind);
-		if (baseNode->kind == NodeKind_Binary)
-		{
-			name = GetBinaryOpName(As<BinaryNode>(baseNode)->op);
-		}
-
-		printf("%s%s%s", prefix, isLeft ? "+-- " : "\\-- ", name);
-	}
-
-	printf(" (line=%d)", baseNode->location.line);
-
-	if (baseNode->kind == NodeKind_Int64Literal)
-	{
-		Int64LiteralNode *node = As<Int64LiteralNode>(baseNode);
-		printf(" (%lld)", node->value);
-	}
-	else if (baseNode->kind == NodeKind_VarDecl)
-	{
-		VarDeclNode *node = As<VarDeclNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(node->name));
-	}
-	else if (baseNode->kind == NodeKind_Var)
-	{
-		VarNode *node = As<VarNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(node->name));
-	}
-	else if (baseNode->kind == NodeKind_Func)
-	{
-		FuncNode *node = As<FuncNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(node->name));
-	}
-	else if (baseNode->kind == NodeKind_Call)
-	{
-		CallNode *node = As<CallNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(node->name));
-	}
-	else if (baseNode->kind == NodeKind_StructDecl)
-	{
-		StructDeclNode *node = As<StructDeclNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(node->name));
-	}
-	else if (baseNode->kind == NodeKind_ConstantDecl)
-	{
-		ConstantDeclNode *node = As<ConstantDeclNode>(baseNode);
-		printf(" (" STR_FMT ")", STR_ARG(node->name));
-	}
-
-	printf("\n");
-
-	char childPrefix[256];
-	snprintf(childPrefix, sizeof(childPrefix), "%s%s", prefix, isLeft ? "|   " : "    ");
-
-	switch (baseNode->kind)
-	{
-		case NodeKind_Block:
-		{
-			BlockNode *node = As<BlockNode>(baseNode);
-			for (int i = 0;
-				 i < node->statements.count;
-				 i++)
-			{
-				Node *statement = node->statements[i];
-				PrintTree(statement, childPrefix, i != node->statements.count-1);
-			}
-		} break;
-
-		case NodeKind_If:
-		{
-			IfNode *node = As<IfNode>(baseNode);
-			if (node->elseBlock)
-			{
-				PrintTree(node->condition, childPrefix, true);
-				PrintTree(node->thenBlock, childPrefix, true);
-				PrintTree(node->elseBlock, childPrefix, false);
-			}
-			else
-			{
-				PrintTree(node->condition, childPrefix, true);
-				PrintTree(node->thenBlock, childPrefix, false);
-			}
-		} break;
-
-		case NodeKind_While:
-		{
-			WhileNode *node = As<WhileNode>(baseNode);
-			PrintTree(node->condition, childPrefix, true);
-			PrintTree(node->body, childPrefix, false);
-		} break;
-
-		case NodeKind_Binary:
-		{
-			BinaryNode *node = As<BinaryNode>(baseNode);
-			if (node->lhs && node->rhs)
-			{
-				PrintTree(node->lhs, childPrefix, true);
-				PrintTree(node->rhs, childPrefix, false);
-			}
-			else if (node->lhs)
-			{
-				PrintTree(node->lhs, childPrefix, false);
-			}
-			else if (node->rhs)
-			{
-				PrintTree(node->rhs, childPrefix, false);
-			}
-		} break;
-
-		case NodeKind_Print:
-		{
-			PrintNode *node = As<PrintNode>(baseNode);
-			PrintTree(node->expr, childPrefix, false);
-		} break;
-
-		case NodeKind_VarDecl:
-		{
-			VarDeclNode *node = As<VarDeclNode>(baseNode);
-			PrintTree(node->expr, childPrefix, false);
-		} break;
-
-		case NodeKind_Assign:
-		{
-			AssignNode *node = As<AssignNode>(baseNode);
-			PrintTree(node->lhs, childPrefix, true);
-			PrintTree(node->rhs, childPrefix, false);
-		} break;
-
-		case NodeKind_Func:
-		{
-			FuncNode *node = As<FuncNode>(baseNode);
-			PrintTree(node->body, childPrefix, false);
-		} break;
-
-		case NodeKind_Return:
-		{
-			ReturnNode *node = As<ReturnNode>(baseNode);
-			PrintTree(node->expr, childPrefix, false);
-		} break;
-
-		case NodeKind_For:
-		{
-			ForNode *node = As<ForNode>(baseNode);
-			PrintTree(node->init, childPrefix, true);
-			PrintTree(node->cond, childPrefix, true);
-			PrintTree(node->incr, childPrefix, true);
-			PrintTree(node->body, childPrefix, false);
-		} break;
-
-		default: {} break;
-	}
-}
-#endif
 
 #if 0
-struct PrintContext
-{
-	int indentation;
-};
+	usize dummy;
 
-internal void
-Print(PrintContext *context,
-	  char *format, ...)
-{
-	for (int i = 0; i < context->indentation; i++)
+	char appdata[512];
+	getenv_s(&dummy, appdata, "LOCALAPPDATA");
+
+	char nasmPath[512];
+	sprintf_s(nasmPath, "%s\\bin\\NASM\\nasm.exe", appdata);
+
+	if (_access(nasmPath, 0) == 0)
 	{
-		printf("    ");
+		return _strdup(nasmPath);
 	}
-
-	va_list args;
-	va_start(args, format);
-
-	vprintf(format, args);
-
-	va_end(args);
-}
-
-internal void
-PrintCode(PrintContext *context,
-		  Node *baseNode)
-{
-	if (!baseNode)
-	{
-		return;
-	}
-
-	switch (baseNode->kind)
-	{
-		case NodeKind_Block:
-		{
-			BlockNode *node = As<BlockNode>(baseNode);
-
-			Print(context, "{\n");
-
-			context->indentation++;
-
-			for (Node *statement : node->statements)
-			{
-				PrintCode(context, statement);
-			}
-
-			context->indentation--;
-
-			Print(context, "}\n");
-		} break;
-
-		case NodeKind_Func:
-		{
-			FuncNode *node = As<FuncNode>(baseNode);
-
-			Print(context, STR_FMT " :: proc(", STR_ARG(node->name));
-
-			for (int i = 0; i < node->numParams; i++)
-			{
-				ParamNode *param = As<ParamNode>(node->params[i]);
-				Print(context, STR_FMT ", ", STR_ARG(param->name));
-			}
-
-			Print(context, ")\n");
-			
-			PrintCode(context, node->body);
-
-			Print(context, "\n");
-		} break;
-
-		default: {} break;
-	}
-}
 #endif
 
-struct FindLinkerResult
-{
-	char *linkExePath;
-	char *libraryPath;
-};
-
-internal FindLinkerResult
-FindLinkerPath()
-{
-	char *versionsToTry[] =
-	{
-		"14.44.35207",
-		"14.42.34433",
-	};
-
-	for (char *version : versionsToTry)
-	{
-		char linkExePath[1024];
-		sprintf_s(linkExePath,
-				  "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\%s\\bin\\Hostx64\\x64\\link.exe",
-				  version);
-
-		char libraryPath[1024];
-		sprintf_s(libraryPath,
-				  "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\%s\\lib\\x64",
-				  version);
-
-		if (_access(linkExePath, 0) == 0)
-		{
-			FindLinkerResult result = {};
-
-			result.linkExePath = _strdup(linkExePath);
-			result.libraryPath = _strdup(libraryPath);
-
-			return result;
-		}
-	}
-
-	fprintf(stderr, "could not find link.exe");
+	fprintf(stderr, "could not find nasm.exe\n");
 	exit(1);
+}
+
+internal char *
+FindLLDLink(CompileOptions *options)
+{
+	string lldPath = tprintf(STR_FMT "\\vendor\\LLVM\\lld-link.exe", STR_ARG(options->exeFileDir));
+
+	if (_access(lldPath.data, 0) == 0)
+	{
+		return lldPath.data;
+	}
+
+	fprintf(stderr, "could not find lld-link.exe\n");
+	exit(1);
+}
+
+internal Find_Result
+FindLinker()
+{
+	Find_Result res = find_visual_studio_and_windows_sdk();
+
+	if (res.windows_sdk_version == 0)
+	{
+		fprintf(stderr, "could not find link.exe\n");
+	}
+
+	return res;
+}
+
+internal int
+process_create(slice<char *> commandLine, subprocess_s *out_process)
+{
+	*out_process = {};
+
+	dynamic_array<char> commandLineCombined = {};
+
+	for (char *arg : commandLine)
+	{
+		for (char *it = arg; *it; it++)
+		{
+			array_add(&commandLineCombined, *it);
+		}
+
+		array_add(&commandLineCombined, ' ');
+	}
+
+	array_add(&commandLineCombined, 0);
+
+	subprocess_startup_info_s startInfo = { sizeof(startInfo) };
+	subprocess_subprocess_information_s processInfo;
+
+	if (!CreateProcessA(nullptr,
+						commandLineCombined.data, // command line
+						nullptr,		// process security attributes
+						nullptr,		// primary thread security attributes
+						1,				// handles are inherited
+						0,				// creation flagsted
+						nullptr,		// used environment
+						nullptr,		// use parent's current directory
+						(LPSTARTUPINFOA)&startInfo,
+						(LPPROCESS_INFORMATION)&processInfo))
+	{
+		return -1;
+	}
+
+	out_process->hProcess = processInfo.hProcess;
+
+	// We don't need the handle of the primary thread in the called process.
+	CloseHandle(processInfo.hThread);
+
+	out_process->alive = 1;
+
+	return 0;
+}
+
+internal int
+run_process(slice<char *> commandLine)
+{
+	subprocess_s process;
+	if (process_create(commandLine, &process) != 0)
+	{
+		return -1;
+	}
+
+	int retcode;
+	if (subprocess_join(&process, &retcode) != 0)
+	{
+		return -1;
+	}
+
+	return retcode;
 }
 
 CompileResult
 Compile(CompileOptions *options)
 {
-	string compilerExeFileDir = get_executable_dir();
-	string modulesDir = string_concat(compilerExeFileDir, "modules/");
+	options->exeFileDir = get_executable_dir();
+	string modulesDir = string_concat(options->exeFileDir, "modules/");
 
 	LexerContext lexerContext = {};
-	lexerContext.compilerExeFileDir = compilerExeFileDir;
+	lexerContext.compilerExeFileDir = options->exeFileDir;
 	lexerContext.modulesDir = modulesDir;
 
 	Lexer lexer = {};
 	lexer.context = &lexerContext;
 
 	{
-		string builtinFilePath = string_concat(compilerExeFileDir, "modules/builtin.c");
+		string builtinFilePath = string_concat(options->exeFileDir, "modules/builtin.c");
 
 		string builtinFileSrc = read_entire_file(builtinFilePath);
 		if (builtinFileSrc.count == 0)
@@ -349,6 +194,7 @@ Compile(CompileOptions *options)
 	defer { free(arena.data); };
 
 	Parser parser = {};
+	parser.options = options;
 	parser.current = GetToken(&lexer);
 
 	Node *program = ParseProgram(&parser, &lexer, &arena);
@@ -401,8 +247,10 @@ Compile(CompileOptions *options)
 	}
 
 	{
+		char *nasmPath = FindNasm(options);
+
 		if (_spawnl(_P_WAIT,
-					"C:\\Users\\Username\\AppData\\Local\\bin\\NASM\\nasm.exe",
+					nasmPath,
 					"nasm",
 					"-g",
 					"-f", "win64",
@@ -414,29 +262,76 @@ Compile(CompileOptions *options)
 		}
 	}
 
+	if (options->useVendorLld)
 	{
-		FindLinkerResult findResult = FindLinkerPath();
+		char *lldExePath = FindLLDLink(options);
 
-		char libraryArg[1024];
-		sprintf_s(libraryArg, "/LIBPATH:\"%s\"", findResult.libraryPath);
+		dynamic_array<char *> commandLine = {};
 
-		if (_spawnl(_P_WAIT,
-					findResult.linkExePath,
-					"link",
-					"/nologo", "/DEBUG", "/INCREMENTAL:NO", "/OPT:REF", "/OPT:ICF",
-					"/SUBSYSTEM:CONSOLE",
-					objFilePathCStr,
-					"raylib_x86-64_vs2022_mt.lib",
-					"minicoro_x86-64_vs2022_mt.lib",
-					"libcmt.lib",
-					"legacy_stdio_definitions.lib",
-					"kernel32.lib", "user32.lib", "gdi32.lib", "shell32.lib", "winmm.lib",
-					libraryArg,
-					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\ucrt\\x64\"",
-					"/LIBPATH:\"C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.22621.0\\um\\x64\"",
-					"/LIBPATH:\"C:\\Users\\Username\\source\\repos\\compiler\\modules\\raylib\"",
-					"/LIBPATH:\"C:\\Users\\Username\\source\\repos\\compiler\\modules\\minicoro\"",
-					nullptr) != 0)
+		array_add(&commandLine, lldExePath);
+		array_add(&commandLine, "/DEBUG");
+		array_add(&commandLine, "/OPT:REF");
+		array_add(&commandLine, "/OPT:ICF");
+		array_add(&commandLine, "/SUBSYSTEM:CONSOLE");
+		array_add(&commandLine, objFilePathCStr);
+
+		for (string lib : options->libraries)
+		{
+			array_add(&commandLine, to_cstring(lib));
+		}
+
+		int retcode = run_process(commandLine);
+		if (retcode != 0)
+		{
+			return CompileResult_LinkerError;
+		}
+	}
+	else
+	{
+		Find_Result res = FindLinker();
+
+		char linkExePath[512];
+		sprintf_s(linkExePath, "\"%s\\link.exe\"", res.vs_exe_path_a);
+
+		char vsLibpathArg[512];
+		sprintf_s(vsLibpathArg, "/LIBPATH:\"%s\"", res.vs_library_path_a);
+
+		char ucrtLibpathArg[512];
+		sprintf_s(ucrtLibpathArg, "/LIBPATH:\"%s\"", res.windows_sdk_ucrt_library_path_a);
+
+		char umLibpathArg[512];
+		sprintf_s(umLibpathArg, "/LIBPATH:\"%s\"", res.windows_sdk_um_library_path_a);
+
+		dynamic_array<char *> commandLine = {};
+
+		array_add(&commandLine, linkExePath);
+		array_add(&commandLine, "/nologo");
+		array_add(&commandLine, "/DEBUG");
+		array_add(&commandLine, "/INCREMENTAL:NO");
+		array_add(&commandLine, "/OPT:REF");
+		array_add(&commandLine, "/OPT:ICF");
+		array_add(&commandLine, "/SUBSYSTEM:CONSOLE");
+		array_add(&commandLine, objFilePathCStr);
+
+		for (string lib : options->libraries)
+		{
+			array_add(&commandLine, to_cstring(lib));
+		}
+
+		array_add(&commandLine, "libcmt.lib");
+		array_add(&commandLine, "legacy_stdio_definitions.lib");
+		array_add(&commandLine, "kernel32.lib");
+		array_add(&commandLine, "user32.lib");
+		array_add(&commandLine, "gdi32.lib");
+		array_add(&commandLine, "shell32.lib");
+		array_add(&commandLine, "winmm.lib");
+
+		array_add(&commandLine, vsLibpathArg);
+		array_add(&commandLine, ucrtLibpathArg);
+		array_add(&commandLine, umLibpathArg);
+
+		int retcode = run_process(commandLine);
+		if (retcode != 0)
 		{
 			return CompileResult_LinkerError;
 		}

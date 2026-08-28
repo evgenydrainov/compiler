@@ -793,7 +793,7 @@ GetToken(Lexer *lexer)
 		string searchDir = strip_filename(lexer->fileName);
 		string fullFilePath = string_concat(searchDir, filePath);
 
-		return IncludeFile(lexer, location, filePath);
+		return IncludeFile(lexer, location, fullFilePath);
 	}
 
 	if (c == '#'

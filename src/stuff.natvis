@@ -10,7 +10,20 @@
     </Expand>
   </Type>
   
-  <Type Name="BumpArray&lt;*&gt;">
+  <Type Name="slice&lt;*&gt;">
+    <DisplayString>{{ size={count} }}</DisplayString>
+    
+    <Expand>
+      <Item Name="[size]">count</Item>
+      
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="bump_array&lt;*&gt;">
     <DisplayString>{{ size={count} }}</DisplayString>
     
     <Expand>
@@ -24,7 +37,21 @@
     </Expand>
   </Type>
 
-  <Type Name="StaticBumpArray&lt;*,*&gt;">
+  <Type Name="dynamic_array&lt;*&gt;">
+    <DisplayString>{{ size={count} }}</DisplayString>
+
+    <Expand>
+      <Item Name="[size]">count</Item>
+      <Item Name="[capacity]">capacity</Item>
+
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="static_bump_array&lt;*,*&gt;">
     <DisplayString>{{ size={count} }}</DisplayString>
     
     <Expand>

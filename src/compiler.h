@@ -6,6 +6,12 @@ struct CompileOptions
 {
 	string inputFilePath;
 	string outputFilePath;
+
+	string exeFileDir;
+
+	dynamic_array<string> libraries;
+
+	bool useVendorLld;
 };
 
 enum CompileResult : u32

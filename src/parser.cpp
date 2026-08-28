@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "compiler.h"
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -1806,6 +1807,51 @@ ParseTopLevelStatement(Parser *parser,
 	if (parser->current.kind == TokenKind_Asm)
 	{
 		return ParseAsmBlock(parser, lexer, arena);
+	}
+
+	if (parser->current.kind == TokenKind_Hash)
+	{
+		Token peekToken = PeekToken(lexer);
+
+		if (peekToken.str == "link_library")
+		{
+			AdvanceToken(parser, lexer);
+			AdvanceToken(parser, lexer);
+
+			string libPath = parser->current.str;
+			libPath.count -= 2;
+			libPath.data++;
+
+			if (is_path_absolute(libPath))
+			{
+				array_add(&parser->options->libraries, libPath);
+			}
+			else
+			{
+				string dir = strip_filename(lexer->fileName);
+
+				string fullLibPath = string_concat(dir, libPath);
+				array_add(&parser->options->libraries, fullLibPath);
+			}
+
+			ExpectToken(parser, lexer, TokenKind_String);
+
+			ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+			return nullptr;
+		}
+
+		if (peekToken.str == "use_vendor_lld")
+		{
+			AdvanceToken(parser, lexer);
+			AdvanceToken(parser, lexer);
+
+			parser->options->useVendorLld = true;
+
+			ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+			return nullptr;
+		}
 	}
 
 	UnexpectedCurrentToken(parser);
