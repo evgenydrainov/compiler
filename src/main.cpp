@@ -9,7 +9,12 @@ Arena g_tempMemory;
 void AssertionHandler(char *file, int line, char *condition)
 {
 	fprintf(stderr, "%s:%d: assertion failed: %s\n", file, line, condition);
+
+#ifndef NDEBUG
 	__debugbreak();
+#endif
+
+	exit(1);
 }
 
 int main(int argc, char *argv[])

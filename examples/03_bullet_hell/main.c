@@ -14,13 +14,13 @@ setup_screen_camera :: proc(camera: *Camera2D)
 	screen_width  := cast(f32)GetScreenWidth();
 	screen_height := cast(f32)GetScreenHeight();
 
-	xscale := screen_width  / cast(f32)GAME_WIDTH;
-	yscale := screen_height / cast(f32)GAME_HEIGHT;
+	xscale := screen_width  / GAME_WIDTH;
+	yscale := screen_height / GAME_HEIGHT;
 
 	scale := fminf(xscale, yscale);
 
-	scaled_width  := cast(f32)GAME_WIDTH  * scale;
-	scaled_height := cast(f32)GAME_HEIGHT * scale;
+	scaled_width  := GAME_WIDTH  * scale;
+	scaled_height := GAME_HEIGHT * scale;
 
 	camera.offset.x = (screen_width  - scaled_width)  * 0.5;
 	camera.offset.y = (screen_height - scaled_height) * 0.5;
@@ -38,7 +38,7 @@ main :: proc() -> int
 
 	while !WindowShouldClose()
 	{
-		delta := fminf(GetFrameTime()*60.0, 2.0);
+		delta := fminf(GetFrameTime()*60, 2);
 		
 		world_update(&world, delta);
 

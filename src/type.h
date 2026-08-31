@@ -83,7 +83,7 @@ struct EnumeratorInfo
 struct EnumInfo
 {
 	string name;
-	static_bump_array<EnumeratorInfo, 32> enumerators;
+	bump_array<EnumeratorInfo> enumerators;
 };
 
 struct ProcInfo

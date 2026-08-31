@@ -135,7 +135,7 @@ GameUpdate :: proc(game: *Game)
 GameDraw :: proc(game: *Game)
 {
 	camera: Camera2D;
-	camera.zoom = 4.0;
+	camera.zoom = 4;
 
 	BeginMode2D(camera);
 

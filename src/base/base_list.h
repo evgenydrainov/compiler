@@ -2,20 +2,20 @@
 
 #include "base_types.h"
 
-template <typename Node>
+template <typename TNode>
 struct list
 {
 	struct iterator
 	{
-		Node *node;
+		TNode *node;
 
 		iterator &operator++()
 		{
-			node = node->next;
+			node = static_cast<TNode *>(node->next);
 			return *this;
 		}
 
-		Node * operator*()
+		TNode * operator*()
 		{
 			return node;
 		}
@@ -31,16 +31,18 @@ struct list
 		}
 	};
 
-	Node *head;
-	Node *tail;
+	TNode *head;
+	TNode *tail;
+	usize count;
 
 	iterator begin() { return {head};    }
 	iterator end()   { return {nullptr}; }
 };
 
-template <typename Node>
+template <typename TNode>
 inline void
-list_append(list<Node> *list, Node *node)
+list_append(list<TNode> *list,
+			typename identity<TNode>::type *node)
 {
 	if (list->head)
 	{
@@ -52,4 +54,6 @@ list_append(list<Node> *list, Node *node)
 		list->head = node;
 		list->tail = node;
 	}
+
+	list->count++;
 }

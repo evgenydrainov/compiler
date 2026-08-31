@@ -252,12 +252,12 @@ TryEvaluateConstantExpression(Node *baseNode,
 
 	i64 result = EvaluateConstantExpression(baseNode, context);
 
-	bool evaluationFailed = context->hadError;
+	bool success = !context->hadError;
 
 	context->suppressErrors = saveSuppressErrors;
 	context->hadError = saveHadError;
 
-	if (!evaluationFailed)
+	if (success)
 	{
 		*outResult = result;
 		return true;
@@ -355,6 +355,50 @@ ResolveType(Type *type,
 	}
 }
 
+template <typename DestType, typename SrcType>
+internal DestType *
+ReinterpretNode(SrcType *&node)
+{
+	static_assert(!is_same<SrcType, Node>::value);
+
+	static_assert(sizeof(DestType) <= sizeof(SrcType));
+
+	SourceLocation location = node->location;
+	Node *next = node->next;
+
+	DestType *newNode = (DestType *)node;
+	*newNode = {};
+	newNode->kind = DestType::KIND;
+	newNode->location = location;
+	newNode->next = next;
+
+	node = nullptr;
+
+	return newNode;
+}
+
+template <typename DestType>
+internal DestType *
+ReinterpretNode(Node *&node)
+{
+	usize srcSize = SizeOfNode(node->kind);
+
+	Assert(sizeof(DestType) <= srcSize);
+
+	SourceLocation location = node->location;
+	Node *next = node->next;
+
+	DestType *newNode = (DestType *)node;
+	*newNode = {};
+	newNode->kind = DestType::KIND;
+	newNode->location = location;
+	newNode->next = next;
+
+	node = nullptr;
+
+	return newNode;
+}
+
 internal bool
 CanImplicitlyCast(Type destType,
 				  Node *source,
@@ -375,6 +419,8 @@ CanImplicitlyCast(Type destType,
 		i64 value;
 		if (TryEvaluateConstantExpression(source, context, &value))
 		{
+			// TODO: fold the constant here
+
 			struct Range
 			{
 				i64 min;
@@ -416,6 +462,8 @@ CanImplicitlyCast(Type destType,
 		i64 value;
 		if (TryEvaluateConstantExpression(source, context, &value))
 		{
+			// TODO: fold the constant here
+
 			struct Range
 			{
 				u64 min;
@@ -494,25 +542,54 @@ CanImplicitlyCast(Type destType,
 		}
 	}
 
+	// allow *void to cast into any pointer
 	if (destType.kind == TypeKind_Pointer
 		|| destType.kind == TypeKind_Proc)
 	{
 		if (source->inferredType.kind == TypeKind_Pointer
 			&& source->inferredType.pointee->kind == TypeKind_Void)
 		{
-			// allow *void to cast into any pointer for now
-			// foo: *int = null;
 			return true;
 		}
 	}
 
+	// allow any pointer to cast into *void
 	if (destType.kind == TypeKind_Pointer
 		&& destType.pointee->kind == TypeKind_Void)
 	{
-		if (source->inferredType.kind == TypeKind_Pointer)
+		if (source->inferredType.kind == TypeKind_Pointer
+			|| source->inferredType.kind == TypeKind_Proc)
 		{
-			// allow any pointer to cast into *void for now
-			// foo: *void = &my_value;
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Float32)
+	{
+		i64 value;
+		if (TryEvaluateConstantExpression(source, context, &value))
+		{
+			// TODO: check that value fits in float32
+
+			Float32LiteralNode *newNode = ReinterpretNode<Float32LiteralNode>(source);
+			newNode->value = (f32)value;
+			newNode->inferredType.kind = TypeKind_Float32;
+
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Float64)
+	{
+		i64 value;
+		if (TryEvaluateConstantExpression(source, context, &value))
+		{
+			// TODO: check that value fits in float64
+
+			Float64LiteralNode *newNode = ReinterpretNode<Float64LiteralNode>(source);
+			newNode->value = (f64)value;
+			newNode->inferredType.kind = TypeKind_Float64;
+
 			return true;
 		}
 	}
@@ -544,66 +621,61 @@ AnalyzeBinaryExpression(Node *baseNode,
 		case BinaryOp_BitOr:
 		case BinaryOp_BitXor:
 		{
+			// TODO: forbid non numeric types
+
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
 
-			char *opName = GetBinaryOpPrettyName(node->op);
-
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
-				&& node->lhs->inferredType.kind != TypeKind_Struct
-				&& node->rhs->inferredType.kind != TypeKind_Struct)
+			// try to cast rhs into lhs
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 			{
 				node->inferredType = node->lhs->inferredType;
+				break;
 			}
-			else
+
+			// try to cast lhs into rhs
+			if (CanImplicitlyCast(node->rhs->inferredType, node->lhs, context))
 			{
-				Error(context, node, "cannot %s '%s' and '%s'",
-					  opName,
-					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
+				node->inferredType = node->rhs->inferredType;
+				break;
 			}
+
+			Error(context, node, "operator '%s': invalid operands '%s' and '%s'",
+				  GetBinaryOpSymbol(node->op),
+				  GetTypeKindPrettyName(node->lhs->inferredType.kind),
+				  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 		} break;
 
 		case BinaryOp_Less:
 		case BinaryOp_Greater:
 		case BinaryOp_LessEqual:
 		case BinaryOp_GreaterEqual:
-		{
-			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context);
-
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
-				&& node->lhs->inferredType.kind != TypeKind_Struct
-				&& node->rhs->inferredType.kind != TypeKind_Struct)
-			{
-				node->inferredType.kind = TypeKind_Bool;
-			}
-			else
-			{
-				Error(context, node, "cannot compare '%s' and '%s'",
-					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
-			}
-		} break;
-
 		case BinaryOp_EqualEqual:
 		case BinaryOp_NotEqual:
 		{
-			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context, node->lhs->inferredType);
+			// TODO: forbid non numeric types
 
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context)
-				&& node->lhs->inferredType.kind != TypeKind_Struct
-				&& node->rhs->inferredType.kind != TypeKind_Struct)
+			AnalyzeExpression(node->lhs, context);
+			AnalyzeExpression(node->rhs, context);
+
+			// try to cast rhs into lhs
+			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 			{
 				node->inferredType.kind = TypeKind_Bool;
+				break;
 			}
-			else
+
+			// try to cast lhs into rhs
+			if (CanImplicitlyCast(node->rhs->inferredType, node->lhs, context))
 			{
-				Error(context, node, "cannot compare '%s' and '%s'",
-					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
+				node->inferredType.kind = TypeKind_Bool;
+				break;
 			}
+
+			Error(context, node, "operator '%s': invalid operands '%s' and '%s'",
+				  GetBinaryOpSymbol(node->op),
+				  GetTypeKindPrettyName(node->lhs->inferredType.kind),
+				  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 		} break;
 
 		case BinaryOp_LogicalAnd:
@@ -616,37 +688,15 @@ AnalyzeBinaryExpression(Node *baseNode,
 				&& node->rhs->inferredType.kind == TypeKind_Bool)
 			{
 				node->inferredType.kind = TypeKind_Bool;
+				break;
 			}
-			else
-			{
-				Error(context, node, "both operands must be 'bool', but they are '%s' and '%s'",
-					  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-					  GetTypeKindPrettyName(node->rhs->inferredType.kind));
-			}
+
+			Error(context, node, "operator '%s': both operands must be 'bool', but they are '%s' and '%s'",
+				  GetBinaryOpSymbol(node->op),
+				  GetTypeKindPrettyName(node->lhs->inferredType.kind),
+				  GetTypeKindPrettyName(node->rhs->inferredType.kind));
 		} break;
 	}
-}
-
-template <typename DestType, typename SrcType>
-internal DestType *
-ReinterpretNode(SrcType *&node)
-{
-	static_assert(!is_same<SrcType, Node>::value);
-
-	static_assert(sizeof(DestType) <= sizeof(SrcType));
-
-	SourceLocation location = node->location;
-	Node *next = node->next;
-
-	DestType *newNode = (DestType *)node;
-	*newNode = {};
-	newNode->kind = DestType::KIND;
-	newNode->location = location;
-	newNode->next = next;
-
-	node = nullptr;
-
-	return newNode;
 }
 
 struct InstantiateContext
@@ -2148,6 +2198,7 @@ EarlyAnalyze(Node *baseNode,
 				type->kind = TypeKind_Enum;
 				type->enumInfo = push_struct<EnumInfo>(arena);
 				type->enumInfo->name = node->name;
+				type->enumInfo->enumerators = push_bump_array<EnumeratorInfo>(arena, node->enumerators.count);
 
 				i64 enumeratorValue = 0;
 
@@ -2157,6 +2208,12 @@ EarlyAnalyze(Node *baseNode,
 					{
 						EnumeratorInfo info = {};
 						info.name = enumerator->name;
+
+						if (enumerator->value)
+						{
+							enumeratorValue = EvaluateConstantExpression(enumerator->value, context);
+						}
+
 						info.value = enumeratorValue++;
 
 						array_add(&type->enumInfo->enumerators, info);

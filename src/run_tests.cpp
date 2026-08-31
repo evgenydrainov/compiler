@@ -214,4 +214,13 @@ int main()
 
 	//TestReturnCode("main", 0);
 	TestCompiles("main");
+
+	if (_chdir("..\\04_no_libc") != 0)
+	{
+		fprintf(stderr, "_chdir failed\n");
+		exit(1);
+	}
+
+	//TestReturnCode("main", 0);
+	TestCompiles("main");
 }

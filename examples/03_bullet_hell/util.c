@@ -7,7 +7,7 @@ point_distance :: proc(x1: f32, y1: f32, x2: f32, y2: f32) -> f32
 
 normalize0 :: proc(px: *f32, py: *f32)
 {
-	if *px!=0.0 || *py!=0.0
+	if *px!=0 || *py!=0
 	{
 		length := sqrtf((*px)*(*px) + (*py)*(*py));
 		*px /= length;
@@ -18,7 +18,7 @@ normalize0 :: proc(px: *f32, py: *f32)
 launch_towards_point :: proc(entity: *Entity, target_x: f32, target_y: f32, acc: f32)
 {
 	distance := point_distance(entity.x, entity.y, target_x, target_y);
-	speed := sqrtf(2.0*distance*acc);
+	speed := sqrtf(2*distance*acc);
 
 	dir_x := target_x - entity.x;
 	dir_y := target_y - entity.y;

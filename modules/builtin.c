@@ -29,7 +29,7 @@ free    :: proc(ptr: *void)                     #foreign;
 
 fabsf :: proc(a: f32) -> f32
 {
-	if a >= 0.0
+	if a >= 0
 	{
 		return a;
 	}

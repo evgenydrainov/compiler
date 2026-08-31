@@ -4,3 +4,4 @@ EXPORTS
     calloc
     realloc
     free
+    printf

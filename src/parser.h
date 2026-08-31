@@ -56,27 +56,55 @@ enum NodeKind : u32
 	NODE_KIND_LIST(GENERATE_NODE_KIND_ENUM)
 };
 
-#define BINARY_OP_LIST(X) \
-	X(BinaryOp_Add,            0,    "add"          ) \
-	X(BinaryOp_Subtract,       1,    "subtract"     ) \
-	X(BinaryOp_Multiply,       2,    "multiply"     ) \
-	X(BinaryOp_Divide,         3,    "divide"       ) \
-	X(BinaryOp_Modulo,         4,    "modulo"       ) \
-	X(BinaryOp_Less,           5,    ""             ) \
-	X(BinaryOp_Greater,        6,    ""             ) \
-	X(BinaryOp_EqualEqual,     7,    ""             ) \
-	X(BinaryOp_LessEqual,      8,    ""             ) \
-	X(BinaryOp_GreaterEqual,   9,    ""             ) \
-	X(BinaryOp_NotEqual,       10,   ""             ) \
-	X(BinaryOp_LogicalAnd,     11,   ""             ) \
-	X(BinaryOp_LogicalOr,      12,   ""             ) \
-	X(BinaryOp_BitAnd,         13,   "bit-and"      ) \
-	X(BinaryOp_BitOr,          14,   "bit-or"       ) \
-	X(BinaryOp_BitXor,         15,   "bit-xor"      ) \
-	X(BinaryOp_ShiftLeft,      16,   "shift-left"   ) \
-	X(BinaryOp_ShiftRight,     17,   "shift-right"  )
+enum BinaryOp : u32
+{
+	BinaryOp_Add,
+	BinaryOp_Subtract,
+	BinaryOp_Multiply,
+	BinaryOp_Divide,
+	BinaryOp_Modulo,
+	BinaryOp_Less,
+	BinaryOp_Greater,
+	BinaryOp_EqualEqual,
+	BinaryOp_LessEqual,
+	BinaryOp_GreaterEqual,
+	BinaryOp_NotEqual,
+	BinaryOp_LogicalAnd,
+	BinaryOp_LogicalOr,
+	BinaryOp_BitAnd,
+	BinaryOp_BitOr,
+	BinaryOp_BitXor,
+	BinaryOp_ShiftLeft,
+	BinaryOp_ShiftRight,
+};
 
-DEFINE_ENUM_WITH_VALUES(BinaryOp, u32, BINARY_OP_LIST);
+inline char *
+GetBinaryOpSymbol(BinaryOp op)
+{
+	switch (op)
+	{
+		case BinaryOp_Add:          return "+";
+		case BinaryOp_Subtract:     return "-";
+		case BinaryOp_Multiply:     return "*";
+		case BinaryOp_Divide:       return "/";
+		case BinaryOp_Modulo:       return "%";
+		case BinaryOp_Less:         return "<";
+		case BinaryOp_Greater:      return ">";
+		case BinaryOp_EqualEqual:   return "==";
+		case BinaryOp_LessEqual:    return "<=";
+		case BinaryOp_GreaterEqual: return ">=";
+		case BinaryOp_NotEqual:     return "!=";
+		case BinaryOp_LogicalAnd:   return "&&";
+		case BinaryOp_LogicalOr:    return "||";
+		case BinaryOp_BitAnd:       return "&";
+		case BinaryOp_BitOr:        return "|";
+		case BinaryOp_BitXor:       return "^";
+		case BinaryOp_ShiftLeft:    return "<<";
+		case BinaryOp_ShiftRight:   return ">>";
+	}
+	Assert(false);
+	return "";
+}
 
 enum UnaryOp : u32
 {
@@ -329,6 +357,7 @@ struct EnumeratorDeclNode : public Node
 	static constexpr NodeKind KIND = NodeKind_EnumeratorDecl;
 
 	string name;
+	Node *value;
 };
 
 struct EnumDeclNode : public Node
@@ -336,7 +365,7 @@ struct EnumDeclNode : public Node
 	static constexpr NodeKind KIND = NodeKind_EnumDecl;
 
 	string name;
-	bump_array<EnumeratorDeclNode *> enumerators;
+	list<EnumeratorDeclNode> enumerators;
 };
 
 struct CastNode : public Node

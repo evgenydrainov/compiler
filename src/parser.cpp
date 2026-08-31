@@ -1671,6 +1671,8 @@ ParseStructDefinition(Parser *parser,
 
 	ExpectToken(parser, lexer, TokenKind_OpenBrace);
 
+	bool multipleDeclarations = false;
+
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseBrace)
 	{
@@ -1679,11 +1681,35 @@ ParseStructDefinition(Parser *parser,
 
 		ExpectToken(parser, lexer, TokenKind_Identifier);
 
-		ExpectToken(parser, lexer, TokenKind_Colon);
+		if (parser->current.kind == TokenKind_Comma)
+		{
+			ExpectToken(parser, lexer, TokenKind_Comma);
 
-		field->type = ParseType(parser, lexer, arena);
+			field->type.kind = TypeKind_InferMe;
 
-		ExpectToken(parser, lexer, TokenKind_Semicolon);
+			multipleDeclarations = true;
+		}
+		else
+		{
+			ExpectToken(parser, lexer, TokenKind_Colon);
+
+			field->type = ParseType(parser, lexer, arena);
+
+			ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+			if (multipleDeclarations)
+			{
+				for (auto it : node->fields)
+				{
+					if (it->type.kind == TypeKind_InferMe)
+					{
+						it->type = field->type;
+					}
+				}
+
+				multipleDeclarations = false;
+			}
+		}
 
 		array_add(&node->fields, field);
 	}
@@ -1698,11 +1724,8 @@ ParseEnumDefinition(Parser *parser,
 					Lexer *lexer,
 					Arena *arena)
 {
-	const int MAX_ENUMERATORS = 32;
-
 	EnumDeclNode *node = MakeNode<EnumDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
-	node->enumerators = push_bump_array<EnumeratorDeclNode *>(arena, MAX_ENUMERATORS);
 
 	AdvanceToken(parser, lexer); // eat the enum name
 
@@ -1721,9 +1744,17 @@ ParseEnumDefinition(Parser *parser,
 
 		ExpectToken(parser, lexer, TokenKind_Identifier);
 
+		if (parser->current.kind == TokenKind_Colon)
+		{
+			ExpectToken(parser, lexer, TokenKind_Colon);
+			ExpectToken(parser, lexer, TokenKind_Colon);
+
+			enumerator->value = ParseExpression(parser, lexer, 0, arena);
+		}
+
 		ExpectToken(parser, lexer, TokenKind_Semicolon);
 
-		array_add(&node->enumerators, enumerator);
+		list_append(&node->enumerators, enumerator);
 	}
 
 	ExpectToken(parser, lexer, TokenKind_CloseBrace);

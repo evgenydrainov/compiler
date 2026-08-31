@@ -36,13 +36,13 @@ world_init :: proc(world: *World)
 	paddle := &world.paddle;
 	ball := &world.ball;
 
-	paddle.x = cast(f32)(GAME_WIDTH / 2);
-	paddle.y = cast(f32)(GAME_HEIGHT / 10 * 9);
-	paddle.width = 40.0;
-	paddle.height = 10.0;
+	paddle.x = GAME_WIDTH/2;
+	paddle.y = GAME_HEIGHT/10*9;
+	paddle.width = 40;
+	paddle.height = 10;
 
-	ball.width = 10.0;
-	ball.height = 10.0;
+	ball.width = 10;
+	ball.height = 10;
 
 	world.lives = 3;
 	world.level = 1;
@@ -50,10 +50,10 @@ world_init :: proc(world: *World)
 	for i in 0..<12
 	{
 		brick: Entity;
-		brick.width = 40.0;
-		brick.height = 10.0;
-		brick.x = 35.0 + (brick.width  + 10.0) * cast(f32)(i%6);
-		brick.y = 20.0 + (brick.height + 10.0) * cast(f32)(i/6);
+		brick.width = 40;
+		brick.height = 10;
+		brick.x = 35 + (brick.width  + 10) * cast(f32)(i%6);
+		brick.y = 20 + (brick.height + 10) * cast(f32)(i/6);
 
 		array_add(&world.bricks, brick);
 	}
@@ -66,11 +66,11 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 
 	if IsKeyDown(KEY_RIGHT)
 	{
-		paddle.x += 4.0 * delta;
+		paddle.x += 4 * delta;
 	}
 	if IsKeyDown(KEY_LEFT)
 	{
-		paddle.x -= 4.0 * delta;
+		paddle.x -= 4 * delta;
 	}
 
 	switch ball.ball_state
@@ -81,8 +81,8 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 
 		if IsKeyPressed(KEY_SPACE)
 		{
-			ball.hspeed = 2.0;
-			ball.vspeed = -2.0;
+			ball.hspeed = 2;
+			ball.vspeed = -2;
 			ball.ball_state = .move;
 		}
 
@@ -90,21 +90,21 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 		ball.x += ball.hspeed * delta;
 		ball.y += ball.vspeed * delta;
 
-		if ball.x + ball.width*0.5 >= cast(f32)GAME_WIDTH
+		if ball.x + ball.width*0.5 >= GAME_WIDTH
 		{
 			ball.hspeed = -fabsf(ball.hspeed);
 		}
-		if ball.x - ball.width*0.5 < 0.0
+		if ball.x - ball.width*0.5 < 0
 		{
 			ball.hspeed = fabsf(ball.hspeed);
 		}
 
-		if ball.y - ball.height*0.5 < 0.0
+		if ball.y - ball.height*0.5 < 0
 		{
 			ball.vspeed = fabsf(ball.vspeed);
 		}
 
-		if ball.y + ball.height*0.5 >= cast(f32)GAME_HEIGHT
+		if ball.y + ball.height*0.5 >= GAME_HEIGHT
 		{
 			world.lives -= 1;
 			ball.ball_state = .stick_to_paddle;

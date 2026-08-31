@@ -22,10 +22,10 @@ this :: macro cast(*Entity)co.user_data;
 wait :: proc(co: *mco_coro, time: f32)
 {
 	this.wait_timer += time;
-	while this.wait_timer >= 1.0
+	while this.wait_timer >= 1
 	{
 		mco_yield(co);
-		this.wait_timer -= 1.0;
+		this.wait_timer -= 1;
 	}
 }
 
@@ -33,7 +33,7 @@ enemy_script :: proc(co: *mco_coro)
 {
 	while true
 	{
-		wait(co, 60.0);
+		wait(co, 60);
 
 		launch_towards_point(co.user_data,
 							 cast(f32)(rand()%GAME_WIDTH),
@@ -54,15 +54,15 @@ world_init :: proc(world: *World)
 	player := &world.player;
 	boss := &world.boss;
 
-	player.x = cast(f32)(GAME_WIDTH / 2);
-	player.y = cast(f32)(GAME_HEIGHT / 4 * 3);
-	player.width = 32.0;
-	player.height = 32.0;
+	player.x = GAME_WIDTH/2;
+	player.y = GAME_HEIGHT/4*3;
+	player.width = 32;
+	player.height = 32;
 
-	boss.x = cast(f32)(GAME_WIDTH / 2);
-	boss.y = cast(f32)(GAME_HEIGHT / 4);
-	boss.width = 32.0;
-	boss.height = 32.0;
+	boss.x = GAME_WIDTH/2;
+	boss.y = GAME_HEIGHT/4;
+	boss.width = 32;
+	boss.height = 32;
 
 	desc := mco_desc_init(enemy_script, 0);
 	mco_create(&boss.co, &desc);
@@ -89,22 +89,22 @@ player_update :: proc(player: *Entity, delta: f32)
 
 	if IsKeyDown(KEY_UP)
 	{
-		dir_y -= 1.0;
+		dir_y -= 1;
 	}
 	if IsKeyDown(KEY_DOWN)
 	{
-		dir_y += 1.0;
+		dir_y += 1;
 	}
 	if IsKeyDown(KEY_LEFT)
 	{
-		dir_x -= 1.0;
+		dir_x -= 1;
 	}
 	if IsKeyDown(KEY_RIGHT)
 	{
-		dir_x += 1.0;
+		dir_x += 1;
 	}
 
-	if dir_x != 0.0 && dir_y != 0.0
+	if dir_x != 0 && dir_y != 0
 	{
 		dir_x *= 0.70710678118654752440084436210485;
 		dir_y *= 0.70710678118654752440084436210485;
