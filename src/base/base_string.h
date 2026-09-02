@@ -3,6 +3,7 @@
 #include "base_types.h"
 #include "base_arena.h"
 
+#include <string.h> // for memcpy
 #include <stdio.h> // for snprintf
 #include <stdarg.h> // for varargs
 
@@ -118,13 +119,13 @@ strip_filename(string filepath)
 inline string
 string_concat(string a, string b)
 {
-	string result;
+	string result = {};
 	result.count = a.count + b.count;
 	result.data = (char *)push_size(&g_tempMemory, result.count);
 
-	MemCpy(result.data, a.data, a.count);
+	memcpy(result.data, a.data, a.count);
 
-	MemCpy(result.data + a.count, b.data, b.count);
+	memcpy(result.data + a.count, b.data, b.count);
 
 	return result;
 }
@@ -134,7 +135,7 @@ to_cstring(string str)
 {
 	char *result = (char *)push_size(&g_tempMemory, str.count + 1);
 
-	MemCpy(result, str.data, str.count);
+	memcpy(result, str.data, str.count);
 
 	result[str.count] = 0;
 

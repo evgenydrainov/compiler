@@ -1,6 +1,8 @@
 #include "codegen.h"
-#include <stdio.h>
+
+#include <string.h> // for strlen
 #include <stdarg.h>
+#include <stdio.h>
 
 internal void
 Emit(CodegenContext *context,
@@ -15,7 +17,7 @@ Emit(CodegenContext *context,
 
 	va_end(args);
 
-	string formatStr = { format, StrLen(format) };
+	string formatStr = { format, strlen(format) };
 	formatStr = trim_left(formatStr);
 
 	if (starts_with(formatStr, "push "))
@@ -721,11 +723,11 @@ GenerateExpression(Node *baseNode,
 			Emit(context, "");
 		} break;
 
-		case NodeKind_Bool:
+		case NodeKind_BoolLiteral:
 		{
-			BoolNode *node = As<BoolNode>(baseNode);
+			BoolLiteralNode *node = As<BoolLiteralNode>(baseNode);
 
-			Emit(context, "    mov rax, %d\t\t; load boolean literal", (int)node->boolValue);
+			Emit(context, "    mov rax, %d\t\t; load boolean literal", (int)node->value);
 			Emit(context, "    push rax");
 			Emit(context, "");
 		} break;
@@ -1574,9 +1576,9 @@ GenerateTopLevelStatement(Node *baseNode,
 {
 	switch (baseNode->kind)
 	{
-		case NodeKind_Func:
+		case NodeKind_ProcDecl:
 		{
-			FuncNode *node = As<FuncNode>(baseNode);
+			ProcDeclNode *node = As<ProcDeclNode>(baseNode);
 
 			if (!node->body)
 			{
@@ -1857,9 +1859,9 @@ Generate_x86_64(Node *_program,
 
 	for (Node *it : program->statements)
 	{
-		if (it->kind == NodeKind_Func)
+		if (it->kind == NodeKind_ProcDecl)
 		{
-			FuncNode *node = As<FuncNode>(it);
+			ProcDeclNode *node = As<ProcDeclNode>(it);
 
 			char *prefix = "proc_";
 			if (node->isForeign

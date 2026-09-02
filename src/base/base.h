@@ -10,4 +10,5 @@
 #include "base_slice.h"
 #include "base_static_bump_array.h"
 #include "base_string.h"
+#include "base_string_builder.h"
 #include "base_types.h"

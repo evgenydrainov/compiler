@@ -1,6 +1,8 @@
 #pragma once
 
 #include "base/base.h"
+#include <stdio.h> // for sprintf_s
+#include <string.h> // for strlen
 
 #define TYPE_KIND_LIST(X) \
 	X(TypeKind_Unknown,       0,    "unknown type"     ) \
@@ -351,4 +353,77 @@ AlignmentOfType(Type type)
 		   || result == 8);
 
 	return result;
+}
+
+inline void
+WriteType(Type type, string_builder *builder)
+{
+	switch (type.kind)
+	{
+		case TypeKind_Void: {sb_write(builder, "void");} break;
+
+		case TypeKind_Int8:  {sb_write(builder, "i8");} break;
+		case TypeKind_Int16: {sb_write(builder, "i16");} break;
+		case TypeKind_Int32: {sb_write(builder, "i32");} break;
+		case TypeKind_Int64: {sb_write(builder, "i64");} break;
+
+		case TypeKind_UInt8:  {sb_write(builder, "u8");} break;
+		case TypeKind_UInt16: {sb_write(builder, "u16");} break;
+		case TypeKind_UInt32: {sb_write(builder, "u32");} break;
+		case TypeKind_UInt64: {sb_write(builder, "u64");} break;
+
+		case TypeKind_Float32: {sb_write(builder, "f32");} break;
+		case TypeKind_Float64: {sb_write(builder, "f64");} break;
+
+		case TypeKind_Bool: {sb_write(builder, "bool");} break;
+
+		case TypeKind_Pointer:
+		{
+			sb_write(builder, "*");
+			WriteType(*type.pointee, builder);
+		} break;
+
+		case TypeKind_Struct:
+		{
+			sb_write(builder, type.structInfo->name);
+		} break;
+
+		case TypeKind_Enum:
+		{
+			sb_write(builder, type.enumInfo->name);
+		} break;
+
+		case TypeKind_Array:
+		{
+			char buf[32];
+			sprintf_s(buf, "[%d]", type.arrayLength);
+
+			sb_write(builder, { buf, strlen(buf) });
+
+			WriteType(*type.arrayElementType, builder);
+		} break;
+
+		case TypeKind_Slice:
+		{
+			sb_write(builder, "[]");
+			WriteType(*type.arrayElementType, builder);
+		} break;
+
+		case TypeKind_DynamicArray:
+		{
+			sb_write(builder, "[..]");
+			WriteType(*type.arrayElementType, builder);
+		} break;
+
+		default: {} break;
+	}
+}
+
+inline string
+TypeToString(Type type)
+{
+	string_builder builder = {};
+	WriteType(type, &builder);
+
+	return sb_to_string(builder);
 }

@@ -2,6 +2,7 @@
 
 #include "base_types.h"
 #include "base_slice.h"
+#include <string.h> // for memset
 
 constexpr usize DEFAULT_ALIGNMENT = 2 * sizeof(void *);
 
@@ -26,7 +27,7 @@ push_size(Arena *arena,
 	void *result = arena->data + alignedPos;
 	arena->pos = alignedPos + size;
 
-	MemSet(result, 0, size);
+	memset(result, 0, size);
 
 	/*
 	f32 percentage = arena->pos/(f32)arena->capacity;

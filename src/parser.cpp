@@ -548,8 +548,8 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_True)
 	{
-		BoolNode *node = MakeNode<BoolNode>(parser->current.location, arena);
-		node->boolValue = true;
+		BoolLiteralNode *node = MakeNode<BoolLiteralNode>(parser->current.location, arena);
+		node->value = true;
 		AdvanceToken(parser, lexer);
 
 		return node;
@@ -557,8 +557,8 @@ ParseAtom_Inner(Parser *parser,
 
 	if (parser->current.kind == TokenKind_False)
 	{
-		BoolNode *node = MakeNode<BoolNode>(parser->current.location, arena);
-		node->boolValue = false;
+		BoolLiteralNode *node = MakeNode<BoolLiteralNode>(parser->current.location, arena);
+		node->value = false;
 		AdvanceToken(parser, lexer);
 
 		return node;
@@ -922,7 +922,6 @@ ParseForeachStatement(Parser *parser,
 
 	ExpectToken(parser, lexer, TokenKind_In);
 
-	string thingName = parser->current.str;
 	Node *from = ParseExpression(parser, lexer, 0, arena);
 
 	if (parser->current.kind == TokenKind_DotDotLess)
@@ -1157,8 +1156,6 @@ ParseSwitchStatement(Parser *parser,
 
 	ExpectToken(parser, lexer, TokenKind_OpenBrace);
 
-	node->cases = push_bump_array<CaseNode *>(arena, 64);
-
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseBrace)
 	{
@@ -1174,7 +1171,7 @@ ParseSwitchStatement(Parser *parser,
 
 			caseNode->body = ParseCaseBlock(parser, lexer, arena);
 
-			array_add(&node->cases, caseNode);
+			list_append(&node->cases, caseNode);
 		}
 		else if (parser->current.kind == TokenKind_Default)
 		{
@@ -1479,7 +1476,7 @@ ParseFunctionDefinition(Parser *parser,
 
 	static_bump_array<ParamNode *, 32> params = {};
 
-	FuncNode *node = MakeNode<FuncNode>(parser->current.location, arena);
+	ProcDeclNode *node = MakeNode<ProcDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
 
 	// eat the function name

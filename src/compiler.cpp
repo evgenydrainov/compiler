@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "codegen.h"
 #include "semantic_pass.h"
+#include "print_code.h"
 
 #pragma warning(push, 0)
 #define MICROSOFT_CRAZINESS_IMPLEMENTATION
@@ -214,10 +215,10 @@ Compile(CompileOptions *options)
 		return CompileResult_SemanticError;
 	}
 
-	//{
-	//	PrintContext context = {};
-	//	PrintCode(&context, program);
-	//}
+	{
+		PrintContext context = {};
+		PrintProgram(&context, program);
+	}
 
 	CodegenContext codegenContext = {};
 	codegenContext.cstringLiterals = semanticContext.cstringLiterals;

@@ -3,6 +3,7 @@
 #include "base_types.h"
 #include "base_arena.h"
 #include "base_slice.h"
+#include <string.h> // for memcpy
 
 template <typename T, usize N>
 struct static_bump_array
@@ -50,7 +51,7 @@ copy_into_slice(static_bump_array<T, N> array, Arena *arena)
 	result.data = push_array<T>(arena, array.count);
 	result.count = array.count;
 
-	MemCpy(result.data, array.data, array.count*sizeof(T));
+	memcpy(result.data, array.data, array.count*sizeof(T));
 
 	return result;
 }

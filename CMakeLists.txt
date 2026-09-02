@@ -19,6 +19,7 @@ add_executable(
     src/base/base_slice.h
     src/base/base_static_bump_array.h
     src/base/base_string.h
+    src/base/base_string_builder.h
     src/base/base_types.h
     src/base/base.h
     src/codegen.cpp
@@ -34,6 +35,8 @@ add_executable(
     src/microsoft_craziness.h
     src/parser.cpp
     src/parser.h
+    src/print_code.cpp
+    src/print_code.h
     src/semantic_pass.cpp
     src/semantic_pass.h
     src/stuff.natvis

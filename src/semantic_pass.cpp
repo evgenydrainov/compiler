@@ -794,6 +794,7 @@ InstantiateMacro(Node *baseNode,
 
 			VarNode *result = MakeNode<VarNode>(node->location, arena);
 			result->name = node->name;
+
 			return result;
 		} break;
 
@@ -832,6 +833,7 @@ InstantiateMacro(Node *baseNode,
 			BlockNode *node = As<BlockNode>(baseNode);
 
 			BlockNode *result = MakeNode<BlockNode>(node->location, arena);
+
 			for (Node *it : node->statements)
 			{
 				Node *statement = InstantiateMacro(it, context);
@@ -899,12 +901,12 @@ InstantiateMacro(Node *baseNode,
 			return result;
 		} break;
 
-		case NodeKind_Bool:
+		case NodeKind_BoolLiteral:
 		{
-			BoolNode *node = As<BoolNode>(baseNode);
+			BoolLiteralNode *node = As<BoolLiteralNode>(baseNode);
 
-			BoolNode *result = MakeNode<BoolNode>(node->location, arena);
-			result->boolValue = node->boolValue;
+			BoolLiteralNode *result = MakeNode<BoolLiteralNode>(node->location, arena);
+			result->value = node->value;
 
 			return result;
 		} break;
@@ -1056,7 +1058,18 @@ InstantiateMacro(Node *baseNode,
 
 		case NodeKind_Switch:
 		{
-			Assert(false);
+			SwitchNode *node = As<SwitchNode>(baseNode);
+
+			SwitchNode *result = MakeNode<SwitchNode>(node->location, arena);
+			result->expr = InstantiateMacro(node->expr, context);
+			result->defaultBody = InstantiateMacro(node->defaultBody, context);
+
+			for (CaseNode *it : node->cases)
+			{
+				Node *_caseNode = InstantiateMacro(it, context);
+				CaseNode *caseNode = As<CaseNode>(_caseNode);
+				list_append(&result->cases, caseNode);
+			}
 
 			return nullptr;
 		} break;
@@ -1149,7 +1162,7 @@ AnalyzeExpression(Node *baseNode,
 			array_add(&context->cstringLiterals, literal);
 		} break;
 
-		case NodeKind_Bool:
+		case NodeKind_BoolLiteral:
 		{
 			baseNode->inferredType.kind = TypeKind_Bool;
 		} break;
@@ -1677,6 +1690,8 @@ AnalyzeExpression(Node *baseNode,
 
 			AnalyzeExpression(node->what, context);
 
+			ResolveType(&node->targetType, context, node);
+
 			if (IsInteger(node->targetType))
 			{
 				if (IsInteger(node->what->inferredType))
@@ -2030,9 +2045,9 @@ AnalyzeTopLevelStatement(Node *baseNode,
 {
 	switch (baseNode->kind)
 	{
-		case NodeKind_Func:
+		case NodeKind_ProcDecl:
 		{
-			FuncNode *node = As<FuncNode>(baseNode);
+			ProcDeclNode *node = As<ProcDeclNode>(baseNode);
 
 			ResolveType(&node->returnType, context, node);
 
@@ -2069,7 +2084,7 @@ AnalyzeTopLevelStatement(Node *baseNode,
 				}
 			}
 
-			FuncNode *saveCurrentFunction = context->currentFunction;
+			ProcDeclNode *saveCurrentFunction = context->currentFunction;
 			context->currentFunction = node;
 
 			if (node->body)
@@ -2105,9 +2120,9 @@ EarlyAnalyze(Node *baseNode,
 			Assert(false);
 		} break;
 
-		case NodeKind_Func:
+		case NodeKind_ProcDecl:
 		{
-			FuncNode *node = As<FuncNode>(baseNode);
+			ProcDeclNode *node = As<ProcDeclNode>(baseNode);
 
 			if (!LookupFunction(context->funcTable, node->name))
 			{
@@ -2323,9 +2338,9 @@ SemanticPass(Node *_program,
 
 	for (Node *it : program->statements)
 	{
-		if (it->kind == NodeKind_Func)
+		if (it->kind == NodeKind_ProcDecl)
 		{
-			FuncNode *functionDef = As<FuncNode>(it);
+			ProcDeclNode *functionDef = As<ProcDeclNode>(it);
 
 			// clear the symbol table for every function
 			memset(context->symTable, 0, sizeof(*context->symTable));

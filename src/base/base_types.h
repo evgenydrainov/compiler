@@ -23,8 +23,8 @@ typedef ptrdiff_t isize;
 typedef float f32;
 typedef double f64;
 
-#define CONCATENATE2(a, b) a##b
-#define CONCATENATE(a, b) CONCATENATE2(a, b)
+#define CONCATENATE_IMPL(a, b) a##b
+#define CONCATENATE(a, b) CONCATENATE_IMPL(a, b)
 
 inline usize
 Kilobytes(usize N)
@@ -71,43 +71,6 @@ inline T
 Min(T a, T b)
 {
 	T result = (a < b) ? a : b;
-	return result;
-}
-
-inline void *
-MemSet(void *dest, int value, usize count)
-{
-	u8 *dest8 = (u8 *)dest;
-	while (count--)
-	{
-		*dest8++ = (u8)value;
-	}
-
-	return dest;
-}
-
-inline void *
-MemCpy(void *dest, void *src, usize count)
-{
-	u8 *dest8 = (u8 *)dest;
-	u8 *src8 = (u8 *)src;
-	while (count--)
-	{
-		*dest8++ = *src8++;
-	}
-
-	return dest;
-}
-
-inline usize
-StrLen(char *str)
-{
-	usize result = 0;
-	while (*str++)
-	{
-		result++;
-	}
-
 	return result;
 }
 

@@ -16,11 +16,11 @@
 	X(If) \
 	X(While) \
 	X(Print) \
-	X(Func) \
+	X(ProcDecl) \
 	X(Call) \
 	X(Return) \
 	X(Param) \
-	X(Bool) \
+	X(BoolLiteral) \
 	X(AddressOf) \
 	X(Deref) \
 	X(StructDecl) \
@@ -113,6 +113,19 @@ enum UnaryOp : u32
 	UnaryOp_BitNegate,
 };
 
+inline char *
+GetUnaryOpSymbol(UnaryOp op)
+{
+	switch (op)
+	{
+		case UnaryOp_Negate: return "-";
+		case UnaryOp_LogicalNot: return "!";
+		case UnaryOp_BitNegate: return "~";
+	}
+	Assert(false);
+	return "";
+}
+
 struct Node
 {
 	NodeKind kind;
@@ -159,8 +172,6 @@ struct VarNode : public Node
 	string name;
 	int stackOffset;
 	bool isGlobal;
-
-	// u8 dummy[64];
 };
 
 struct Int64LiteralNode : public Node
@@ -226,9 +237,9 @@ struct ParamNode : public Node
 	Type type;
 };
 
-struct FuncNode : public Node
+struct ProcDeclNode : public Node
 {
-	static constexpr NodeKind KIND = NodeKind_Func;
+	static constexpr NodeKind KIND = NodeKind_ProcDecl;
 
 	string name;
 	string linkName;
@@ -267,11 +278,11 @@ struct ReturnNode : public Node
 	Node *expr;
 };
 
-struct BoolNode : public Node
+struct BoolLiteralNode : public Node
 {
-	static constexpr NodeKind KIND = NodeKind_Bool;
+	static constexpr NodeKind KIND = NodeKind_BoolLiteral;
 
-	bool boolValue;
+	bool value;
 };
 
 struct AddressOfNode : public Node
@@ -432,7 +443,7 @@ struct SwitchNode : public Node
 	static constexpr NodeKind KIND = NodeKind_Switch;
 
 	Node *expr;
-	bump_array<CaseNode *> cases;
+	list<CaseNode> cases;
 	Node *defaultBody;
 };
 

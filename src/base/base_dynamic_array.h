@@ -67,8 +67,19 @@ array_add(dynamic_array<T> *array,
 		  typename identity<T>::type const &value)
 {
 	array_reserve(array, array->count+1);
-	array->data[array->count] = value;
-	array->count++;
+	array->data[array->count++] = value;
+}
+
+template <typename T>
+inline void
+array_add_many(dynamic_array<T> *array,
+			   slice<T> values)
+{
+	array_reserve(array, array->count + values.count);
+	for (const T &value : values)
+	{
+		array->data[array->count++] = value;
+	}
 }
 
 template <typename T>

@@ -22,7 +22,7 @@ struct SemanticContext
 	ConstantsTable *constTable;
 	MacroTable     *macroTable;
 
-	FuncNode *currentFunction;
+	ProcDeclNode *currentFunction;
 
 	Node *currentLoop;
 
