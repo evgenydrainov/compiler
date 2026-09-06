@@ -905,8 +905,6 @@ ParseForeachStatement(Parser *parser,
 					  Lexer *lexer,
 					  Arena *arena)
 {
-	BlockNode *blockNode = MakeNode<BlockNode>(parser->current.location, arena);
-
 	AdvanceToken(parser, lexer); // eat the 'for'
 
 	bool iterateByPointer = false;
@@ -924,208 +922,50 @@ ParseForeachStatement(Parser *parser,
 
 	Node *from = ParseExpression(parser, lexer, 0, arena);
 
-	if (parser->current.kind == TokenKind_DotDotLess)
+	if (parser->current.kind == TokenKind_DotDotLess
+		|| parser->current.kind == TokenKind_DotDotEqual
+		|| parser->current.kind == TokenKind_DotDot)
 	{
 		// for it in from..<to { statements; }
-
-		// expands into:
-		// {
-		//     $to_copy := to;
-		//     for it := from; it < $to_copy; it = it + 1
-		//         { body }
-		// }
 
 		if (iterateByPointer)
 		{
 			ErrorAtCurrent(parser, "cannot iterate by pointer in a range-based for loop");
+			return nullptr;
+		}
+
+		RangeBasedForNode *node = MakeNode<RangeBasedForNode>(parser->current.location, arena);
+		node->iteratorName = iteratorName;
+		node->from = from;
+
+		if (parser->current.kind == TokenKind_DotDotEqual
+			|| parser->current.kind == TokenKind_DotDot)
+		{
+			node->inclusiveUpperBound = true;
 		}
 
 		AdvanceToken(parser, lexer); // eat the '..<'
 
-		Node *to = ParseExpression(parser, lexer, 0, arena);
+		node->to = ParseExpression(parser, lexer, 0, arena);
 
-		{
-			// $to_copy := to;
+		node->body = ParseBlock(parser, lexer, arena);
 
-			VarDeclNode *varDeclNode = MakeNode<VarDeclNode>(parser->current.location, arena);
-			varDeclNode->name = "$to_copy";
-			varDeclNode->expr = to;
-			varDeclNode->type.kind = TypeKind_InferMe;
-
-			list_append(&blockNode->statements, (Node *)varDeclNode);
-		}
-
-		ForNode *forNode = MakeNode<ForNode>(parser->current.location, arena);
-
-		{
-			// it := from;
-
-			VarDeclNode *varDeclNode = MakeNode<VarDeclNode>(parser->current.location, arena);
-			varDeclNode->name = iteratorName;
-			varDeclNode->expr = from;
-			varDeclNode->type.kind = TypeKind_InferMe;
-
-			forNode->init = varDeclNode;
-		}
-
-		{
-			// it < $to_copy
-
-			VarNode *comparisonLhs = MakeNode<VarNode>(parser->current.location, arena);
-			comparisonLhs->name = iteratorName;
-
-			VarNode *comparisonRhs = MakeNode<VarNode>(parser->current.location, arena);
-			comparisonRhs->name = "$to_copy";
-
-			BinaryNode *comparisonNode = MakeNode<BinaryNode>(parser->current.location, arena);
-			comparisonNode->op = BinaryOp_Less;
-			comparisonNode->lhs = comparisonLhs;
-			comparisonNode->rhs = comparisonRhs;
-
-			forNode->cond = comparisonNode;
-		}
-	
-		{
-			// it = it + 1;
-
-			VarNode *additionLhs = MakeNode<VarNode>(parser->current.location, arena);
-			additionLhs->name = iteratorName;
-
-			Int64LiteralNode *additionRhs = MakeNode<Int64LiteralNode>(parser->current.location, arena);
-			additionRhs->value = 1;
-
-			BinaryNode *assignRhs = MakeNode<BinaryNode>(parser->current.location, arena);
-			assignRhs->op = BinaryOp_Add;
-			assignRhs->rhs = additionLhs;
-			assignRhs->lhs = additionRhs;
-
-			VarNode *assignLhs = MakeNode<VarNode>(parser->current.location, arena);
-			assignLhs->name = iteratorName;
-
-			AssignNode *assignNode = MakeNode<AssignNode>(parser->current.location, arena);
-			assignNode->lhs = assignLhs;
-			assignNode->rhs = assignRhs;
-
-			forNode->incr = assignNode;
-		}
-
-		forNode->body = ParseBlock(parser, lexer, arena);
-
-		list_append(&blockNode->statements, (Node *)forNode);
-
-		return blockNode;
+		return node;
 	}
 	else
 	{
-		Node *thing = from;
+		// for it in what { statements; }
 
-		// for it in thing { statements; }
+		Node *what = from;
 
-		// expands into:
-		// {
-		//     $thing_copy := thing;
-		//     for $it_index := 0; $it_index < $thing_copy.count; $it_index = $it_index + 1
-		//     {
-		//         it := $thing_copy[$it_index];
-		//         { body }
-		//     }
-		// }
+		ForeachNode *node = MakeNode<ForeachNode>(parser->current.location, arena);
+		node->iteratorName = iteratorName;
+		node->what = what;
+		node->iterateByPointer = iterateByPointer;
 
-		{
-			// $thing_copy := thing;
+		node->body = ParseBlock(parser, lexer, arena);
 
-			VarDeclNode *varDeclNode = MakeNode<VarDeclNode>(parser->current.location, arena);
-			varDeclNode->name = "$thing_copy";
-			varDeclNode->expr = thing;
-			varDeclNode->type.kind = TypeKind_InferMe;
-
-			list_append(&blockNode->statements, (Node *)varDeclNode);
-		}
-
-		ForNode *forNode = MakeNode<ForNode>(parser->current.location, arena);
-
-		{
-			// $it_index := 0;
-
-			Int64LiteralNode *zero = MakeNode<Int64LiteralNode>(parser->current.location, arena);
-			zero->value = 0;
-
-			VarDeclNode *varDeclNode = MakeNode<VarDeclNode>(parser->current.location, arena);
-			varDeclNode->name = "$it_index";
-			varDeclNode->expr = zero;
-			varDeclNode->type.kind = TypeKind_InferMe;
-
-			forNode->init = varDeclNode;
-		}
-
-		{
-			// $it_index < $thing_copy.count
-
-			FieldAccessNode *fieldAccessNode = MakeNode<FieldAccessNode>(parser->current.location, arena);
-			fieldAccessNode->expr = MakeVarNode(parser->current.location, "$thing_copy", arena);
-			fieldAccessNode->fieldName = "count";
-
-			BinaryNode *comparisonNode = MakeNode<BinaryNode>(parser->current.location, arena);
-			comparisonNode->op = BinaryOp_Less;
-			comparisonNode->lhs = MakeVarNode(parser->current.location, "$it_index", arena);
-			comparisonNode->rhs = fieldAccessNode;
-
-			forNode->cond = comparisonNode;
-		}
-
-		{
-			// $it_index = $it_index + 1;
-
-			BinaryNode *assignRhs = MakeNode<BinaryNode>(parser->current.location, arena);
-			assignRhs->op = BinaryOp_Add;
-			assignRhs->rhs = MakeVarNode(parser->current.location, "$it_index", arena);
-			assignRhs->lhs = MakeInt64Literal(parser->current.location, 1, arena);
-
-			AssignNode *assignNode = MakeNode<AssignNode>(parser->current.location, arena);
-			assignNode->lhs = MakeVarNode(parser->current.location, "$it_index", arena);
-			assignNode->rhs = assignRhs;
-
-			forNode->incr = assignNode;
-		}
-
-		BlockNode *loopBody = MakeNode<BlockNode>(parser->current.location, arena);
-
-		{
-			// it := $thing_copy[$it_index];
-
-			ArrayIndexAccessNode *arrayIndexAccess = MakeNode<ArrayIndexAccessNode>(parser->current.location, arena);
-			arrayIndexAccess->arrayExpr = MakeVarNode(parser->current.location, "$thing_copy", arena);
-			arrayIndexAccess->indexExpr = MakeVarNode(parser->current.location, "$it_index", arena);
-
-			VarDeclNode *varDeclNode = MakeNode<VarDeclNode>(parser->current.location, arena);
-			varDeclNode->name = iteratorName;
-			varDeclNode->type.kind = TypeKind_InferMe;
-
-			if (iterateByPointer)
-			{
-				AddressOfNode *addressOf = MakeNode<AddressOfNode>(parser->current.location, arena);
-				addressOf->what = arrayIndexAccess;
-
-				varDeclNode->expr = addressOf;
-			}
-			else
-			{
-				varDeclNode->expr = arrayIndexAccess;
-			}
-
-			list_append(&loopBody->statements, (Node *)varDeclNode);
-		}
-
-		{
-			Node *actualLoopBody = ParseBlock(parser, lexer, arena);
-			list_append(&loopBody->statements, actualLoopBody);
-		}
-
-		forNode->body = loopBody;
-
-		list_append(&blockNode->statements, (Node *)forNode);
-
-		return blockNode;
+		return node;
 	}
 }
 

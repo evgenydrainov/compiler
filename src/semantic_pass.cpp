@@ -761,6 +761,25 @@ InstantiateMacro(Node *baseNode,
 			result->expr = InstantiateMacro(node->expr, context);
 			result->type = node->type;
 
+			if (decl)
+			{
+				for (int i = 0; i < decl->params.count; i++)
+				{
+					if (decl->params[i]->name == node->name)
+					{
+						if (decl->dontBind
+							&& context->arguments[i]->kind == NodeKind_Var)
+						{
+							result->name = As<VarNode>(context->arguments[i])->name;
+						}
+						else
+						{
+							// TODO: do something
+						}
+					}
+				}
+			}
+
 			return result;
 		} break;
 
@@ -1089,6 +1108,33 @@ InstantiateMacro(Node *baseNode,
 
 			SizeofNode *result = MakeNode<SizeofNode>(node->location, arena);
 			result->what = InstantiateMacro(node->what, context);
+
+			return result;
+		} break;
+
+		case NodeKind_RangeBasedFor:
+		{
+			RangeBasedForNode *node = As<RangeBasedForNode>(baseNode);
+
+			RangeBasedForNode *result = MakeNode<RangeBasedForNode>(node->location, arena);
+			result->iteratorName = node->iteratorName;
+			result->from = InstantiateMacro(node->from, context);
+			result->to = InstantiateMacro(node->to, context);
+			result->body = InstantiateMacro(node->body, context);
+			result->inclusiveUpperBound = node->inclusiveUpperBound;
+
+			return result;
+		} break;
+
+		case NodeKind_Foreach:
+		{
+			ForeachNode *node = As<ForeachNode>(baseNode);
+
+			ForeachNode *result = MakeNode<ForeachNode>(node->location, arena);
+			result->iteratorName = node->iteratorName;
+			result->what = InstantiateMacro(node->what, context);
+			result->body = InstantiateMacro(node->body, context);
+			result->iterateByPointer = node->iterateByPointer;
 
 			return result;
 		} break;
@@ -1749,72 +1795,6 @@ AnalyzeExpression(Node *baseNode,
 				  GetTypeKindPrettyName(node->targetType.kind));
 		} break;
 
-		case NodeKind_Break:
-		{
-			if (!(context->currentLoop
-				  && (context->currentLoop->kind == NodeKind_While
-					  || context->currentLoop->kind == NodeKind_For)))
-			{
-				Error(context, baseNode,
-					  "'break' is only allowed in 'while' and 'for' loops");
-			}
-		} break;
-
-		case NodeKind_Continue:
-		{
-			if (!(context->currentLoop
-				  && (context->currentLoop->kind == NodeKind_While
-					  || context->currentLoop->kind == NodeKind_For)))
-			{
-				Error(context, baseNode,
-					  "'continue' is only allowed in 'while' and 'for' loops");
-			}
-		} break;
-
-		case NodeKind_Defer:
-		{
-			DeferNode *node = As<DeferNode>(baseNode);
-
-			AnalyzeStatement(node->what, context);
-		} break;
-
-		case NodeKind_Switch:
-		{
-			SwitchNode *node = As<SwitchNode>(baseNode);
-
-			AnalyzeExpression(node->expr, context);
-
-			if (IsInteger(node->expr->inferredType)
-				|| node->expr->inferredType.kind == TypeKind_Enum)
-			{
-				for (CaseNode *caseNode : node->cases)
-				{
-					AnalyzeExpression(caseNode->label, context, node->expr->inferredType);
-
-					AnalyzeStatement(caseNode->body, context);
-
-					i64 result;
-					if (TryEvaluateConstantExpression(caseNode->label, context, &result))
-					{
-						caseNode->labelValue = result;
-					}
-					else
-					{
-						Error(context, caseNode->label, "case label must be constant");
-					}
-				}
-
-				if (node->defaultBody)
-				{
-					AnalyzeStatement(node->defaultBody, context);
-				}
-			}
-			else
-			{
-				Error(context, node->expr, "switch expression must be an integer or an enum");
-			}
-		} break;
-
 		case NodeKind_Proxy:
 		{
 			ProxyNode *node = As<ProxyNode>(baseNode);
@@ -1832,6 +1812,11 @@ AnalyzeStatement(Node *baseNode,
 {
 	switch (baseNode->kind)
 	{
+		default:
+		{
+			AnalyzeExpression(baseNode, context);
+		} break;
+
 		case NodeKind_VarDecl:
 		{
 			VarDeclNode *node = As<VarDeclNode>(baseNode);
@@ -1957,7 +1942,10 @@ AnalyzeStatement(Node *baseNode,
 
 			Scope scope = EnterScope(context->symTable);
 
-			AnalyzeStatement(node->init, context);
+			if (node->init)
+			{
+				AnalyzeStatement(node->init, context);
+			}
 			AnalyzeExpression(node->cond, context);
 			AnalyzeStatement(node->incr, context);
 
@@ -2032,9 +2020,147 @@ AnalyzeStatement(Node *baseNode,
 			node->yieldIndex = ++context->currentFunction->yieldIndex;
 		} break;
 
-		default:
+		case NodeKind_Break:
 		{
-			AnalyzeExpression(baseNode, context);
+			if (!(context->currentLoop
+				  && (context->currentLoop->kind == NodeKind_While
+					  || context->currentLoop->kind == NodeKind_For)))
+			{
+				Error(context, baseNode,
+					  "'break' is only allowed in 'while' and 'for' loops");
+			}
+		} break;
+
+		case NodeKind_Continue:
+		{
+			if (!(context->currentLoop
+				  && (context->currentLoop->kind == NodeKind_While
+					  || context->currentLoop->kind == NodeKind_For)))
+			{
+				Error(context, baseNode,
+					  "'continue' is only allowed in 'while' and 'for' loops");
+			}
+		} break;
+
+		case NodeKind_Defer:
+		{
+			DeferNode *node = As<DeferNode>(baseNode);
+
+			AnalyzeStatement(node->what, context);
+		} break;
+
+		case NodeKind_Switch:
+		{
+			SwitchNode *node = As<SwitchNode>(baseNode);
+
+			AnalyzeExpression(node->expr, context);
+
+			if (IsInteger(node->expr->inferredType)
+				|| node->expr->inferredType.kind == TypeKind_Enum)
+			{
+				for (CaseNode *caseNode : node->cases)
+				{
+					AnalyzeExpression(caseNode->label, context, node->expr->inferredType);
+
+					AnalyzeStatement(caseNode->body, context);
+
+					i64 result;
+					if (TryEvaluateConstantExpression(caseNode->label, context, &result))
+					{
+						caseNode->labelValue = result;
+					}
+					else
+					{
+						Error(context, caseNode->label, "case label must be constant");
+					}
+				}
+
+				if (node->defaultBody)
+				{
+					AnalyzeStatement(node->defaultBody, context);
+				}
+			}
+			else
+			{
+				Error(context, node->expr, "switch expression must be an integer or an enum");
+			}
+		} break;
+
+		case NodeKind_RangeBasedFor:
+		{
+			RangeBasedForNode *node = As<RangeBasedForNode>(baseNode);
+
+			Macro *macro;
+			if (node->inclusiveUpperBound)
+			{
+				macro = LookupMacro(context->macroTable, "__range_based_for_expansion_inclusive");
+			}
+			else
+			{
+				macro = LookupMacro(context->macroTable, "__range_based_for_expansion_exclusive");
+			}
+			Assert(macro);
+
+			Node *itExpr = MakeVarNode(node->location, node->iteratorName, context->arenaForAst);
+
+			Node *arguments[4] =
+			{
+				node->from,
+				node->to,
+				itExpr,
+				node->body,
+			};
+
+			InstantiateContext instContext = {};
+			instContext.arena = context->arenaForAst;
+			instContext.decl = macro->decl;
+			instContext.uniqueId = ++context->macroInstantiationUniqueId;
+			instContext.arguments = arguments;
+
+			Node *instantiated = InstantiateMacro(macro->decl->body, &instContext);
+
+			BlockNode *newNode = ReinterpretNode<BlockNode>(node);
+			list_append(&newNode->statements, instantiated);
+
+			AnalyzeStatement(newNode, context);
+		} break;
+
+		case NodeKind_Foreach:
+		{
+			ForeachNode *node = As<ForeachNode>(baseNode);
+
+			Macro *macro;
+			if (node->iterateByPointer)
+			{
+				macro = LookupMacro(context->macroTable, "__foreach_expansion_by_pointer");
+			}
+			else
+			{
+				macro = LookupMacro(context->macroTable, "__foreach_expansion_by_value");
+			}
+			Assert(macro);
+
+			Node *itExpr = MakeVarNode(node->location, node->iteratorName, context->arenaForAst);
+
+			Node *arguments[3] =
+			{
+				node->what,
+				itExpr,
+				node->body,
+			};
+
+			InstantiateContext instContext = {};
+			instContext.arena = context->arenaForAst;
+			instContext.decl = macro->decl;
+			instContext.uniqueId = ++context->macroInstantiationUniqueId;
+			instContext.arguments = arguments;
+
+			Node *instantiated = InstantiateMacro(macro->decl->body, &instContext);
+
+			BlockNode *newNode = ReinterpretNode<BlockNode>(node);
+			list_append(&newNode->statements, instantiated);
+
+			AnalyzeStatement(newNode, context);
 		} break;
 	}
 }

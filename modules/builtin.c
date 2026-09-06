@@ -101,3 +101,46 @@ array_unordered_remove :: macro(array, index)
 	}
 	array.count -= 1;
 }
+
+__range_based_for_expansion_exclusive :: macro(from, to, it, body) #no_bind
+{
+	it := from;
+	__to := to;
+	for ; it < __to; it += 1
+	{
+		body;
+	}
+}
+
+__range_based_for_expansion_inclusive :: macro(from, to, it, body) #no_bind
+{
+	it := from;
+	__to := to;
+	for ; it <= __to; it += 1
+	{
+		body;
+	}
+}
+
+__foreach_expansion_by_pointer :: macro(array, it, body) #no_bind
+{
+	__array := array;
+	it := &__array.data[0];
+	__end := &__array.data[__array.count];
+	for ; it != __end; it = &it[1] // it += 1
+	{
+		body;
+	}
+}
+
+__foreach_expansion_by_value :: macro(array, it, body) #no_bind
+{
+	__array := array;
+	__it := &__array.data[0];
+	__end := &__array.data[__array.count];
+	for ; __it != __end; __it = &__it[1] // it += 1
+	{
+		it := *__it;
+		body;
+	}
+}

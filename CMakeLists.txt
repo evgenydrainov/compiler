@@ -64,7 +64,10 @@ set_property(TARGET run_tests PROPERTY
 )
 
 set_target_properties(compiler PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG          "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL     "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE        "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}"
 )
 
 set(FLAGS
@@ -79,6 +82,10 @@ target_compile_options(run_tests PRIVATE ${FLAGS})
 target_compile_options(
     compiler PRIVATE
     /MT
+)
+target_link_options(
+    compiler PRIVATE
+    /INCREMENTAL:NO
 )
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/distrib)

@@ -70,7 +70,7 @@ PrintExpression(PrintContext *context,
 	{
 		default:
 		{
-			Assert(false);
+			//Assert(false);
 		} break;
 
 		case NodeKind_Int64Literal:
@@ -215,6 +215,19 @@ PrintExpression(PrintContext *context,
 				  STR_ARG(TypeToString(node->targetType)));
 
 			PrintExpression(context, node->what);
+		} break;
+
+		case NodeKind_Deref:
+		{
+			DerefNode *node = As<DerefNode>(_node);
+
+			Print(context, "*");
+
+			Print(context, "(");
+
+			PrintExpression(context, node->what);
+
+			Print(context, ")");
 		} break;
 	}
 }
@@ -377,6 +390,16 @@ PrintStatement(PrintContext *context,
 
 			context->indentation--;
 			PrintLn(context, "}");
+		} break;
+
+		case NodeKind_Break:
+		{
+			PrintLn(context, "break;");
+		} break;
+
+		case NodeKind_Continue:
+		{
+			PrintLn(context, "continue;");
 		} break;
 
 		default:

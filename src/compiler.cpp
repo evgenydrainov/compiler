@@ -216,8 +216,8 @@ Compile(CompileOptions *options)
 	}
 
 	{
-		PrintContext context = {};
-		PrintProgram(&context, program);
+		//PrintContext context = {};
+		//PrintProgram(&context, program);
 	}
 
 	CodegenContext codegenContext = {};

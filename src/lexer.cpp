@@ -760,6 +760,11 @@ GetToken(Lexer *lexer)
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_DotDotLess, location, 3);
 			}
+			if (lexer->current[1] == '.'
+				&& lexer->current[2] == '=')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_DotDotEqual, location, 3);
+			}
 			if (lexer->current[1] == '.')
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_DotDot, location, 2);

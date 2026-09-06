@@ -47,7 +47,9 @@
 	X(MacroDecl) \
 	X(ProcRef) \
 	X(MacroRef) \
-	X(Proxy)
+	X(Proxy) \
+	X(RangeBasedFor) \
+	X(Foreach)
 
 #define GENERATE_NODE_KIND_ENUM(Name) NodeKind_##Name,
 
@@ -493,6 +495,32 @@ struct ProxyNode : public Node
 	static constexpr NodeKind KIND = NodeKind_Proxy;
 
 	Node *proxy;
+};
+
+struct RangeBasedForNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_RangeBasedFor;
+
+	string iteratorName;
+
+	Node *from;
+	Node *to;
+
+	Node *body;
+
+	bool inclusiveUpperBound;
+};
+
+struct ForeachNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Foreach;
+
+	string iteratorName;
+
+	Node *what;
+	Node *body;
+
+	bool iterateByPointer;
 };
 
 template <typename T>

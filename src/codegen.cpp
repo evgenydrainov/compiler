@@ -1337,6 +1337,7 @@ GenerateStatement(Node *baseNode,
 			context->currentLoopDeferFloor = context->deferStack.count;
 
 			Emit(context, ".loop_%d:", uniqueId);
+			Emit(context, ".continue_%d:", uniqueId);
 
 			GenerateExpression(node->condition, context);
 
@@ -1347,7 +1348,6 @@ GenerateStatement(Node *baseNode,
 
 			GenerateBlock(node->body, context);
 
-			Emit(context, ".continue_%d:", uniqueId);
 			Emit(context, "    jmp .loop_%d", uniqueId);
 			Emit(context, ".end_%d:", uniqueId);
 			Emit(context, "");
@@ -1368,7 +1368,10 @@ GenerateStatement(Node *baseNode,
 			context->currentLoopUniqueId = uniqueId;
 			context->currentLoopDeferFloor = context->deferStack.count;
 
-			GenerateStatement(node->init, context);
+			if (node->init)
+			{
+				GenerateStatement(node->init, context);
+			}
 
 			Emit(context, ".loop_%d:", uniqueId);
 

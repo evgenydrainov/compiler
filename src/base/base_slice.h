@@ -15,6 +15,9 @@ struct slice
 
 	slice(dynamic_array<T> array);
 
+	template <usize N>
+	slice(T (&array)[N]) : data(array), count(N) {}
+
 	T &operator[](usize index)
 	{
 		Assert(index >= 0 && index < count);

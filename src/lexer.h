@@ -52,6 +52,7 @@ enum TokenKind : u32
 
 	/* three-character tokens */
 	TokenKind_DotDotLess,
+	TokenKind_DotDotEqual,
 
 	/* keywords */
 	TokenKind_If,
@@ -137,6 +138,7 @@ GetTokenKindName(TokenKind kind)
 		case TokenKind_SlashEqual:     return "/=";
 		case TokenKind_DotDot:         return "..";
 		case TokenKind_DotDotLess:     return "..<";
+		case TokenKind_DotDotEqual:    return "..=";
 		case TokenKind_If:             return "if";
 		case TokenKind_Else:           return "else";
 		case TokenKind_While:          return "while";
