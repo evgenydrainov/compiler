@@ -360,58 +360,54 @@ WriteType(Type type, string_builder *builder)
 {
 	switch (type.kind)
 	{
-		case TypeKind_Void: {sb_write(builder, "void");} break;
+		case TypeKind_Void: {builder_write(builder, "void");} break;
 
-		case TypeKind_Int8:  {sb_write(builder, "i8");} break;
-		case TypeKind_Int16: {sb_write(builder, "i16");} break;
-		case TypeKind_Int32: {sb_write(builder, "i32");} break;
-		case TypeKind_Int64: {sb_write(builder, "i64");} break;
+		case TypeKind_Int8:  {builder_write(builder, "i8");} break;
+		case TypeKind_Int16: {builder_write(builder, "i16");} break;
+		case TypeKind_Int32: {builder_write(builder, "i32");} break;
+		case TypeKind_Int64: {builder_write(builder, "i64");} break;
 
-		case TypeKind_UInt8:  {sb_write(builder, "u8");} break;
-		case TypeKind_UInt16: {sb_write(builder, "u16");} break;
-		case TypeKind_UInt32: {sb_write(builder, "u32");} break;
-		case TypeKind_UInt64: {sb_write(builder, "u64");} break;
+		case TypeKind_UInt8:  {builder_write(builder, "u8");} break;
+		case TypeKind_UInt16: {builder_write(builder, "u16");} break;
+		case TypeKind_UInt32: {builder_write(builder, "u32");} break;
+		case TypeKind_UInt64: {builder_write(builder, "u64");} break;
 
-		case TypeKind_Float32: {sb_write(builder, "f32");} break;
-		case TypeKind_Float64: {sb_write(builder, "f64");} break;
+		case TypeKind_Float32: {builder_write(builder, "f32");} break;
+		case TypeKind_Float64: {builder_write(builder, "f64");} break;
 
-		case TypeKind_Bool: {sb_write(builder, "bool");} break;
+		case TypeKind_Bool: {builder_write(builder, "bool");} break;
 
 		case TypeKind_Pointer:
 		{
-			sb_write(builder, "*");
+			builder_write(builder, "*");
 			WriteType(*type.pointee, builder);
 		} break;
 
 		case TypeKind_Struct:
 		{
-			sb_write(builder, type.structInfo->name);
+			builder_write(builder, type.structInfo->name);
 		} break;
 
 		case TypeKind_Enum:
 		{
-			sb_write(builder, type.enumInfo->name);
+			builder_write(builder, type.enumInfo->name);
 		} break;
 
 		case TypeKind_Array:
 		{
-			char buf[32];
-			sprintf_s(buf, "[%d]", type.arrayLength);
-
-			sb_write(builder, { buf, strlen(buf) });
-
+			builder_write_fmt(builder, "[%d]", type.arrayLength);
 			WriteType(*type.arrayElementType, builder);
 		} break;
 
 		case TypeKind_Slice:
 		{
-			sb_write(builder, "[]");
+			builder_write(builder, "[]");
 			WriteType(*type.arrayElementType, builder);
 		} break;
 
 		case TypeKind_DynamicArray:
 		{
-			sb_write(builder, "[..]");
+			builder_write(builder, "[..]");
 			WriteType(*type.arrayElementType, builder);
 		} break;
 
@@ -423,7 +419,9 @@ inline string
 TypeToString(Type type)
 {
 	string_builder builder = {};
+	builder_init(&builder, &g_tempMemory);
+
 	WriteType(type, &builder);
 
-	return sb_to_string(builder);
+	return builder_to_string(builder);
 }

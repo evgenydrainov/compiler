@@ -130,14 +130,11 @@ GetUnaryOpSymbol(UnaryOp op)
 
 struct Node
 {
-	NodeKind kind;
-	SourceLocation location;
-
 	Type inferredType;
-
-	int paramCopyOffset;
-
+	SourceLocation location;
 	Node *next;
+	NodeKind kind;
+	int paramCopyOffset;
 };
 
 struct BinaryNode : public Node

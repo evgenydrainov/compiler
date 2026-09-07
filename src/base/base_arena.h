@@ -77,3 +77,22 @@ push_slice(Arena *arena, usize count)
 
 	return result;
 }
+
+inline void *
+grow_allocation(Arena *arena, void *ptr, usize oldSize, usize newSize)
+{
+	Assert(newSize >= oldSize);
+
+	if (ptr)
+	{
+		Assert(arena->data + arena->pos == (u8 *)ptr + oldSize);
+
+		push_size(arena, newSize - oldSize, 1);
+
+		return ptr;
+	}
+	else
+	{
+		return push_size(arena, newSize);
+	}
+}

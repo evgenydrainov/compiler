@@ -11,10 +11,10 @@
 #include <string.h>
 
 internal void
-Error(SemanticContext *context,
-	  Node *node,
-	  char *format,
-	  ...)
+_Error(SemanticContext *context,
+	   Node *node,
+	   char *format,
+	   ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -33,10 +33,10 @@ Error(SemanticContext *context,
 }
 
 internal void
-Note(SemanticContext *context,
-	 Node *node,
-	 char *format,
-	 ...)
+_Note(SemanticContext *context,
+	  Node *node,
+	  char *format,
+	  ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -51,6 +51,11 @@ Note(SemanticContext *context,
 
 	va_end(args);
 }
+
+#define Error(context, node, format, ...) \
+	do { if (0) {printf(format, ##__VA_ARGS__);} _Error(context, node, format, ##__VA_ARGS__); } while (0)
+#define Note(context, node, format, ...) \
+	do { if (0) {printf(format, ##__VA_ARGS__);} _Note(context, node, format, ##__VA_ARGS__); } while (0)
 
 struct Scope
 {
@@ -640,10 +645,12 @@ AnalyzeBinaryExpression(Node *baseNode,
 				break;
 			}
 
-			Error(context, node, "operator '%s': invalid operands '%s' and '%s'",
+			string lhsTypeString = TypeToString(node->lhs->inferredType);
+			string rhsTypeString = TypeToString(node->rhs->inferredType);
+			Error(context, node, "operator '%s': invalid operands " STR_FMT_QUOTED " and " STR_FMT_QUOTED,
 				  GetBinaryOpSymbol(node->op),
-				  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-				  GetTypeKindPrettyName(node->rhs->inferredType.kind));
+				  STR_ARG(lhsTypeString),
+				  STR_ARG(rhsTypeString));
 		} break;
 
 		case BinaryOp_Less:
@@ -672,10 +679,12 @@ AnalyzeBinaryExpression(Node *baseNode,
 				break;
 			}
 
-			Error(context, node, "operator '%s': invalid operands '%s' and '%s'",
+			string lhsTypeString = TypeToString(node->lhs->inferredType);
+			string rhsTypeString = TypeToString(node->rhs->inferredType);
+			Error(context, node, "operator '%s': invalid operands " STR_FMT_QUOTED " and " STR_FMT_QUOTED,
 				  GetBinaryOpSymbol(node->op),
-				  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-				  GetTypeKindPrettyName(node->rhs->inferredType.kind));
+				  STR_ARG(lhsTypeString),
+				  STR_ARG(rhsTypeString));
 		} break;
 
 		case BinaryOp_LogicalAnd:
@@ -691,10 +700,12 @@ AnalyzeBinaryExpression(Node *baseNode,
 				break;
 			}
 
-			Error(context, node, "operator '%s': both operands must be 'bool', but they are '%s' and '%s'",
+			string lhsTypeString = TypeToString(node->lhs->inferredType);
+			string rhsTypeString = TypeToString(node->rhs->inferredType);
+			Error(context, node, "operator '%s': both operands must be 'bool', but they are " STR_FMT_QUOTED " and " STR_FMT_QUOTED,
 				  GetBinaryOpSymbol(node->op),
-				  GetTypeKindPrettyName(node->lhs->inferredType.kind),
-				  GetTypeKindPrettyName(node->rhs->inferredType.kind));
+				  STR_ARG(lhsTypeString),
+				  STR_ARG(rhsTypeString));
 		} break;
 	}
 }
@@ -1247,9 +1258,10 @@ AnalyzeExpression(Node *baseNode,
 				}
 				else
 				{
+					string exprTypeString = TypeToString(node->expr->inferredType);
 					Error(context, node->expr,
-						  "cannot negate '%s': operand must be a signed integer or a float",
-						  GetTypeKindPrettyName(node->expr->inferredType.kind));
+						  "cannot negate " STR_FMT_QUOTED ": operand must be a signed integer or a float",
+						  STR_ARG(exprTypeString));
 				}
 			}
 			else if (node->op == UnaryOp_LogicalNot)
@@ -1260,8 +1272,9 @@ AnalyzeExpression(Node *baseNode,
 				}
 				else
 				{
-					Error(context, node->expr, "cannot negate '%s': operand must be 'bool'",
-						  GetTypeKindPrettyName(node->expr->inferredType.kind));
+					string exprTypeString = TypeToString(node->expr->inferredType);
+					Error(context, node->expr, "cannot negate " STR_FMT_QUOTED ": operand must be 'bool'",
+						  STR_ARG(exprTypeString));
 				}
 			}
 			else
@@ -1409,8 +1422,9 @@ AnalyzeExpression(Node *baseNode,
 
 			if (node->callee->inferredType.kind != TypeKind_Proc)
 			{
-				Error(context, node->callee, "cannot call a value of type '%s'",
-					  GetTypeKindPrettyName(node->callee->inferredType.kind));
+				string calleeTypeString = TypeToString(node->callee->inferredType);
+				Error(context, node->callee, "cannot call a value of type " STR_FMT_QUOTED,
+					  STR_ARG(calleeTypeString));
 				break;
 			}
 
@@ -1454,11 +1468,13 @@ AnalyzeExpression(Node *baseNode,
 				}
 				else
 				{
+					string exprTypeString = TypeToString(expr->inferredType);
+					string paramTypeString = TypeToString(node->signature->params[i]);
 					Error(context, expr,
-						  "cannot pass '%s' as argument %d: expected '%s'",
-						  GetTypeKindPrettyName(expr->inferredType.kind),
+						  "cannot pass " STR_FMT_QUOTED " as argument %d: expected " STR_FMT_QUOTED,
+						  STR_ARG(exprTypeString),
 						  (int)(i + 1),
-						  GetTypeKindPrettyName(node->signature->params[i].kind));
+						  STR_ARG(paramTypeString));
 				}
 			}
 
@@ -1508,8 +1524,9 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node->what, "cannot dereference '%s': it is not a pointer",
-					  GetTypeKindPrettyName(node->what->inferredType.kind));
+				string whatTypeString = TypeToString(node->what->inferredType);
+				Error(context, node->what, "cannot dereference " STR_FMT_QUOTED ": it is not a pointer",
+					  STR_ARG(whatTypeString));
 			}
 		} break;
 
@@ -1548,9 +1565,10 @@ AnalyzeExpression(Node *baseNode,
 				}
 				else
 				{
-					Error(context, node, "cannot use '." STR_FMT "' here: expected type is '%s', not an enum",
+					string expectedTypeString = TypeToString(expectedType);
+					Error(context, node, "cannot use '." STR_FMT "' here: expected type is " STR_FMT_QUOTED ", not an enum",
 						  STR_ARG(node->fieldName),
-						  GetTypeKindPrettyName(expectedType.kind));
+						  STR_ARG(expectedTypeString));
 				}
 
 				break;
@@ -1691,9 +1709,10 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node->expr, "cannot access field " STR_FMT_QUOTED " of '%s': it is not a struct",
+				string exprTypeString = TypeToString(node->expr->inferredType);
+				Error(context, node->expr, "cannot access field " STR_FMT_QUOTED " of " STR_FMT_QUOTED ": it is not a struct",
 					  STR_ARG(node->fieldName),
-					  GetTypeKindPrettyName(node->expr->inferredType.kind));
+					  STR_ARG(exprTypeString));
 			}
 		} break;
 
@@ -1706,9 +1725,10 @@ AnalyzeExpression(Node *baseNode,
 
 			if (!IsSignedInteger(node->indexExpr->inferredType))
 			{
+				string indexExprTypeString = TypeToString(node->indexExpr->inferredType);
 				Error(context, node->indexExpr,
-					  "array index must be a signed integer, but it is '%s'",
-					  GetTypeKindPrettyName(node->indexExpr->inferredType.kind));
+					  "array index must be a signed integer, but it is " STR_FMT_QUOTED,
+					  STR_ARG(indexExprTypeString));
 				break;
 			}
 
@@ -1724,9 +1744,10 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
+				string arayExprTypeString = TypeToString(node->arrayExpr->inferredType);
 				Error(context, node->arrayExpr,
-					  "cannot index '%s': it is not an array or a pointer",
-					  GetTypeKindPrettyName(node->arrayExpr->inferredType.kind));
+					  "cannot index " STR_FMT_QUOTED ": it is not an array or a pointer",
+					  STR_ARG(arayExprTypeString));
 			}
 		} break;
 
@@ -1790,9 +1811,11 @@ AnalyzeExpression(Node *baseNode,
 				}
 			}
 
-			Error(context, node, "cannot cast '%s' to '%s'",
-				  GetTypeKindPrettyName(node->what->inferredType.kind),
-				  GetTypeKindPrettyName(node->targetType.kind));
+			string whatTypeString = TypeToString(node->what->inferredType);
+			string targetTypeString = TypeToString(node->targetType);
+			Error(context, node, "cannot cast " STR_FMT_QUOTED " to " STR_FMT_QUOTED,
+				  STR_ARG(whatTypeString),
+				  STR_ARG(targetTypeString));
 		} break;
 
 		case NodeKind_Proxy:
@@ -1833,36 +1856,36 @@ AnalyzeStatement(Node *baseNode,
 
 			ResolveType(&node->type, context, node);
 
-			if (node->type.kind != TypeKind_Void)
-			{
-				if (!LookupSymbol(context->symTable, node->name, context->symTable->scopeStart))
-				{
-					Symbol *symbol = DeclareSymbol(context->symTable, node->name, node->type);
-
-					node->stackOffset = symbol->stackOffset;
-
-					if (node->expr)
-					{
-						if (!CanImplicitlyCast(symbol->type, node->expr, context))
-						{
-							Error(context, node->expr,
-								  "cannot initialize " STR_FMT_QUOTED " of type '%s' with a value of type '%s'",
-								  STR_ARG(node->name),
-								  GetTypeKindPrettyName(symbol->type.kind),
-								  GetTypeKindPrettyName(node->expr->inferredType.kind));
-						}
-					}
-				}
-				else
-				{
-					Error(context, node, "variable " STR_FMT_QUOTED " is already declared in this scope",
-						  STR_ARG(node->name));
-				}
-			}
-			else
+			if (node->type.kind == TypeKind_Void)
 			{
 				Error(context, node, "cannot declare variable " STR_FMT_QUOTED " of type 'void'",
 					  STR_ARG(node->name));
+				break;
+			}
+
+			if (LookupSymbol(context->symTable, node->name, context->symTable->scopeStart))
+			{
+				Error(context, node, "variable " STR_FMT_QUOTED " is already declared in this scope",
+					  STR_ARG(node->name));
+				break;
+			}
+
+			Symbol *symbol = DeclareSymbol(context->symTable, node->name, node->type);
+
+			node->stackOffset = symbol->stackOffset;
+
+			if (node->expr)
+			{
+				if (!CanImplicitlyCast(symbol->type, node->expr, context))
+				{
+					string symbolTypeString = TypeToString(symbol->type);
+					string exprTypeString = TypeToString(node->expr->inferredType);
+					Error(context, node->expr,
+						  "cannot initialize " STR_FMT_QUOTED " of type " STR_FMT_QUOTED " with a value of type " STR_FMT_QUOTED,
+						  STR_ARG(node->name),
+						  STR_ARG(symbolTypeString),
+						  STR_ARG(exprTypeString));
+				}
 			}
 		} break;
 
@@ -1877,9 +1900,11 @@ AnalyzeStatement(Node *baseNode,
 			{
 				if (!CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 				{
-					Error(context, node->rhs, "cannot assign a value of type '%s' to '%s'",
-						  GetTypeKindPrettyName(node->rhs->inferredType.kind),
-						  GetTypeKindPrettyName(node->lhs->inferredType.kind));
+					string rhsTypeString = TypeToString(node->rhs->inferredType);
+					string lhsTypeString = TypeToString(node->lhs->inferredType);
+					Error(context, node->rhs, "cannot assign a value of type " STR_FMT_QUOTED " to " STR_FMT_QUOTED,
+						  STR_ARG(rhsTypeString),
+						  STR_ARG(lhsTypeString));
 				}
 			}
 			else
@@ -1909,9 +1934,10 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->condition->inferredType.kind != TypeKind_Bool)
 			{
+				string conditionTypeString = TypeToString(node->condition->inferredType);
 				Error(context, node->condition,
-					  "'if' condition must be of type 'bool', but it is '%s'",
-					  GetTypeKindPrettyName(node->condition->inferredType.kind));
+					  "'if' condition must be of type 'bool', but it is " STR_FMT_QUOTED,
+					  STR_ARG(conditionTypeString));
 			}
 		} break;
 
@@ -1930,9 +1956,10 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->condition->inferredType.kind != TypeKind_Bool)
 			{
+				string conditionTypeString = TypeToString(node->condition->inferredType);
 				Error(context, node->condition,
-					  "'while' condition must be of type 'bool', but it is '%s'",
-					  GetTypeKindPrettyName(node->condition->inferredType.kind));
+					  "'while' condition must be of type 'bool', but it is " STR_FMT_QUOTED,
+					  STR_ARG(conditionTypeString));
 			}
 		} break;
 
@@ -1960,9 +1987,10 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->cond->inferredType.kind != TypeKind_Bool)
 			{
+				string condTypeString = TypeToString(node->cond->inferredType);
 				Error(context, node->cond,
-					  "'for' condition must be of type 'bool', but it is '%s'",
-					  GetTypeKindPrettyName(node->cond->inferredType.kind));
+					  "'for' condition must be of type 'bool', but it is " STR_FMT_QUOTED,
+					  STR_ARG(condTypeString));
 			}
 		} break;
 
@@ -1988,11 +2016,13 @@ AnalyzeStatement(Node *baseNode,
 				
 				if (!CanImplicitlyCast(context->currentFunction->returnType, node->expr, context))
 				{
+					string exprTypeString = TypeToString(node->expr->inferredType);
+					string returnTypeString = TypeToString(context->currentFunction->returnType);
 					Error(context, node,
-						  "cannot return a value of type '%s' from " STR_FMT_QUOTED ": its return type is '%s'",
-						  GetTypeKindPrettyName(node->expr->inferredType.kind),
+						  "cannot return a value of type " STR_FMT_QUOTED " from " STR_FMT_QUOTED ": its return type is " STR_FMT_QUOTED,
+						  STR_ARG(exprTypeString),
 						  STR_ARG(context->currentFunction->name),
-						  GetTypeKindPrettyName(context->currentFunction->returnType.kind));
+						  STR_ARG(returnTypeString));
 				}
 			}
 			else
@@ -2001,9 +2031,10 @@ AnalyzeStatement(Node *baseNode,
 
 				if (context->currentFunction->returnType.kind != TypeKind_Void)
 				{
-					Error(context, node, STR_FMT_QUOTED " must return a value of type '%s'",
+					string returnTypeString = TypeToString(context->currentFunction->returnType);
+					Error(context, node, STR_FMT_QUOTED " must return a value of type " STR_FMT_QUOTED,
 						  STR_ARG(context->currentFunction->name),
-						  GetTypeKindPrettyName(context->currentFunction->returnType.kind));
+						  STR_ARG(returnTypeString));
 				}
 			}
 		} break;
@@ -2483,3 +2514,6 @@ SemanticPass(Node *_program,
 		}
 	}
 }
+
+#undef Error
+#undef Note

@@ -165,21 +165,29 @@ strip_extension(string filepath)
 }
 
 inline string
-tprintf(char *format, ...)
+vtprintf(char *format, va_list args)
 {
-	va_list args;
-	va_start(args, format);
-
 	int length = vsnprintf(nullptr, 0, format, args);
 
 	char *buffer = (char *)push_size(&g_tempMemory, length+1);
 	vsnprintf(buffer, length+1, format, args);
 
-	va_end(args);
-
-	string result;
+	string result = {};
 	result.data = buffer;
 	result.count = length;
+
+	return result;
+}
+
+inline string
+tprintf(char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	string result = vtprintf(format, args);
+
+	va_end(args);
 
 	return result;
 }
