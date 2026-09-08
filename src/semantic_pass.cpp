@@ -281,19 +281,23 @@ ResolveType(Type *type,
 {
 	if (type->kind == TypeKind_Struct)
 	{
-		if (!type->structInfo
-			&& !type->enumInfo)
+		if (!type->structInfo())
 		{
 			Type *typeInfo = LookupType(context->typeTable, type->name);
 			if (typeInfo)
 			{
-				type->structInfo = typeInfo->structInfo;
-				type->enumInfo = typeInfo->enumInfo;
-
-				if (type->enumInfo)
+				if (typeInfo->kind == TypeKind_Struct)
 				{
-					Assert(!type->structInfo);
+					type->structInfo() = typeInfo->structInfo();
+				}
+				else if (typeInfo->kind == TypeKind_Enum)
+				{
 					type->kind = TypeKind_Enum;
+					type->enumInfo() = typeInfo->enumInfo();
+				}
+				else
+				{
+					Assert(false);
 				}
 			}
 			else
@@ -303,7 +307,7 @@ ResolveType(Type *type,
 					  STR_ARG(type->name));
 
 				local_persist StructInfo dummyStructInfo;
-				type->structInfo = &dummyStructInfo; // avoid crashes
+				type->structInfo() = &dummyStructInfo; // avoid crash
 			}
 		}
 		else
@@ -313,14 +317,14 @@ ResolveType(Type *type,
 	}
 	else if (type->kind == TypeKind_Array)
 	{
-		ResolveType(type->arrayElementType, context, nodeForError);
+		ResolveType(type->array().elementType, context, nodeForError);
 
-		if (type->arrayLength == 0)
+		if (type->array().length == 0)
 		{
-			i64 arrayLength = EvaluateConstantExpression(type->arrayLengthExpr, context);
+			i64 arrayLength = EvaluateConstantExpression(type->array().lengthExpr, context);
 			if (arrayLength > 0)
 			{
-				type->arrayLength = (int)arrayLength;
+				type->array().length = (int)arrayLength;
 			}
 			else
 			{
@@ -328,7 +332,7 @@ ResolveType(Type *type,
 					  "array length must be greater than zero, but it is %lld",
 					  arrayLength);
 
-				type->arrayLength = 1; // avoid crash
+				type->array().length = 1; // avoid crash
 			}
 		}
 		else
@@ -338,25 +342,25 @@ ResolveType(Type *type,
 	}
 	else if (type->kind == TypeKind_Pointer)
 	{
-		ResolveType(type->pointee, context, nodeForError);
+		ResolveType(type->pointee(), context, nodeForError);
 	}
 	else if (type->kind == TypeKind_Slice
 			 || type->kind == TypeKind_DynamicArray)
 	{
-		ResolveType(type->arrayElementType, context, nodeForError);
+		ResolveType(type->array().elementType, context, nodeForError);
 	}
 	else if (type->kind == TypeKind_Proc)
 	{
-		Assert(type->procInfo);
+		Assert(type->procInfo());
 
 		for (usize i = 0;
-			 i < type->procInfo->params.count;
+			 i < type->procInfo()->params.count;
 			 i++)
 		{
-			ResolveType(&type->procInfo->params[i], context, nodeForError);
+			ResolveType(&type->procInfo()->params[i], context, nodeForError);
 		}
 
-		ResolveType(&type->procInfo->returnType, context, nodeForError);
+		ResolveType(&type->procInfo()->returnType, context, nodeForError);
 	}
 }
 
@@ -552,7 +556,7 @@ CanImplicitlyCast(Type destType,
 		|| destType.kind == TypeKind_Proc)
 	{
 		if (source->inferredType.kind == TypeKind_Pointer
-			&& source->inferredType.pointee->kind == TypeKind_Void)
+			&& source->inferredType.pointee()->kind == TypeKind_Void)
 		{
 			return true;
 		}
@@ -560,7 +564,7 @@ CanImplicitlyCast(Type destType,
 
 	// allow any pointer to cast into *void
 	if (destType.kind == TypeKind_Pointer
-		&& destType.pointee->kind == TypeKind_Void)
+		&& destType.pointee()->kind == TypeKind_Void)
 	{
 		if (source->inferredType.kind == TypeKind_Pointer
 			|| source->inferredType.kind == TypeKind_Proc)
@@ -1184,7 +1188,7 @@ AnalyzeExpression(Node *baseNode,
 			local_persist Type voidType = { TypeKind_Void };
 
 			baseNode->inferredType.kind = TypeKind_Pointer;
-			baseNode->inferredType.pointee = &voidType;
+			baseNode->inferredType.pointee() = &voidType;
 		} break;
 
 		case NodeKind_String:
@@ -1208,7 +1212,7 @@ AnalyzeExpression(Node *baseNode,
 			baseNode->inferredType.kind = TypeKind_Pointer;
 
 			local_persist Type uint8Type = { TypeKind_UInt8 };
-			baseNode->inferredType.pointee = &uint8Type;
+			baseNode->inferredType.pointee() = &uint8Type;
 
 			CStringNode *node = As<CStringNode>(baseNode);
 
@@ -1321,7 +1325,7 @@ AnalyzeExpression(Node *baseNode,
 				ProcRefNode *newNode = ReinterpretNode<ProcRefNode>(node);
 				newNode->linkName = function->linkName;
 				newNode->inferredType.kind = TypeKind_Proc;
-				newNode->inferredType.procInfo = function->info;
+				newNode->inferredType.procInfo() = function->info;
 
 				break;
 			}
@@ -1403,7 +1407,7 @@ AnalyzeExpression(Node *baseNode,
 						varDecl->expr = node->arguments[i];
 						varDecl->type.kind = TypeKind_InferMe;
 
-						list_append(&statements, (Node *)varDecl);
+						list_append(&statements, varDecl);
 					}
 				}
 
@@ -1428,7 +1432,7 @@ AnalyzeExpression(Node *baseNode,
 				break;
 			}
 
-			node->signature = node->callee->inferredType.procInfo;
+			node->signature = node->callee->inferredType.procInfo();
 			node->calleeSlotOffset = ReserveSpace(context->symTable, node->callee->inferredType);
 
 			bool good = ((node->signature->isVariadic)
@@ -1500,7 +1504,7 @@ AnalyzeExpression(Node *baseNode,
 			if (IsLValue(node->what))
 			{
 				node->inferredType.kind = TypeKind_Pointer;
-				node->inferredType.pointee = &node->what->inferredType;
+				node->inferredType.pointee() = &node->what->inferredType;
 			}
 			else
 			{
@@ -1518,7 +1522,7 @@ AnalyzeExpression(Node *baseNode,
 
 			if (node->what->inferredType.kind == TypeKind_Pointer)
 			{
-				node->inferredType = *node->what->inferredType.pointee;
+				node->inferredType = *node->what->inferredType.pointee();
 
 				ResolveType(&node->inferredType, context, node);
 			}
@@ -1541,7 +1545,7 @@ AnalyzeExpression(Node *baseNode,
 				
 				if (expectedType.kind == TypeKind_Enum)
 				{
-					EnumeratorInfo *enumerator = FindEnumerator(expectedType.enumInfo, node->fieldName);
+					EnumeratorInfo *enumerator = FindEnumerator(expectedType.enumInfo(), node->fieldName);
 					if (enumerator)
 					{
 						Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
@@ -1551,7 +1555,7 @@ AnalyzeExpression(Node *baseNode,
 					else
 					{
 						Error(context, node, "enum " STR_FMT_QUOTED " has no enumerator " STR_FMT_QUOTED,
-							  STR_ARG(expectedType.enumInfo->name),
+							  STR_ARG(expectedType.enumInfo()->name),
 							  STR_ARG(node->fieldName));
 					}
 				}
@@ -1579,7 +1583,7 @@ AnalyzeExpression(Node *baseNode,
 				Type *type = LookupType(context->typeTable, As<VarNode>(node->expr)->name);
 				if (type && type->kind == TypeKind_Enum)
 				{
-					EnumeratorInfo *enumerator = FindEnumerator(type->enumInfo, node->fieldName);
+					EnumeratorInfo *enumerator = FindEnumerator(type->enumInfo(), node->fieldName);
 					if (enumerator)
 					{
 						Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
@@ -1603,7 +1607,7 @@ AnalyzeExpression(Node *baseNode,
 			{
 				if (type->kind == TypeKind_Struct)
 				{
-					StructField *field = FindField(type->structInfo, node->fieldName);
+					StructField *field = FindField(type->structInfo(), node->fieldName);
 					if (field)
 					{
 						node->inferredType = field->type;
@@ -1612,7 +1616,7 @@ AnalyzeExpression(Node *baseNode,
 					else
 					{
 						Error(context, node, "struct " STR_FMT_QUOTED " has no field " STR_FMT_QUOTED,
-							  STR_ARG(type->structInfo->name),
+							  STR_ARG(type->structInfo()->name),
 							  STR_ARG(node->fieldName));
 					}
 				}
@@ -1621,7 +1625,7 @@ AnalyzeExpression(Node *baseNode,
 					if (node->fieldName == "data")
 					{
 						node->inferredType.kind = TypeKind_Pointer;
-						node->inferredType.pointee = type->arrayElementType;
+						node->inferredType.pointee() = type->array().elementType;
 						node->fieldOffset = 0;
 					}
 					else if (node->fieldName == "count")
@@ -1638,7 +1642,7 @@ AnalyzeExpression(Node *baseNode,
 				{
 					if (node->fieldName == "count")
 					{
-						int arrayLength = type->arrayLength;
+						int arrayLength = type->array().length;
 						Assert(arrayLength != 0);
 
 						Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
@@ -1655,7 +1659,7 @@ AnalyzeExpression(Node *baseNode,
 					if (node->fieldName == "data")
 					{
 						node->inferredType.kind = TypeKind_Pointer;
-						node->inferredType.pointee = type->arrayElementType;
+						node->inferredType.pointee() = type->array().elementType;
 						node->fieldOffset = 0;
 					}
 					else if (node->fieldName == "count")
@@ -1691,14 +1695,14 @@ AnalyzeExpression(Node *baseNode,
 				// auto dereference
 				// pointer.field
 
-				if (node->expr->inferredType.pointee->kind == TypeKind_Struct
-					|| node->expr->inferredType.pointee->kind == TypeKind_Slice
-					|| node->expr->inferredType.pointee->kind == TypeKind_Array
-					|| node->expr->inferredType.pointee->kind == TypeKind_DynamicArray)
+				if (node->expr->inferredType.pointee()->kind == TypeKind_Struct
+					|| node->expr->inferredType.pointee()->kind == TypeKind_Slice
+					|| node->expr->inferredType.pointee()->kind == TypeKind_Array
+					|| node->expr->inferredType.pointee()->kind == TypeKind_DynamicArray)
 				{
-					ResolveType(node->expr->inferredType.pointee, context, node->expr);
+					ResolveType(node->expr->inferredType.pointee(), context, node->expr);
 
-					HandleField(node->expr->inferredType.pointee);
+					HandleField(node->expr->inferredType.pointee());
 				}
 				else
 				{
@@ -1734,13 +1738,13 @@ AnalyzeExpression(Node *baseNode,
 
 			if (node->arrayExpr->inferredType.kind == TypeKind_Pointer)
 			{
-				node->inferredType = *node->arrayExpr->inferredType.pointee;
+				node->inferredType = *node->arrayExpr->inferredType.pointee();
 			}
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Array
 					 || node->arrayExpr->inferredType.kind == TypeKind_Slice
 					 || node->arrayExpr->inferredType.kind == TypeKind_DynamicArray)
 			{
-				node->inferredType = *node->arrayExpr->inferredType.arrayElementType;
+				node->inferredType = *node->arrayExpr->inferredType.array().elementType;
 			}
 			else
 			{
@@ -2216,7 +2220,7 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 				Type voidPtrType = {};
 				voidPtrType.kind = TypeKind_Pointer;
-				voidPtrType.pointee = &voidType;
+				voidPtrType.pointee() = &voidType;
 
 				// declare the hidden struct pointer, which is the first argument
 				int stackOffset = ReserveSpace(context->symTable, voidPtrType);
@@ -2312,15 +2316,15 @@ EarlyAnalyze(Node *baseNode,
 				Type *type = DeclareType(context->typeTable, node->name);
 
 				type->kind = TypeKind_Struct;
-				type->structInfo = push_struct<StructInfo>(arena);
-				type->structInfo->name = node->name;
+				type->structInfo() = push_struct<StructInfo>(arena);
+				type->structInfo()->name = node->name;
 
 				int offset = 0;
 				int maxFieldAlignment = 0;
 
 				for (StructFieldDeclNode *field : node->fields)
 				{
-					if (!FindField(type->structInfo, field->name))
+					if (!FindField(type->structInfo(), field->name))
 					{
 						ResolveType(&field->type, context, field);
 
@@ -2337,7 +2341,7 @@ EarlyAnalyze(Node *baseNode,
 						fieldInfo.offset = offset;
 						offset += size;
 
-						array_add(&type->structInfo->fields, fieldInfo);
+						array_add(&type->structInfo()->fields, fieldInfo);
 					}
 					else
 					{
@@ -2348,8 +2352,8 @@ EarlyAnalyze(Node *baseNode,
 					}
 				}
 
-				type->structInfo->size = (int)align_forward(offset, maxFieldAlignment);
-				type->structInfo->alignment = maxFieldAlignment;
+				type->structInfo()->size = (int)align_forward(offset, maxFieldAlignment);
+				type->structInfo()->alignment = maxFieldAlignment;
 			}
 			else
 			{
@@ -2368,16 +2372,16 @@ EarlyAnalyze(Node *baseNode,
 				Type *type = DeclareType(context->typeTable, node->name);
 
 				type->kind = TypeKind_Enum;
-				type->enumInfo = push_struct<EnumInfo>(arena);
-				type->enumInfo->name = node->name;
-				type->enumInfo->underlyingType = node->underlyingType;
-				type->enumInfo->enumerators = push_bump_array<EnumeratorInfo>(arena, node->enumerators.count);
+				type->enumInfo() = push_struct<EnumInfo>(arena);
+				type->enumInfo()->name = node->name;
+				type->enumInfo()->underlyingType = node->underlyingType;
+				type->enumInfo()->enumerators = push_bump_array<EnumeratorInfo>(arena, node->enumerators.count);
 
 				i64 enumeratorValue = 0;
 
 				for (EnumeratorDeclNode *enumerator : node->enumerators)
 				{
-					if (!FindEnumerator(type->enumInfo, enumerator->name))
+					if (!FindEnumerator(type->enumInfo(), enumerator->name))
 					{
 						EnumeratorInfo info = {};
 						info.name = enumerator->name;
@@ -2389,7 +2393,7 @@ EarlyAnalyze(Node *baseNode,
 
 						info.value = enumeratorValue++;
 
-						array_add(&type->enumInfo->enumerators, info);
+						array_add(&type->enumInfo()->enumerators, info);
 					}
 					else
 					{

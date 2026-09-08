@@ -229,13 +229,13 @@ GenerateLValueAddress(Node *baseNode,
 			{
 				GenerateExpression(node->arrayExpr, context);
 
-				size = SizeOfType(*node->arrayExpr->inferredType.pointee);
+				size = SizeOfType(*node->arrayExpr->inferredType.pointee());
 			}
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Array)
 			{
 				GenerateLValueAddress(node->arrayExpr, context);
 
-				size = SizeOfType(*node->arrayExpr->inferredType.arrayElementType);
+				size = SizeOfType(*node->arrayExpr->inferredType.array().elementType);
 			}
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Slice
 					 || node->arrayExpr->inferredType.kind == TypeKind_DynamicArray)
@@ -248,7 +248,7 @@ GenerateLValueAddress(Node *baseNode,
 				Emit(context, "    mov rax, qword [rax]");
 				Emit(context, "    push rax");
 
-				size = SizeOfType(*node->arrayExpr->inferredType.arrayElementType);
+				size = SizeOfType(*node->arrayExpr->inferredType.array().elementType);
 			}
 			else
 			{
@@ -737,7 +737,7 @@ GenerateExpression(Node *baseNode,
 			ProcRefNode *node = As<ProcRefNode>(baseNode);
 
 			char *prefix = "proc_";
-			if (node->inferredType.procInfo->isForeign
+			if (node->inferredType.procInfo()->isForeign
 				|| node->linkName == "main")
 			{
 				prefix = "";

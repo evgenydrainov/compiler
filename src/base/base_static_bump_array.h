@@ -31,7 +31,7 @@ struct static_bump_array
 
 template <typename T, usize N>
 inline T *
-array_add(static_bump_array<T, N> *array, const T &value)
+array_add(static_bump_array<T, N> *array, const IDENTITY(T) &value)
 {
 	Assert(array->count < array->capacity);
 

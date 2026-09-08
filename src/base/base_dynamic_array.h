@@ -63,8 +63,7 @@ array_free(dynamic_array<T> *array)
 
 template <typename T>
 inline void
-array_add(dynamic_array<T> *array,
-		  typename identity<T>::type const &value)
+array_add(dynamic_array<T> *array, const IDENTITY(T) &value)
 {
 	array_reserve(array, array->count+1);
 	array->data[array->count++] = value;

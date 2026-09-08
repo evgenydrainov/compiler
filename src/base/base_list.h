@@ -41,8 +41,7 @@ struct list
 
 template <typename TNode>
 inline void
-list_append(list<TNode> *list,
-			typename identity<TNode>::type *node)
+list_append(list<TNode> *list, IDENTITY(TNode) *node)
 {
 	if (list->head)
 	{

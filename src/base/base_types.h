@@ -7,6 +7,8 @@
 #define local_persist static
 #define global_variable static
 
+#define foreach(it, array) for (auto it = (array).begin(); it != (array).end(); it++)
+
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
@@ -112,6 +114,8 @@ struct identity
 {
 	typedef T type;
 };
+
+#define IDENTITY(Type) typename identity<Type>::type
 
 #define ANSI_COLOR_RESET   "\x1b[0m"
 #define ANSI_COLOR_BLACK   "\x1b[30m"
