@@ -230,6 +230,10 @@ ParseType(Parser *parser,
 				ExpectToken(parser, lexer, TokenKind_Comma);
 			}
 
+			ExpectToken(parser, lexer, TokenKind_Identifier);
+
+			ExpectToken(parser, lexer, TokenKind_Colon);
+
 			Type param = ParseType(parser, lexer, arena);
 			array_add(&params, param);
 		}

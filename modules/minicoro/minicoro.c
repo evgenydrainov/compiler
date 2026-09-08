@@ -25,12 +25,12 @@ MCO_STACK_OVERFLOW       :: 12;
 mco_coro :: struct {
 	context         : *void;
 	state           : i32;
-	func            : proc(*mco_coro);
+	func            : proc(co: *mco_coro);
 	prev_co         : *mco_coro;
 	user_data       : *void;
 	coro_size       : u64;
 	allocator_data  : *void;
-	dealloc_cb      : proc(*void, u64, *void);
+	dealloc_cb      : proc(ptr: *void, size: u64, allocator_data: *void);
 	stack_base      : *void; /* Stack base address, can be used to scan memory in a garbage collector. */
 	stack_size      : u64;
 	storage         : *u8;
@@ -44,11 +44,11 @@ mco_coro :: struct {
 
 /* Structure used to initialize a coroutine. */
 mco_desc :: struct {
-	func           : proc(*mco_coro); /* Entry point function for the coroutine. */
+	func           : proc(co: *mco_coro); /* Entry point function for the coroutine. */
 	user_data      : *void;           /* Coroutine user data, can be get with `mco_get_user_data`. */
 	/* Custom allocation interface. */
-	alloc_cb       : proc(u64, *void) -> *void; /* Custom allocation function. */
-	dealloc_cb     : proc(*void, u64, *void);   /* Custom deallocation function. */
+	alloc_cb       : proc(size: u64, allocator_data: *void) -> *void; /* Custom allocation function. */
+	dealloc_cb     : proc(ptr: *void, size: u64, allocator_data: *void);   /* Custom deallocation function. */
 	allocator_data : *void;      /* User data pointer passed to `alloc`/`dealloc` allocation functions. */
 	storage_size   : u64;        /* Coroutine storage size, to be used with the storage APIs. */
 	/* These must be initialized only through `mco_init_desc`. */
@@ -57,7 +57,7 @@ mco_desc :: struct {
 };
 
 /* Coroutine functions. */
-mco_desc_init     :: proc(func: proc(*mco_coro), stack_size: u64) -> mco_desc #foreign; /* Initialize description of a coroutine. When stack size is 0 then MCO_DEFAULT_STACK_SIZE is used. */
+mco_desc_init     :: proc(func: proc(co: *mco_coro), stack_size: u64) -> mco_desc #foreign; /* Initialize description of a coroutine. When stack size is 0 then MCO_DEFAULT_STACK_SIZE is used. */
 mco_init          :: proc(co: *mco_coro, desc: *mco_desc)         -> i32      #foreign; /* Initialize the coroutine. */
 mco_uninit        :: proc(co: *mco_coro)                          -> i32      #foreign; /* Uninitialize the coroutine, may fail if it's not dead or suspended. */
 mco_create        :: proc(out_co: **mco_coro, desc: *mco_desc)    -> i32      #foreign; /* Allocates and initializes a new coroutine. */

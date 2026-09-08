@@ -2,7 +2,7 @@ main :: proc() -> i64
 {
 	// ---- a procedure in a local, called and then replaced ----
 	{
-		f: proc(int, int) -> int;
+		f: proc(a: int, b: int) -> int;
 
 		f = add;
 		if f(3, 4) != 7 { return 1; }
@@ -50,7 +50,7 @@ main :: proc() -> i64
 
 	// ---- a table, indexed and called in one expression ----
 	{
-		table: [2]proc(int, int) -> int;
+		table: [2]proc(a: int, b: int) -> int;
 		table[0] = add;
 		table[1] = mul;
 
@@ -86,7 +86,7 @@ main :: proc() -> i64
 
 	// ---- null, and comparison ----
 	{
-		f: proc(int, int) -> int = null;
+		f: proc(a: int, b: int) -> int = null;
 		if f != null { return 16; }
 
 		f = add;
@@ -141,7 +141,7 @@ main :: proc() -> i64
 
 	// ---- a dynamic array of them ----
 	{
-		a: [..]proc(int, int) -> int;
+		a: [..]proc(a: int, b: int) -> int;
 		defer array_free(&a);
 
 		array_add(&a, add);
@@ -221,13 +221,13 @@ bump :: proc(x: int) -> int
 
 // ---- procedures that take and return procedures -------------------------
 
-apply :: proc(f: proc(int, int) -> int, a: int, b: int) -> int
+apply :: proc(f: proc(a: int, b: int) -> int, a: int, b: int) -> int
 {
 	return f(a, b);
 }
 
 // the return type's arrow binds to the inner 'proc': this returns a procedure
-pick :: proc(first: bool) -> proc(int, int) -> int
+pick :: proc(first: bool) -> proc(a: int, b: int) -> int
 {
 	if first
 	{
@@ -239,7 +239,7 @@ pick :: proc(first: bool) -> proc(int, int) -> int
 
 // ---- state --------------------------------------------------------------
 
-g_handler: proc(int) -> int;
+g_handler: proc(x: int) -> int;
 
 ticks: int;
 steps: int;
@@ -254,5 +254,5 @@ V2 :: struct
 Entity :: struct
 {
 	hp:     int;
-	update: proc(*Entity);
+	update: proc(e: *Entity);
 }
