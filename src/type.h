@@ -86,6 +86,7 @@ struct EnumInfo
 {
 	string name;
 	bump_array<EnumeratorInfo> enumerators;
+	Type underlyingType;
 };
 
 struct ProcInfo
@@ -201,7 +202,6 @@ SizeOfType(Type type)
 
 		case TypeKind_Pointer:      {result = 8;}  break;
 		case TypeKind_Bool:         {result = 1;}  break;
-		case TypeKind_Enum:         {result = 8;}  break;
 		case TypeKind_Slice:        {result = 16;} break;
 		case TypeKind_DynamicArray: {result = 24;} break;
 		case TypeKind_Proc:         {result = 8;}  break;
@@ -209,6 +209,13 @@ SizeOfType(Type type)
 		// NOTE: the size of a void type is asked when a function checks if
 		// it has a large struct return value
 		case TypeKind_Void:    {result = 1;} break;
+
+		case TypeKind_Enum:
+		{
+			Assert(type.enumInfo && "type was not resolved");
+
+			result = SizeOfType(type.enumInfo->underlyingType);
+		} break;
 
 		case TypeKind_Struct:
 		{

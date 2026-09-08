@@ -2370,6 +2370,7 @@ EarlyAnalyze(Node *baseNode,
 				type->kind = TypeKind_Enum;
 				type->enumInfo = push_struct<EnumInfo>(arena);
 				type->enumInfo->name = node->name;
+				type->enumInfo->underlyingType = node->underlyingType;
 				type->enumInfo->enumerators = push_bump_array<EnumeratorInfo>(arena, node->enumerators.count);
 
 				i64 enumeratorValue = 0;

@@ -286,7 +286,7 @@ ParseType(Parser *parser,
 
 			if (parser->current.str == "int")
 			{
-				// 'int' is alias for 'i64'
+				// alias for i64
 				AdvanceToken(parser, lexer);
 				return { TypeKind_Int64 };
 			}
@@ -349,6 +349,16 @@ ParseType(Parser *parser,
 			{
 				AdvanceToken(parser, lexer);
 				return { TypeKind_Void };
+			}
+		} break;
+
+		case 's':
+		{
+			if (parser->current.str == "size_t")
+			{
+				// alias for u64
+				AdvanceToken(parser, lexer);
+				return { TypeKind_UInt64 };
 			}
 		} break;
 	}
@@ -1574,6 +1584,18 @@ ParseEnumDefinition(Parser *parser,
 	ExpectToken(parser, lexer, TokenKind_Colon);
 
 	ExpectToken(parser, lexer, TokenKind_Enum);
+
+	node->underlyingType.kind = TypeKind_Int64;
+
+	if (parser->current.kind != TokenKind_OpenBrace)
+	{
+		node->underlyingType = ParseType(parser, lexer, arena);
+
+		if (!IsInteger(node->underlyingType))
+		{
+			ErrorAtCurrent(parser, "underlying type of enum must be an integer type");
+		}
+	}
 
 	ExpectToken(parser, lexer, TokenKind_OpenBrace);
 

@@ -376,6 +376,7 @@ struct EnumDeclNode : public Node
 
 	string name;
 	list<EnumeratorDeclNode> enumerators;
+	Type underlyingType;
 };
 
 struct CastNode : public Node
