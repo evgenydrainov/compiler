@@ -34,11 +34,19 @@ builder_write_fmt(string_builder *builder, char *format, ...)
 	va_list args;
 	va_start(args, format);
 
-	string str = vtprintf(format, args);
+	int length = vsnprintf(nullptr, 0, format, args);
+
+	builder->data = (char *)grow_allocation(builder->arena, builder->data, builder->count, builder->count + length + 1);
+
+	vsnprintf(builder->data + builder->count, length + 1, format, args);
+
+	builder->count += length + 1;
+
+	// pop the null terminator
+	builder->count--;
+	builder->arena->pos--;
 
 	va_end(args);
-
-	builder_write(builder, str);
 }
 
 inline string
