@@ -5,7 +5,7 @@
 struct CompileOptions
 {
 	string inputFilePath;
-	string outputFilePath;
+	string outputFilePathNoExt;
 
 	string exeFileDir;
 

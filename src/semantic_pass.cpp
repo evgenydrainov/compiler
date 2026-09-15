@@ -418,18 +418,11 @@ CanImplicitlyCast(Type destType,
 		return false;
 	}
 
-	if (TypesEqual(destType, source->inferredType))
-	{
-		return true;
-	}
-
 	if (IsSignedInteger(destType))
 	{
 		i64 value;
 		if (TryEvaluateConstantExpression(source, context, &value))
 		{
-			// TODO: fold the constant here
-
 			struct Range
 			{
 				i64 min;
@@ -461,6 +454,10 @@ CanImplicitlyCast(Type destType,
 
 			if (value >= range.min && value <= range.max)
 			{
+				Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(source);
+				newNode->value = value;
+				newNode->inferredType.kind = TypeKind_Int64;
+
 				return true;
 			}
 		}
@@ -471,8 +468,6 @@ CanImplicitlyCast(Type destType,
 		i64 value;
 		if (TryEvaluateConstantExpression(source, context, &value))
 		{
-			// TODO: fold the constant here
-
 			struct Range
 			{
 				u64 min;
@@ -504,9 +499,48 @@ CanImplicitlyCast(Type destType,
 
 			if ((u64)value >= range.min && (u64)value <= range.max)
 			{
+				Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(source);
+				newNode->value = value;
+				newNode->inferredType.kind = TypeKind_Int64;
+
 				return true;
 			}
 		}
+	}
+
+	if (destType.kind == TypeKind_Float32)
+	{
+		i64 value;
+		if (TryEvaluateConstantExpression(source, context, &value))
+		{
+			// TODO: check that value fits in float32
+
+			Float32LiteralNode *newNode = ReinterpretNode<Float32LiteralNode>(source);
+			newNode->value = (f32)value;
+			newNode->inferredType.kind = TypeKind_Float32;
+
+			return true;
+		}
+	}
+
+	if (destType.kind == TypeKind_Float64)
+	{
+		i64 value;
+		if (TryEvaluateConstantExpression(source, context, &value))
+		{
+			// TODO: check that value fits in float64
+
+			Float64LiteralNode *newNode = ReinterpretNode<Float64LiteralNode>(source);
+			newNode->value = (f64)value;
+			newNode->inferredType.kind = TypeKind_Float64;
+
+			return true;
+		}
+	}
+
+	if (TypesEqual(destType, source->inferredType))
+	{
+		return true;
 	}
 
 	if (destType.kind == TypeKind_Int64)
@@ -569,36 +603,6 @@ CanImplicitlyCast(Type destType,
 		if (source->inferredType.kind == TypeKind_Pointer
 			|| source->inferredType.kind == TypeKind_Proc)
 		{
-			return true;
-		}
-	}
-
-	if (destType.kind == TypeKind_Float32)
-	{
-		i64 value;
-		if (TryEvaluateConstantExpression(source, context, &value))
-		{
-			// TODO: check that value fits in float32
-
-			Float32LiteralNode *newNode = ReinterpretNode<Float32LiteralNode>(source);
-			newNode->value = (f32)value;
-			newNode->inferredType.kind = TypeKind_Float32;
-
-			return true;
-		}
-	}
-
-	if (destType.kind == TypeKind_Float64)
-	{
-		i64 value;
-		if (TryEvaluateConstantExpression(source, context, &value))
-		{
-			// TODO: check that value fits in float64
-
-			Float64LiteralNode *newNode = ReinterpretNode<Float64LiteralNode>(source);
-			newNode->value = (f64)value;
-			newNode->inferredType.kind = TypeKind_Float64;
-
 			return true;
 		}
 	}

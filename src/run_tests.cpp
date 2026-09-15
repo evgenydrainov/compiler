@@ -104,8 +104,21 @@ TestCompiles(char *testName)
 }
 
 internal void
-run_tests()
+ChDir(char *path)
 {
+	int res = _chdir(path);
+	if (res != 0)
+	{
+		fprintf(stderr, "_chdir failed\n");
+		exit(1);
+	}
+}
+
+internal void
+RunTests()
+{
+	ChDir("tests");
+
 	TestReturnCode("01_arithmetic", 0);
 	TestReturnCode("02_variables_scope", 0);
 	TestReturnCode("03_control_flow", 0);
@@ -133,11 +146,15 @@ run_tests()
 	TestReturnCode("25_dynamic_array", 0);
 	TestReturnCode("26_macro", 0);
 	TestReturnCode("27_function_pointers", 0);
+
+	ChDir("..");
 }
 
 internal void
-run_failure_tests()
+RunFailureTests()
 {
+	ChDir("tests\\should_fail");
+
 	TestCompileError("01_assign_to_literal");
 	TestCompileError("02_redeclaration");
 	TestCompileError("03_type_mismatch_return");
@@ -157,6 +174,19 @@ run_failure_tests()
 	TestCompileError("17_array_add_on_slice");
 	TestCompileError("18_dynamic_array_not_a_slice");
 	TestCompileError("19_dynamic_array_unknown_field");
+
+	ChDir("..\\..");
+}
+
+internal void
+TestExampleCompiles(char *testName, char *folder)
+{
+	ChDir("examples");
+	ChDir(folder);
+
+	TestCompiles(testName);
+
+	ChDir("..\\..");
 }
 
 int main()
@@ -172,55 +202,10 @@ int main()
 
 	sprintf_s(compilerPath, "%s\\compiler.exe", currentDir);
 
-	if (_chdir("tests") != 0)
-	{
-		fprintf(stderr, "_chdir failed\n");
-		exit(1);
-	}
-
-	run_tests();
-
-	if (_chdir("should_fail") != 0)
-	{
-		fprintf(stderr, "_chdir failed\n");
-		exit(1);
-	}
-
-	run_failure_tests();
-
-	if (_chdir("..\\..\\examples\\01_raylib") != 0)
-	{
-		fprintf(stderr, "_chdir failed\n");
-		exit(1);
-	}
-
-	//TestReturnCode("main", 0);
-	TestCompiles("main");
-
-	if (_chdir("..\\02_breakout") != 0)
-	{
-		fprintf(stderr, "_chdir failed\n");
-		exit(1);
-	}
-
-	//TestReturnCode("main", 0);
-	TestCompiles("main");
-
-	if (_chdir("..\\03_bullet_hell") != 0)
-	{
-		fprintf(stderr, "_chdir failed\n");
-		exit(1);
-	}
-
-	//TestReturnCode("main", 0);
-	TestCompiles("main");
-
-	if (_chdir("..\\04_no_libc") != 0)
-	{
-		fprintf(stderr, "_chdir failed\n");
-		exit(1);
-	}
-
-	//TestReturnCode("main", 0);
-	TestCompiles("main");
+	RunTests();
+	RunFailureTests();
+	TestExampleCompiles("main", "01_raylib");
+	TestExampleCompiles("main", "02_breakout");
+	TestExampleCompiles("main", "03_bullet_hell");
+	TestExampleCompiles("main", "04_no_libc");
 }

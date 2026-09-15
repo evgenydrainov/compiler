@@ -225,8 +225,8 @@ Compile(CompileOptions *options)
 	codegenContext.stringLiterals = semanticContext.stringLiterals;
 	codegenContext.deferStack = push_bump_array<Node *>(&arena, 256);
 
-	string asmFilePath = string_concat(options->outputFilePath, ".asm");
-	string objFilePath = string_concat(options->outputFilePath, ".obj");
+	string asmFilePath = string_concat(options->outputFilePathNoExt, ".asm");
+	string objFilePath = string_concat(options->outputFilePathNoExt, ".obj");
 
 	char *asmFilePathCStr = to_cstring(asmFilePath);
 	char *objFilePathCStr = to_cstring(objFilePath);

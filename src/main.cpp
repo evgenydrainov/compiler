@@ -31,11 +31,11 @@ int main(int argc, char *argv[])
 	string inputFilePath = { argv[1], strlen(argv[1]) };
 	inputFilePath = get_absolute_filepath(inputFilePath);
 
-	string outputFilePath = strip_extension(inputFilePath);
+	string outputFilePathNoExt = strip_extension(inputFilePath);
 
 	CompileOptions options = {};
 	options.inputFilePath = inputFilePath;
-	options.outputFilePath = outputFilePath;
+	options.outputFilePathNoExt = outputFilePathNoExt;
 
 	CompileResult result = Compile(&options);
 

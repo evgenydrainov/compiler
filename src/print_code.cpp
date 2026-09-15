@@ -229,6 +229,33 @@ PrintExpression(PrintContext *context,
 
 			Print(context, ")");
 		} break;
+
+		case NodeKind_Proxy:
+		{
+			ProxyNode *node = As<ProxyNode>(_node);
+
+			PrintExpression(context, node->proxy);
+		} break;
+	}
+}
+
+internal void
+PrintStatement(PrintContext *context,
+			   Node *_node);
+
+internal void
+PrintStatementIndented(PrintContext *context,
+					   Node *_node)
+{
+	if (_node->kind == NodeKind_Block)
+	{
+		PrintStatement(context, _node);
+	}
+	else
+	{
+		context->indentation++;
+		PrintStatement(context, _node);
+		context->indentation--;
 	}
 }
 
@@ -238,6 +265,7 @@ PrintStatement(PrintContext *context,
 {
 	if (!_node)
 	{
+		PrintLn(context, ";");
 		return;
 	}
 
@@ -271,13 +299,13 @@ PrintStatement(PrintContext *context,
 
 			PrintLn(context, "");
 
-			PrintStatement(context, node->thenBlock);
+			PrintStatementIndented(context, node->thenBlock);
 
 			if (node->elseBlock)
 			{
 				PrintLn(context, "else");
 
-				PrintStatement(context, node->elseBlock);
+				PrintStatementIndented(context, node->elseBlock);
 			}
 		} break;
 
@@ -402,6 +430,37 @@ PrintStatement(PrintContext *context,
 			PrintLn(context, "continue;");
 		} break;
 
+		case NodeKind_Yield:
+		{
+			PrintLn(context, "yield;");
+		} break;
+
+		case NodeKind_Print:
+		{
+			PrintNode *node = As<PrintNode>(_node);
+
+			Print(context, "print ");
+
+			PrintExpression(context, node->expr);
+
+			PrintLn(context, ";");
+		} break;
+
+		case NodeKind_Defer:
+		{
+			DeferNode *node = As<DeferNode>(_node);
+
+			Print(context, "defer ");
+
+			PrintStatement(context, node->what);
+		} break;
+
+		case NodeKind_Asm:
+		{
+			// TODO
+			PrintLn(context, "asm {}");
+		} break;
+
 		default:
 		{
 			PrintExpression(context, _node);
@@ -447,9 +506,16 @@ PrintTopLevelStatement(PrintContext *context,
 					  STR_ARG(TypeToString(node->returnType)));
 			}
 
-			PrintLn(context, "");
-			
-			PrintStatement(context, node->body);
+			if (node->body)
+			{
+				PrintLn(context, "");
+
+				PrintStatement(context, node->body);
+			}
+			else
+			{
+				PrintLn(context, ";");
+			}
 
 			PrintLn(context, "");
 		} break;
