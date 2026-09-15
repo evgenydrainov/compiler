@@ -12,6 +12,8 @@ struct CompileOptions
 	dynamic_array<string> libraries;
 
 	bool useVendorLld;
+
+	bool printCode;
 };
 
 enum CompileResult : u32

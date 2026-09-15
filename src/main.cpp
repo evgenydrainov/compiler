@@ -22,20 +22,43 @@ int main(int argc, char *argv[])
 	g_tempMemory.capacity = Megabytes(1);
 	g_tempMemory.data = (u8 *)malloc(g_tempMemory.capacity);
 
-	if (argc != 2)
+	CompileOptions options = {};
+
+	for (int i = 1; i < argc; i++)
 	{
-		fprintf(stderr, "Usage: compiler <filename>\n");
-		return 1;
+		if (argv[i][0] == '-')
+		{
+			if (strcmp(argv[i], "-print-code") == 0)
+			{
+				options.printCode = true;
+			}
+			else
+			{
+				fprintf(stderr, "unknown option '%s'\n", argv[i]);
+				exit(1);
+			}
+		}
+		else
+		{
+			string inputFilePath = { argv[i], strlen(argv[i]) };
+			inputFilePath = get_absolute_filepath(inputFilePath);
+
+			options.inputFilePath = inputFilePath;
+		}
 	}
 
-	string inputFilePath = { argv[1], strlen(argv[1]) };
-	inputFilePath = get_absolute_filepath(inputFilePath);
+	if (options.inputFilePath.count == 0)
+	{
+		fprintf(stderr, "no input files provided\n");
+		exit(1);
+	}
 
-	string outputFilePathNoExt = strip_extension(inputFilePath);
+	if (options.outputFilePathNoExt.count == 0)
+	{
+		string outputFilePathNoExt = strip_extension(options.inputFilePath);
 
-	CompileOptions options = {};
-	options.inputFilePath = inputFilePath;
-	options.outputFilePathNoExt = outputFilePathNoExt;
+		options.outputFilePathNoExt = outputFilePathNoExt;
+	}
 
 	CompileResult result = Compile(&options);
 

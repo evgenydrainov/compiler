@@ -25,7 +25,7 @@
 internal char *
 FindNasm(CompileOptions *options)
 {
-	string nasmPath = tprintf(STR_FMT "\\vendor\\nasm\\nasm.exe", STR_ARG(options->exeFileDir));
+	string nasmPath = tprintf(STR_FMT "vendor\\nasm\\nasm.exe", STR_ARG(options->exeFileDir));
 
 	if (_access(nasmPath.data, 0) == 0)
 	{
@@ -54,7 +54,7 @@ FindNasm(CompileOptions *options)
 internal char *
 FindLLDLink(CompileOptions *options)
 {
-	string lldPath = tprintf(STR_FMT "\\vendor\\LLVM\\lld-link.exe", STR_ARG(options->exeFileDir));
+	string lldPath = tprintf(STR_FMT "vendor\\LLVM\\lld-link.exe", STR_ARG(options->exeFileDir));
 
 	if (_access(lldPath.data, 0) == 0)
 	{
@@ -215,9 +215,10 @@ Compile(CompileOptions *options)
 		return CompileResult_SemanticError;
 	}
 
+	if (options->printCode)
 	{
-		//PrintContext context = {};
-		//PrintProgram(&context, program);
+		PrintContext context = {};
+		PrintProgram(&context, program);
 	}
 
 	CodegenContext codegenContext = {};
