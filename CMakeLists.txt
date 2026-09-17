@@ -35,6 +35,7 @@ add_executable(
     src/microsoft_craziness.h
     src/parser.cpp
     src/parser.h
+    src/print.h
     src/print_code.cpp
     src/print_code.h
     src/semantic_pass.cpp

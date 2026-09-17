@@ -1,31 +1,26 @@
 #include "codegen.h"
-
+#include "print.h"
 #include <string.h> // for strlen
 #include <stdarg.h>
 #include <stdio.h>
 
+template <typename... Args>
 internal void
 Emit(CodegenContext *context,
-	 char *format,
-	 ...)
+	 string format,
+	 Args... args)
 {
-	va_list args;
-	va_start(args, format);
+	PrintFormat(context->out, format, args...);
+	PrintFormat(context->out, "\n");
 
-	vfprintf(context->out, format, args);
-	fprintf(context->out, "\n");
+	format = trim_left(format);
 
-	va_end(args);
-
-	string formatStr = { format, strlen(format) };
-	formatStr = trim_left(formatStr);
-
-	if (starts_with(formatStr, "push "))
+	if (starts_with(format, "push "))
 	{
 		context->stackDepth++;
 	}
 
-	if (starts_with(formatStr, "pop "))
+	if (starts_with(format, "pop "))
 	{
 		context->stackDepth--;
 	}
@@ -163,15 +158,15 @@ GenerateLValueAddress(Node *baseNode,
 
 			if (node->isGlobal)
 			{
-				Emit(context, "    lea rax, [rel " STR_FMT "]\t; load address of variable " STR_FMT_QUOTED,
-					 STR_ARG(node->name),
-					 STR_ARG(node->name));
+				Emit(context, "    lea rax, [rel %s]\t; load address of variable '%s'",
+					 node->name,
+					 node->name);
 			}
 			else
 			{
-				Emit(context, "    lea rax, [rbp - %d]\t; load address of variable " STR_FMT_QUOTED,
+				Emit(context, "    lea rax, [rbp - %d]\t; load address of variable '%s'",
 					 node->stackOffset,
-					 STR_ARG(node->name));
+					 node->name);
 			}
 			Emit(context, "    push rax");
 			Emit(context, "");
@@ -204,9 +199,9 @@ GenerateLValueAddress(Node *baseNode,
 			}
 
 			Emit(context, "    pop rax");
-			Emit(context, "    add rax, %d\t\t; add offset of field " STR_FMT_QUOTED,
+			Emit(context, "    add rax, %d\t\t; add offset of field '%s'",
 				 node->fieldOffset,
-				 STR_ARG(node->fieldName));
+				 node->fieldName);
 			Emit(context, "    push rax");
 		} break;
 
@@ -743,10 +738,10 @@ GenerateExpression(Node *baseNode,
 				prefix = "";
 			}
 
-			Emit(context, "    lea rax, [%s" STR_FMT "]\t; load address of procedure " STR_FMT_QUOTED,
+			Emit(context, "    lea rax, [%s%s]\t; load address of procedure '%s'",
 				 prefix,
-				 STR_ARG(node->linkName),
-				 STR_ARG(node->linkName));
+				 node->linkName,
+				 node->linkName);
 			Emit(context, "    push rax");
 			Emit(context, "");
 		} break;
@@ -1474,7 +1469,7 @@ GenerateStatement(Node *baseNode,
 			AsmNode *node = As<AsmNode>(baseNode);
 
 			Emit(context, "    ; inline assembly begin");
-			Emit(context, STR_FMT, STR_ARG(node->code));
+			Emit(context, "%s", node->code);
 			Emit(context, "");
 			Emit(context, "    ; inline assembly end");
 			Emit(context, "");
@@ -1599,7 +1594,7 @@ GenerateTopLevelStatement(Node *baseNode,
 				prefix = "";
 			}
 
-			Emit(context, "%s" STR_FMT ":", prefix, STR_ARG(node->linkName));
+			Emit(context, "%s%s:", prefix, node->linkName);
 
 			// doesn't affect stack depth
 			Emit(context, "    push rbp");
