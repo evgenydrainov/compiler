@@ -400,6 +400,9 @@ WriteType(Type type, string_builder *builder)
 {
 	switch (type.kind)
 	{
+		case TypeKind_Unknown: {builder_write(builder, "<unknown type>");} break;
+		case TypeKind_InferMe: {builder_write(builder, "<type to be inferred>");} break;
+
 		case TypeKind_Void: {builder_write(builder, "void");} break;
 
 		case TypeKind_Int8:  {builder_write(builder, "i8");} break;
@@ -451,7 +454,29 @@ WriteType(Type type, string_builder *builder)
 			WriteType(*type.array().elementType, builder);
 		} break;
 
-		default: {} break;
+		case TypeKind_Proc:
+		{
+			builder_write(builder, "proc(");
+
+			bool needComma = false;
+			int index = 0;
+
+			for (const Type &it : type.procInfo()->params)
+			{
+				if (needComma)
+				{
+					builder_write(builder, ", ");
+				}
+
+				builder_write_fmt(builder, "a%d: ", index++);
+
+				WriteType(it, builder);
+
+				needComma = true;
+			}
+
+			builder_write(builder, ")");
+		} break;
 	}
 }
 

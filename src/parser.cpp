@@ -1507,11 +1507,8 @@ ParseStructDefinition(Parser *parser,
 					  Lexer *lexer,
 					  Arena *arena)
 {
-	const int MAX_STRUCT_FIELDS = 32;
-
 	StructDeclNode *node = MakeNode<StructDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
-	node->fields = push_bump_array<StructFieldDeclNode *>(arena, MAX_STRUCT_FIELDS);
 
 	AdvanceToken(parser, lexer); // eat the struct name
 
@@ -1550,7 +1547,7 @@ ParseStructDefinition(Parser *parser,
 
 			if (multipleDeclarations)
 			{
-				for (auto it : node->fields)
+				for (StructFieldDeclNode *it : node->fields)
 				{
 					if (it->type.kind == TypeKind_InferMe)
 					{
@@ -1562,7 +1559,7 @@ ParseStructDefinition(Parser *parser,
 			}
 		}
 
-		array_add(&node->fields, field);
+		list_append(&node->fields, field);
 	}
 
 	ExpectToken(parser, lexer, TokenKind_CloseBrace);

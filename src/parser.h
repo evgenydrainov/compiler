@@ -311,7 +311,7 @@ struct StructDeclNode : public Node
 	static constexpr NodeKind KIND = NodeKind_StructDecl;
 
 	string name;
-	bump_array<StructFieldDeclNode *> fields;
+	list<StructFieldDeclNode> fields;
 };
 
 struct FieldAccessNode : public Node
