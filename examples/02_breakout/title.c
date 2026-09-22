@@ -1,6 +1,5 @@
 Title :: struct
 {
-	dummy: int;
 };
 
 title_update :: proc(title: *Title,

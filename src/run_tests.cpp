@@ -205,7 +205,7 @@ int main()
 	RunTests();
 	RunFailureTests();
 	TestExampleCompiles("main", "01_raylib");
-	TestExampleCompiles("main", "02_breakout");
+	TestExampleCompiles("breakout", "02_breakout");
 	TestExampleCompiles("main", "03_bullet_hell");
 	TestExampleCompiles("main", "04_no_libc");
 }

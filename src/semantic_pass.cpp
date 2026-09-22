@@ -2309,8 +2309,16 @@ EarlyAnalyze(Node *baseNode,
 					}
 				}
 
-				type->structInfo()->size = (int)align_forward(offset, maxFieldAlignment);
-				type->structInfo()->alignment = maxFieldAlignment;
+				if (offset == 0 && maxFieldAlignment == 0)
+				{
+					type->structInfo()->size = 1;
+					type->structInfo()->alignment = 1;
+				}
+				else
+				{
+					type->structInfo()->size = (int)align_forward(offset, maxFieldAlignment);
+					type->structInfo()->alignment = maxFieldAlignment;
+				}
 			}
 			else
 			{

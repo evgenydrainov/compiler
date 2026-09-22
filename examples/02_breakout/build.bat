@@ -1,2 +1,2 @@
 @echo off
-..\..\compiler.exe main.c
+..\..\compiler.exe breakout.c
