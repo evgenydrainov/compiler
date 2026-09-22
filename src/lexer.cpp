@@ -485,16 +485,97 @@ ParseHexadecimalNumber(Lexer *lexer, SourceLocation location)
 
 	Token result = MakeToken(lexer, TokenKind_Int64Literal, str, location);
 	result.int64Value = value;
+
+	return result;
+}
+
+internal Token
+ParseOctalNumber(Lexer *lexer, SourceLocation location)
+{
+	string str = {lexer->current, 0};
+	i64 value = 0;
+
+	AdvanceChar(lexer, 2); // skip '0o'
+
+	while (IsDigit(*lexer->current)
+		   || *lexer->current == '_')
+	{
+		if (*lexer->current == '_')
+		{
+			// ignore
+		}
+		else if (*lexer->current == '8' || *lexer->current == '9')
+		{
+			return ErrorToken(lexer, "invalid octal digit", location);
+		}
+		else
+		{
+			value = 8*value + (*lexer->current - '0');
+		}
+
+		AdvanceChar(lexer);
+		str.count++;
+	}
+
+	Token result = MakeToken(lexer, TokenKind_Int64Literal, str, location);
+	result.int64Value = value;
+
+	return result;
+}
+
+internal Token
+ParseBinaryNumber(Lexer *lexer, SourceLocation location)
+{
+	string str = {lexer->current, 0};
+	i64 value = 0;
+
+	AdvanceChar(lexer, 2); // skip '0b'
+
+	while (IsDigit(*lexer->current)
+		   || *lexer->current == '_')
+	{
+		if (*lexer->current == '_')
+		{
+			// ignore
+		}
+		else if (*lexer->current == '0' || *lexer->current == '1')
+		{
+			value = 2*value + (*lexer->current - '0');
+		}
+		else
+		{
+			return ErrorToken(lexer, "invalid binary digit", location);
+		}
+
+		AdvanceChar(lexer);
+		str.count++;
+	}
+
+	Token result = MakeToken(lexer, TokenKind_Int64Literal, str, location);
+	result.int64Value = value;
+
 	return result;
 }
 
 internal Token
 ParseNumber(Lexer *lexer, SourceLocation location)
 {
-	if (PeekChar(lexer) == '0'
-		&& PeekNextChar(lexer) == 'x')
+	if (lexer->current[0] == '0'
+		&& lexer->current[1] == 'x')
 	{
 		return ParseHexadecimalNumber(lexer, location);
+	}
+
+	if (lexer->current[0] == '0'
+		&& lexer->current[1] == 'o')
+	{
+		return ParseOctalNumber(lexer, location);
+	}
+
+	if (lexer->current[0] == '0'
+		&& lexer->current[1] == 'b')
+	{
+		return ParseBinaryNumber(lexer, location);
 	}
 
 	return ParseDecimalNumber(lexer, location);
