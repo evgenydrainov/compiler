@@ -13,7 +13,7 @@ struct Arena
 	usize capacity;
 };
 
-extern Arena g_tempMemory;
+extern Arena g_tempArena;
 
 inline void *
 push_size(Arena *arena,

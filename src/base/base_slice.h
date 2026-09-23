@@ -5,6 +5,8 @@
 template <typename T>
 struct dynamic_array;
 
+struct string;
+
 template <typename T>
 struct slice
 {
@@ -13,23 +15,25 @@ struct slice
 
 	slice() = default;
 
-	slice(dynamic_array<T> array);
+	NO_STEP_INTO slice(dynamic_array<T> array);
+
+	NO_STEP_INTO slice(string str);
 
 	template <usize N>
-	slice(T (&array)[N]) : data(array), count(N) {}
+	NO_STEP_INTO slice(T (&array)[N]) : data(array), count(N) {}
 
-	T &operator[](usize index)
+	NO_STEP_INTO T &operator[](usize index)
 	{
 		Assert(index >= 0 && index < count);
 		return data[index];
 	}
 
-	const T &operator[](usize index) const
+	NO_STEP_INTO const T &operator[](usize index) const
 	{
 		Assert(index >= 0 && index < count);
 		return data[index];
 	}
 
-	T *begin() { return &data[0]; }
-	T *end()   { return &data[count]; }
+	NO_STEP_INTO T *begin() { return &data[0]; }
+	NO_STEP_INTO T *end()   { return &data[count]; }
 };

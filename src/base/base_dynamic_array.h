@@ -65,14 +65,14 @@ template <typename T>
 inline void
 array_add(dynamic_array<T> *array, const IDENTITY(T) &value)
 {
-	array_reserve(array, array->count+1);
+	array_reserve(array, array->count + 1);
 	array->data[array->count++] = value;
 }
 
 template <typename T>
 inline void
 array_add_many(dynamic_array<T> *array,
-			   slice<T> values)
+			   slice<IDENTITY(T)> values)
 {
 	array_reserve(array, array->count + values.count);
 	for (const T &value : values)

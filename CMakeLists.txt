@@ -16,6 +16,7 @@ add_executable(
     src/base/base_enum.h
     src/base/base_file.h
     src/base/base_list.h
+    src/base/base_process.h
     src/base/base_slice.h
     src/base/base_static_bump_array.h
     src/base/base_string.h
@@ -60,6 +61,7 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 set_property(TARGET compiler PROPERTY
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
+
 set_property(TARGET run_tests PROPERTY
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
@@ -76,18 +78,16 @@ set(FLAGS
     /wd4201 /wd4100 /wd4189 /wd4127 /wd4505 /wd4200
     /we4062 /we5262
     /Zc:strictStrings-
+    /MT
 )
 target_compile_options(compiler PRIVATE ${FLAGS})
 target_compile_options(run_tests PRIVATE ${FLAGS})
 
-target_compile_options(
-    compiler PRIVATE
-    /MT
-)
-target_link_options(
-    compiler PRIVATE
+set(LINK_FLAGS
     /INCREMENTAL:NO
 )
+target_link_options(compiler PRIVATE ${LINK_FLAGS})
+target_link_options(run_tests PRIVATE ${LINK_FLAGS})
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/distrib)
 

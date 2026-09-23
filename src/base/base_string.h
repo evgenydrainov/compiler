@@ -2,6 +2,7 @@
 
 #include "base_types.h"
 #include "base_arena.h"
+#include "base_slice.h"
 
 #include <string.h> // for memcpy
 #include <stdio.h> // for snprintf
@@ -121,7 +122,7 @@ string_concat(string a, string b)
 {
 	string result = {};
 	result.count = a.count + b.count;
-	result.data = (char *)push_size(&g_tempMemory, result.count);
+	result.data = (char *)push_size(&g_tempArena, result.count);
 
 	memcpy(result.data, a.data, a.count);
 
@@ -133,7 +134,7 @@ string_concat(string a, string b)
 inline char *
 to_cstring(string str)
 {
-	char *result = (char *)push_size(&g_tempMemory, str.count + 1);
+	char *result = (char *)push_size(&g_tempArena, str.count + 1);
 
 	memcpy(result, str.data, str.count);
 
@@ -169,7 +170,7 @@ vtprintf(char *format, va_list args)
 {
 	int length = vsnprintf(nullptr, 0, format, args);
 
-	char *buffer = (char *)push_size(&g_tempMemory, length+1);
+	char *buffer = (char *)push_size(&g_tempArena, length+1);
 	vsnprintf(buffer, length+1, format, args);
 
 	string result = {};
@@ -213,4 +214,34 @@ is_path_absolute(string path)
 	}
 
 	return false;
+}
+
+inline bool
+string_needs_quoting(string str)
+{
+	bool insideQuote = false;
+
+	for (char it : str)
+	{
+		if (it == '"')
+		{
+			insideQuote ^= true;
+		}
+
+		if (it == ' ')
+		{
+			if (!insideQuote)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+template <>
+slice<char>::slice(string str)
+	: data(str.data), count(str.count)
+{
 }

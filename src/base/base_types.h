@@ -126,3 +126,5 @@ struct identity
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_WHITE   "\x1b[37m"
+
+#define NO_STEP_INTO __declspec(non_user_code)

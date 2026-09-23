@@ -4,7 +4,7 @@
 
 #include "compiler.h"
 
-Arena g_tempMemory;
+Arena g_tempArena;
 
 void AssertionHandler(char *file, int line, char *condition)
 {
@@ -19,8 +19,8 @@ void AssertionHandler(char *file, int line, char *condition)
 
 int main(int argc, char *argv[])
 {
-	g_tempMemory.capacity = Megabytes(1);
-	g_tempMemory.data = (u8 *)malloc(g_tempMemory.capacity);
+	g_tempArena.capacity = Megabytes(1);
+	g_tempArena.data = (u8 *)malloc(g_tempArena.capacity);
 
 	CompileOptions options = {};
 
@@ -31,6 +31,10 @@ int main(int argc, char *argv[])
 			if (strcmp(argv[i], "-print-code") == 0)
 			{
 				options.printCode = true;
+			}
+			else if (strcmp(argv[i], "-verbose") == 0)
+			{
+				options.verboseMode = true;
 			}
 			else
 			{

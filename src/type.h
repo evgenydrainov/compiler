@@ -484,7 +484,7 @@ inline string
 TypeToString(Type type)
 {
 	string_builder builder = {};
-	builder_init(&builder, &g_tempMemory);
+	builder_init(&builder, &g_tempArena);
 
 	WriteType(type, &builder);
 

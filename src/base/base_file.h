@@ -23,12 +23,12 @@ GetFullPathNameA(const char *lpFileName,
 inline string
 get_executable_filepath()
 {
-	char *buf = (char *)push_size(&g_tempMemory, 260);
+	char *buf = (char *)push_size(&g_tempArena, 260);
 
 	u32 size = GetModuleFileNameA(nullptr, buf, 260);
 	Assert(size != 0);
 
-	string result;
+	string result = {};
 	result.data = buf;
 	result.count = size;
 
@@ -46,7 +46,7 @@ get_absolute_filepath(string relative_path)
 		return {};
 	}
 
-	char *absolute_path = (char *)push_size(&g_tempMemory, absolute_path_size);
+	char *absolute_path = (char *)push_size(&g_tempArena, absolute_path_size);
 
 	u32 written = GetFullPathNameA(relative_path_cstr, absolute_path_size, absolute_path, nullptr);
 	if (!(written != 0 && written < absolute_path_size))

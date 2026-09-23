@@ -11,8 +11,6 @@
 #include "microsoft_craziness.h"
 #pragma warning(pop)
 
-#include "subprocess.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -22,14 +20,14 @@
 #include <io.h>
 #include <process.h>
 
-internal char *
+internal string
 FindNasm(CompileOptions *options)
 {
 	string nasmPath = tprintf(STR_FMT "vendor\\nasm\\nasm.exe", STR_ARG(options->exeFileDir));
 
 	if (_access(nasmPath.data, 0) == 0)
 	{
-		return nasmPath.data;
+		return nasmPath;
 	}
 
 #if 0
@@ -51,14 +49,14 @@ FindNasm(CompileOptions *options)
 	exit(1);
 }
 
-internal char *
+internal string
 FindLLDLink(CompileOptions *options)
 {
 	string lldPath = tprintf(STR_FMT "vendor\\LLVM\\lld-link.exe", STR_ARG(options->exeFileDir));
 
 	if (_access(lldPath.data, 0) == 0)
 	{
-		return lldPath.data;
+		return lldPath;
 	}
 
 	fprintf(stderr, "could not find lld-link.exe\n");
@@ -79,67 +77,19 @@ FindLinker()
 }
 
 internal int
-process_create(slice<char *> commandLine, subprocess_s *out_process)
+CompilerRunProcess(CompileOptions *options, slice<string> commandLine)
 {
-	*out_process = {};
-
-	dynamic_array<char> commandLineCombined = {};
-
-	for (char *arg : commandLine)
+	if (options->verboseMode)
 	{
-		for (char *it = arg; *it; it++)
+		printf("[VERBOSE] running command: ");
+		for (string it : commandLine)
 		{
-			array_add(&commandLineCombined, *it);
+			printf(STR_FMT " ", STR_ARG(it));
 		}
-
-		array_add(&commandLineCombined, ' ');
+		printf("\n");
 	}
 
-	array_add(&commandLineCombined, 0);
-
-	subprocess_startup_info_s startInfo = { sizeof(startInfo) };
-	subprocess_subprocess_information_s processInfo;
-
-	if (!CreateProcessA(nullptr,
-						commandLineCombined.data, // command line
-						nullptr,		// process security attributes
-						nullptr,		// primary thread security attributes
-						1,				// handles are inherited
-						0,				// creation flagsted
-						nullptr,		// used environment
-						nullptr,		// use parent's current directory
-						(LPSTARTUPINFOA)&startInfo,
-						(LPPROCESS_INFORMATION)&processInfo))
-	{
-		return -1;
-	}
-
-	out_process->hProcess = processInfo.hProcess;
-
-	// We don't need the handle of the primary thread in the called process.
-	CloseHandle(processInfo.hThread);
-
-	out_process->alive = 1;
-
-	return 0;
-}
-
-internal int
-run_process(slice<char *> commandLine)
-{
-	subprocess_s process;
-	if (process_create(commandLine, &process) != 0)
-	{
-		return -1;
-	}
-
-	int retcode;
-	if (subprocess_join(&process, &retcode) != 0)
-	{
-		return -1;
-	}
-
-	return retcode;
+	return run_process(commandLine);
 }
 
 CompileResult
@@ -192,8 +142,6 @@ Compile(CompileOptions *options)
 	arena.capacity = Megabytes(4);
 	arena.data = (u8 *)malloc(arena.capacity);
 
-	defer { free(arena.data); };
-
 	Parser parser = {};
 	parser.options = options;
 	parser.current = GetToken(&lexer);
@@ -230,7 +178,6 @@ Compile(CompileOptions *options)
 	string objFilePath = string_concat(options->outputFilePathNoExt, ".obj");
 
 	char *asmFilePathCStr = to_cstring(asmFilePath);
-	char *objFilePathCStr = to_cstring(objFilePath);
 
 	{
 		FILE *out;
@@ -249,16 +196,20 @@ Compile(CompileOptions *options)
 	}
 
 	{
-		char *nasmPath = FindNasm(options);
+		string nasmPath = FindNasm(options);
 
-		if (_spawnl(_P_WAIT,
-					nasmPath,
-					"nasm",
-					"-g",
-					"-f", "win64",
-					"-o", objFilePathCStr,
-					asmFilePathCStr,
-					nullptr) != 0)
+		dynamic_array<string> commandLine = {};
+		defer { array_free(&commandLine); };
+
+		array_add(&commandLine, nasmPath);
+		array_add(&commandLine, "-g");
+		array_add(&commandLine, "-f");
+		array_add(&commandLine, "win64");
+		array_add(&commandLine, "-o");
+		array_add(&commandLine, objFilePath);
+		array_add(&commandLine, asmFilePath);
+
+		if (CompilerRunProcess(options, commandLine) != 0)
 		{
 			return CompileResult_NasmError;
 		}
@@ -266,23 +217,24 @@ Compile(CompileOptions *options)
 
 	if (options->useVendorLld)
 	{
-		char *lldExePath = FindLLDLink(options);
+		string lldExePath = FindLLDLink(options);
 
-		dynamic_array<char *> commandLine = {};
+		dynamic_array<string> commandLine = {};
+		defer { array_free(&commandLine); };
 
 		array_add(&commandLine, lldExePath);
 		array_add(&commandLine, "/DEBUG");
 		array_add(&commandLine, "/OPT:REF");
 		array_add(&commandLine, "/OPT:ICF");
 		array_add(&commandLine, "/SUBSYSTEM:CONSOLE");
-		array_add(&commandLine, objFilePathCStr);
+		array_add(&commandLine, objFilePath);
 
 		for (string lib : options->libraries)
 		{
-			array_add(&commandLine, to_cstring(lib));
+			array_add(&commandLine, lib);
 		}
 
-		int retcode = run_process(commandLine);
+		int retcode = CompilerRunProcess(options, commandLine);
 		if (retcode != 0)
 		{
 			return CompileResult_LinkerError;
@@ -292,19 +244,13 @@ Compile(CompileOptions *options)
 	{
 		Find_Result res = FindLinker();
 
-		char linkExePath[512];
-		sprintf_s(linkExePath, "\"%s\\link.exe\"", res.vs_exe_path_a);
+		string linkExePath = tprintf("\"%s\\link.exe\"", res.vs_exe_path_a);
+		string vsLibpathArg = tprintf("/LIBPATH:\"%s\"", res.vs_library_path_a);
+		string ucrtLibpathArg = tprintf("/LIBPATH:\"%s\"", res.windows_sdk_ucrt_library_path_a);
+		string umLibpathArg = tprintf("/LIBPATH:\"%s\"", res.windows_sdk_um_library_path_a);
 
-		char vsLibpathArg[512];
-		sprintf_s(vsLibpathArg, "/LIBPATH:\"%s\"", res.vs_library_path_a);
-
-		char ucrtLibpathArg[512];
-		sprintf_s(ucrtLibpathArg, "/LIBPATH:\"%s\"", res.windows_sdk_ucrt_library_path_a);
-
-		char umLibpathArg[512];
-		sprintf_s(umLibpathArg, "/LIBPATH:\"%s\"", res.windows_sdk_um_library_path_a);
-
-		dynamic_array<char *> commandLine = {};
+		dynamic_array<string> commandLine = {};
+		defer { array_free(&commandLine); };
 
 		array_add(&commandLine, linkExePath);
 		array_add(&commandLine, "/nologo");
@@ -313,11 +259,11 @@ Compile(CompileOptions *options)
 		array_add(&commandLine, "/OPT:REF");
 		array_add(&commandLine, "/OPT:ICF");
 		array_add(&commandLine, "/SUBSYSTEM:CONSOLE");
-		array_add(&commandLine, objFilePathCStr);
+		array_add(&commandLine, objFilePath);
 
 		for (string lib : options->libraries)
 		{
-			array_add(&commandLine, to_cstring(lib));
+			array_add(&commandLine, lib);
 		}
 
 		array_add(&commandLine, "libcmt.lib");
@@ -332,14 +278,18 @@ Compile(CompileOptions *options)
 		array_add(&commandLine, ucrtLibpathArg);
 		array_add(&commandLine, umLibpathArg);
 
-		int retcode = run_process(commandLine);
+		int retcode = CompilerRunProcess(options, commandLine);
 		if (retcode != 0)
 		{
 			return CompileResult_LinkerError;
 		}
 	}
 
-	// printf("Arena usage: %.2f%%\n", 100.0f*(arena.pos/(float)arena.capacity));
+	if (options->verboseMode)
+	{
+		printf("[VERBOSE] arena usage: %.2f%%\n", 100.0f*(arena.pos/(float)arena.capacity));
+		printf("[VERBOSE] temp arena usage: %.2f%%\n", 100.0f*(g_tempArena.pos/(float)g_tempArena.capacity));
+	}
 
 	return CompileResult_Success;
 }
