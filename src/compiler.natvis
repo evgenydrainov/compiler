@@ -65,4 +65,19 @@
     </Expand>
   </Type>
 
+  <Type Name="list&lt;*&gt;">
+    <DisplayString>{{ size={count} }}</DisplayString>
+
+    <Expand>
+      <Item Name="[size]">count</Item>
+
+      <LinkedListItems>
+        <Size>count</Size>
+        <HeadPointer>head</HeadPointer>
+        <NextPointer>($T1 *)next</NextPointer>
+        <ValueNode>this</ValueNode>
+      </LinkedListItems>
+    </Expand>
+  </Type>
+
 </AutoVisualizer>

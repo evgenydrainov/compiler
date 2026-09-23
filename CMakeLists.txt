@@ -27,6 +27,7 @@ add_executable(
     src/codegen.h
     src/compiler.cpp
     src/compiler.h
+    src/compiler.natvis
     src/constants_table.h
     src/function_table.h
     src/lexer.cpp
@@ -41,7 +42,6 @@ add_executable(
     src/print_code.h
     src/semantic_pass.cpp
     src/semantic_pass.h
-    src/stuff.natvis
     src/symbol_table.h
     src/type.h
     src/type_table.h
