@@ -189,6 +189,17 @@ TestExampleCompiles(char *testName, char *folder)
 	ChDir("..\\..");
 }
 
+internal void
+RunExample(char *testName, char *folder)
+{
+	ChDir("examples");
+	ChDir(folder);
+
+	TestReturnCode(testName, 0);
+
+	ChDir("..\\..");
+}
+
 int main()
 {
 	//onlyRunThisTest = "26_macro";

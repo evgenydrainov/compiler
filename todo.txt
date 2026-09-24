@@ -4,8 +4,6 @@ make arenas growable in the compiler
 
 floating-point constants (and typed constants)
 
-character literals
-
 pointer arithmetic maybe
 
 run-time and compile-time bounds checking
@@ -21,3 +19,5 @@ fix crashes in the compiler
 remove hard-coded limits in the compiler (num of functions, structs, etc)
 
 fix type checking for binary ops and other places
+
+fix C ffi variadic float promotion if more than 4 args

@@ -286,6 +286,19 @@ ParseIdentifier(Lexer *lexer, SourceLocation location)
 	return result;
 }
 
+internal bool
+IsValidEscapeSequence(char ch)
+{
+	bool result = (ch == 'n'
+				   || ch == 't'
+				   || ch == 'r'
+				   || ch == '0'
+				   || ch == '\\'
+				   || ch == '"'
+				   || ch == '\'');
+	return result;
+}
+
 internal Token
 ParseString(Lexer *lexer, SourceLocation location)
 {
@@ -300,7 +313,7 @@ ParseString(Lexer *lexer, SourceLocation location)
 	{
 		if (*lexer->current == '\n')
 		{
-			return ErrorToken(lexer, "newline in string", location);
+			return ErrorToken(lexer, "newline in string literal", location);
 		}
 
 		if (*lexer->current == '\\')
@@ -308,12 +321,7 @@ ParseString(Lexer *lexer, SourceLocation location)
 			AdvanceChar(lexer);
 			str.count++;
 
-			if (*lexer->current == 'n'
-				|| *lexer->current == 't'
-				|| *lexer->current == 'r'
-				|| *lexer->current == '0'
-				|| *lexer->current == '\\'
-				|| *lexer->current == '"')
+			if (IsValidEscapeSequence(*lexer->current))
 			{
 				AdvanceChar(lexer);
 				str.count++;
@@ -332,7 +340,7 @@ ParseString(Lexer *lexer, SourceLocation location)
 
 	if (IsAtEnd(lexer))
 	{
-		return ErrorToken(lexer, "unterminated string", location);
+		return ErrorToken(lexer, "unterminated string literal", location);
 	}
 
 	// eat the closing quote
@@ -350,6 +358,84 @@ ParseString(Lexer *lexer, SourceLocation location)
 	}
 
 	return MakeToken(lexer, kind, str, location);
+}
+
+internal Token
+ParseCharacter(Lexer *lexer, SourceLocation location)
+{
+	string str = {lexer->current, 0};
+
+	// eat the opening quote
+	AdvanceChar(lexer);
+	str.count++;
+
+	u64 value = 0;
+	//u64 shift = 0;
+
+	while (!IsAtEnd(lexer)
+		   && *lexer->current != '\'')
+	{
+		if (*lexer->current == '\n')
+		{
+			return ErrorToken(lexer, "newline in character literal", location);
+		}
+
+		if (*lexer->current == '\\')
+		{
+			AdvanceChar(lexer);
+			str.count++;
+
+			if (!IsValidEscapeSequence(*lexer->current))
+			{
+				return ErrorToken(lexer, "invalid escape sequence", location);
+			}
+
+			u64 charValue = GetEscapeSequenceValue(*lexer->current);
+
+#if 0
+			value = value | (charValue << shift);
+			shift += 8;
+#else
+			value = (value << 8) | charValue;
+#endif
+
+			AdvanceChar(lexer);
+			str.count++;
+		}
+		else
+		{
+			u64 charValue = *lexer->current;
+
+#if 0
+			value = value | (charValue << shift);
+			shift += 8;
+#else
+			value = (value << 8) | charValue;
+#endif
+
+			AdvanceChar(lexer);
+			str.count++;
+		}
+	}
+
+	if (IsAtEnd(lexer))
+	{
+		return ErrorToken(lexer, "unterminated character literal", location);
+	}
+
+	// eat the closing quote
+	AdvanceChar(lexer);
+	str.count++;
+
+	if (str.count == 2)
+	{
+		return ErrorToken(lexer, "empty character literal", location);
+	}
+
+	Token result = MakeToken(lexer, TokenKind_Int64Literal, str, location);
+	result.int64Value = value;
+
+	return result;
 }
 
 internal Token
@@ -912,6 +998,11 @@ GetToken(Lexer *lexer)
 	if (c == '"')
 	{
 		return ParseString(lexer, location);
+	}
+
+	if (c == '\'')
+	{
+		return ParseCharacter(lexer, location);
 	}
 
 	if ((c >= '!' && c <= '/')

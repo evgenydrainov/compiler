@@ -1803,34 +1803,9 @@ WriteStringBytes(string str,
 		if (str[i] == '\\')
 		{
 			i++;
-			if (str[i] == 'n')
-			{
-				fprintf(out, "%d", '\n');
-			}
-			else if (str[i] == 't')
-			{
-				fprintf(out, "%d", '\t');
-			}
-			else if (str[i] == 'r')
-			{
-				fprintf(out, "%d", '\r');
-			}
-			else if (str[i] == '0')
-			{
-				fprintf(out, "%d", '\0');
-			}
-			else if (str[i] == '\\')
-			{
-				fprintf(out, "%d", '\\');
-			}
-			else if (str[i] == '"')
-			{
-				fprintf(out, "%d", '"');
-			}
-			else
-			{
-				Assert(false);
-			}
+
+			int value = GetEscapeSequenceValue(str[i]);
+			fprintf(out, "%d", value);
 		}
 		else
 		{

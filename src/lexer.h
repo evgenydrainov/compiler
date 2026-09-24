@@ -240,3 +240,21 @@ PeekToken(Lexer *lexer, int count = 1)
 
 	return result;
 }
+
+inline int
+GetEscapeSequenceValue(char ch)
+{
+	switch (ch)
+	{
+		case 'n':  return '\n';
+		case 't':  return '\t';
+		case 'r':  return '\r';
+		case '0':  return '\0';
+		case '\\': return '\\';
+		case '"':  return '"';
+		case '\'': return '\'';
+	}
+
+	Assert(false);
+	return 0;
+}
