@@ -1841,6 +1841,12 @@ WriteStringBytes(string str,
 		needComma = true;
 	}
 
+	if (needComma)
+	{
+		fprintf(out, ",");
+	}
+	fprintf(out, "0\n");
+
 	return stringLength;
 }
 
@@ -1891,8 +1897,6 @@ Generate_x86_64(Node *_program,
 		fprintf(out, "cstring_literal_%d: db ", literal.uniqueLabelId);
 
 		WriteStringBytes(literal.value, out);
-
-		fprintf(out, ",0\n");
 	}
 	fprintf(out, "\n");
 
@@ -1901,8 +1905,6 @@ Generate_x86_64(Node *_program,
 		fprintf(out, "string_literal_%d_bytes: db ", literal.uniqueLabelId);
 
 		int stringLength = WriteStringBytes(literal.value, out);
-
-		fprintf(out, ",0\n");
 
 		fprintf(out, "string_literal_%d: dq string_literal_%d_bytes, %d\n",
 				literal.uniqueLabelId,

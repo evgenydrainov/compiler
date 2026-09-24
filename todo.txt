@@ -1,5 +1,3 @@
-fix empty string literal
-
 #embed file
 
 make arenas growable in the compiler
