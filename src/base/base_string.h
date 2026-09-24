@@ -241,7 +241,7 @@ string_needs_quoting(string str)
 }
 
 template <>
-slice<char>::slice(string str)
+inline slice<char>::slice(string str)
 	: data(str.data), count(str.count)
 {
 }

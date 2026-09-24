@@ -13,11 +13,14 @@ struct slice
 	T *data;
 	usize count;
 
-	slice() = default;
+	NO_STEP_INTO slice() = default;
 
 	NO_STEP_INTO slice(dynamic_array<T> array);
 
-	NO_STEP_INTO slice(string str);
+	// this is implemented only for T=char
+	NO_STEP_INTO slice(string str) = delete;
+
+	NO_STEP_INTO slice(T *data, usize count) : data(data), count(count) {}
 
 	template <usize N>
 	NO_STEP_INTO slice(T (&array)[N]) : data(array), count(N) {}
