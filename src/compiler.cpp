@@ -92,6 +92,40 @@ CompilerRunProcess(CompileOptions *options, slice<string> commandLine)
 	return run_process(commandLine);
 }
 
+internal void
+PrintSize(usize value)
+{
+	f64 valueF64 = (f64)value;
+	if (valueF64 >= 1024)
+	{
+		valueF64 /= 1024;
+		if (valueF64 >= 1024)
+		{
+			valueF64 /= 1024;
+			printf("%.2f MB", valueF64);
+		}
+		else
+		{
+			printf("%.2f KB", valueF64);
+		}
+	}
+	else
+	{
+		printf("%.2f B", valueF64);
+	}
+}
+
+internal void
+PrintArenaUsage(Arena *arena)
+{
+	f32 percentage = 100.0f*(arena->pos/(float)arena->capacity);
+	printf("%.2f%% (", percentage);
+	PrintSize(arena->pos);
+	printf(" / ");
+	PrintSize(arena->capacity);
+	printf(") (num times reallocated: %u)\n", arena->numTimesReallocated);
+}
+
 CompileResult
 Compile(CompileOptions *options)
 {
@@ -287,8 +321,10 @@ Compile(CompileOptions *options)
 
 	if (options->verboseMode)
 	{
-		printf("[VERBOSE] arena usage: %.2f%%\n", 100.0f*(arena.pos/(float)arena.capacity));
-		printf("[VERBOSE] temp arena usage: %.2f%%\n", 100.0f*(g_tempArena.pos/(float)g_tempArena.capacity));
+		printf("[VERBOSE] arena usage: ");
+		PrintArenaUsage(&arena);
+		printf("[VERBOSE] temp arena usage: ");
+		PrintArenaUsage(&g_tempArena);
 	}
 
 	return CompileResult_Success;

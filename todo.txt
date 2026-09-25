@@ -1,7 +1,5 @@
 #embed file
 
-make arenas growable in the compiler
-
 floating-point constants (and typed constants)
 
 pointer arithmetic maybe

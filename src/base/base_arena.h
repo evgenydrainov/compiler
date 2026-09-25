@@ -3,6 +3,7 @@
 #include "base_types.h"
 #include "base_slice.h"
 #include <string.h> // for memset
+#include <stdlib.h> // for malloc
 
 constexpr usize DEFAULT_ALIGNMENT = 2 * sizeof(void *);
 
@@ -11,6 +12,7 @@ struct Arena
 	u8 *data;
 	usize pos;
 	usize capacity;
+	u32 numTimesReallocated;
 };
 
 extern Arena g_tempArena;
@@ -20,23 +22,31 @@ push_size(Arena *arena,
 		  usize size,
 		  usize alignment = DEFAULT_ALIGNMENT)
 {
+	Assert(size <= arena->capacity && "allocation too large");
+
 	usize alignedPos = align_forward(arena->pos, alignment);
 
-	Assert(alignedPos + size <= arena->capacity);
+	if (alignedPos + size > arena->capacity)
+	{
+		arena->data = (u8 *)malloc(arena->capacity);
+		arena->pos = 0;
+		arena->numTimesReallocated++;
+		alignedPos = 0;
+	}
 
 	void *result = arena->data + alignedPos;
 	arena->pos = alignedPos + size;
 
 	memset(result, 0, size);
 
-	/*
+#if 0
 	f32 percentage = arena->pos/(f32)arena->capacity;
 	printf("%f\n", percentage);
 	if (percentage > 0.90)
 	{
-		int k = 123;
+		__debugbreak();
 	}
-	*/
+#endif
 
 	return result;
 }
@@ -83,16 +93,19 @@ grow_allocation(Arena *arena, void *ptr, usize oldSize, usize newSize)
 {
 	Assert(newSize >= oldSize);
 
-	if (ptr)
-	{
-		Assert(arena->data + arena->pos == (u8 *)ptr + oldSize);
-
-		push_size(arena, newSize - oldSize, 1);
-
-		return ptr;
-	}
-	else
+	if (!ptr)
 	{
 		return push_size(arena, newSize);
 	}
+
+	// assert that this allocation was the last one for this arena
+	Assert(arena->data + arena->pos == (u8 *)ptr + oldSize);
+
+	usize growSize = newSize - oldSize;
+
+	// assert that reallocation will not happen in push_size()
+	Assert(arena->pos + growSize <= arena->capacity);
+	push_size(arena, growSize, 1);
+
+	return ptr;
 }
