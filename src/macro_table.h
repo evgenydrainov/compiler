@@ -12,28 +12,22 @@ struct Macro
 
 struct MacroTable
 {
-	static_bump_array<Macro, 128> macros;
+	dynamic_array<Macro> macros;
 };
 
 inline Macro *
 LookupMacro(MacroTable *table,
 			string name)
 {
-	Macro *result = nullptr;
-
-	for (usize i = 0;
-		 i < table->macros.count;
-		 i++)
+	foreach (it, table->macros)
 	{
-		Macro *macro = &table->macros[i];
-		if (macro->name == name)
+		if (it->name == name)
 		{
-			result = macro;
-			break;
+			return it;
 		}
 	}
 
-	return result;
+	return nullptr;
 }
 
 inline Macro *

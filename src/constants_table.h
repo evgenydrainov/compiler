@@ -10,28 +10,22 @@ struct Constant
 
 struct ConstantsTable
 {
-	static_bump_array<Constant, 256> constants;
+	dynamic_array<Constant> constants;
 };
 
 inline Constant *
 LookupConstant(ConstantsTable *table,
 			   string name)
 {
-	Constant *result = nullptr;
-
-	for (usize i = 0;
-		 i < table->constants.count;
-		 i++)
+	foreach (it, table->constants)
 	{
-		Constant *constant = &table->constants[i];
-		if (constant->name == name)
+		if (it->name == name)
 		{
-			result = constant;
-			break;
+			return it;
 		}
 	}
 
-	return result;
+	return nullptr;
 }
 
 inline Constant *

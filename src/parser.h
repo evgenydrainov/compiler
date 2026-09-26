@@ -243,16 +243,15 @@ struct ProcDeclNode : public Node
 	string name;
 	string linkName;
 
-	Node *body;
+	BlockNode *body;
 	Type returnType;
 
 	slice<ParamNode *> params;
 
-	bool isForeign;
-
-	bool isCoroutine;
 	int yieldIndex;
 
+	bool isForeign;
+	bool isCoroutine;
 	bool isVariadic;
 };
 
@@ -264,9 +263,9 @@ struct CallNode : public Node
 
 	slice<Node *> arguments;
 
-	int returnSlotOffset;
-	
 	ProcInfo *signature;
+	
+	int returnSlotOffset;
 	int calleeSlotOffset;
 };
 

@@ -14,8 +14,12 @@ editor support (simple syntax highlighting)
 
 fix crashes in the compiler
 
-remove hard-coded limits in the compiler (num of functions, structs, etc)
-
 fix type checking for binary ops and other places
 
 fix C ffi variadic float promotion if more than 4 args
+
+unary plus operator
+
+switch to signed size_t everywhere
+
+optimize PeekToken()

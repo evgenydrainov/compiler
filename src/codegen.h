@@ -16,10 +16,10 @@ struct CodegenContext
 
 	Type currentReturnType;
 
-	bump_array<GenerateCStringLiteral> cstringLiterals;
-	bump_array<GenerateStringLiteral> stringLiterals;
+	slice<GenerateCStringLiteral> cstringLiterals;
+	slice<GenerateStringLiteral> stringLiterals;
 
-	bump_array<Node *> deferStack;
+	dynamic_array<Node *> deferStack;
 };
 
 void Generate_x86_64(Node *_program,

@@ -62,11 +62,16 @@ array_free(dynamic_array<T> *array)
 }
 
 template <typename T>
-inline void
+inline T *
 array_add(dynamic_array<T> *array, const IDENTITY(T) &value)
 {
 	array_reserve(array, array->count + 1);
-	array->data[array->count++] = value;
+
+	T *result = &array->data[array->count];
+	*result = value;
+	array->count++;
+
+	return result;
 }
 
 template <typename T>

@@ -36,7 +36,6 @@ array_add(static_bump_array<T, N> *array, const IDENTITY(T) &value)
 	Assert(array->count < array->capacity);
 
 	T *result = &array->data[array->count];
-
 	*result = value;
 	array->count++;
 

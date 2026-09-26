@@ -5,38 +5,28 @@
 
 struct TypeTable
 {
-	Type types[256];
-	int count;
+	dynamic_array<Type> types;
 };
 
 inline Type *
 LookupType(TypeTable *table,
 		   string name)
 {
-	Type *result = nullptr;
-
-	for (int i = 0;
-		 i < table->count;
-		 i++)
+	foreach (it, table->types)
 	{
-		Type *type = &table->types[i];
-		if (type->name == name)
+		if (it->name == name)
 		{
-			result = type;
-			break;
+			return it;
 		}
 	}
 
-	return result;
+	return nullptr;
 }
 
 inline Type *
 DeclareType(TypeTable *table, string name)
 {
-	Assert(table->count < ArrayCount(table->types));
-
-	Type *type = &table->types[table->count++];
-	*type = {};
+	Type *type = array_add(&table->types, {});
 	type->name = name;
 
 	return type;

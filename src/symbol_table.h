@@ -5,40 +5,35 @@
 
 struct Symbol
 {
+	Type type;
 	string name;
 	int stackOffset;
-	Type type;
 };
 
 struct SymbolTable
 {
-	Symbol symbols[256];
-	int count;
+	dynamic_array<Symbol> symbols;
+	usize scopeStart;
 	int stackSize;
 	int maxStackSize;
-	int scopeStart;
 };
 
 inline Symbol *
 LookupSymbol(SymbolTable *table,
 			 string name,
-			 int scopeStart)
+			 usize scopeStart)
 {
-	Symbol *result = nullptr;
-
 	// search backwards
-	for (int i = table->count;
+	for (usize i = table->symbols.count;
 		 i-- != scopeStart;)
 	{
-		Symbol *symbol = &table->symbols[i];
-		if (symbol->name == name)
+		if (table->symbols[i].name == name)
 		{
-			result = symbol;
-			break;
+			return &table->symbols[i];
 		}
 	}
 
-	return result;
+	return nullptr;
 }
 
 inline Symbol *
@@ -53,10 +48,7 @@ DeclareSymbol(SymbolTable *table,
 
 	table->maxStackSize = Max(table->maxStackSize, table->stackSize);
 
-	Assert(table->count < ArrayCount(table->symbols));
-
-	Symbol *symbol = &table->symbols[table->count++];
-	*symbol = {};
+	Symbol *symbol = array_add(&table->symbols, {});
 	symbol->name = name;
 	symbol->stackOffset = table->stackSize;
 	symbol->type = type;
@@ -77,4 +69,13 @@ ReserveSpace(SymbolTable *table,
 
 	int stackOffset = table->stackSize;
 	return stackOffset;
+}
+
+inline void
+ClearTable(SymbolTable *table)
+{
+	table->symbols.count = 0;
+	table->scopeStart = 0;
+	table->stackSize = 0;
+	table->maxStackSize = 0;
 }

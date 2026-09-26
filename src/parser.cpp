@@ -626,6 +626,7 @@ ParseAtom(Parser *parser,
 {
 	Node *result = nullptr;
 	
+	// allow implicit enum inference (e: MyEnum = .Foo)
 	if (parser->current.kind != TokenKind_Dot)
 	{
 		result = ParseAtom_Inner(parser, lexer, arena);
@@ -736,7 +737,7 @@ ParseStatement(Parser *parser,
 			   Lexer *lexer,
 			   Arena *arena);
 
-internal Node *
+internal BlockNode *
 ParseBlock(Parser *parser,
 		   Lexer *lexer,
 		   Arena *arena)

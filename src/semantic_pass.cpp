@@ -47,9 +47,9 @@ Note(SemanticContext *context,
 
 struct Scope
 {
-	int numSymbols;
+	usize scopeStart;
+	usize numSymbols;
 	int stackSize;
-	int scopeStart;
 };
 
 internal Scope
@@ -57,11 +57,11 @@ EnterScope(SymbolTable *symTable)
 {
 	Scope scope = {};
 
-	scope.numSymbols = symTable->count;
+	scope.numSymbols = symTable->symbols.count;
 	scope.stackSize = symTable->stackSize;
 	scope.scopeStart = symTable->scopeStart;
 
-	symTable->scopeStart = symTable->count;
+	symTable->scopeStart = symTable->symbols.count;
 
 	return scope;
 }
@@ -69,7 +69,7 @@ EnterScope(SymbolTable *symTable)
 internal void
 LeaveScope(SymbolTable *symTable, Scope scope)
 {
-	symTable->count = scope.numSymbols;
+	symTable->symbols.count = scope.numSymbols;
 	symTable->stackSize = scope.stackSize;
 	symTable->scopeStart = scope.scopeStart;
 }
@@ -2168,6 +2168,9 @@ AnalyzeTopLevelStatement(Node *baseNode,
 		{
 			ProcDeclNode *node = As<ProcDeclNode>(baseNode);
 
+			// clear the symbol table for every function
+			ClearTable(context->symTable);
+
 			ResolveType(&node->returnType, context, node);
 
 			Scope scope = EnterScope(context->symTable);
@@ -2217,12 +2220,15 @@ AnalyzeTopLevelStatement(Node *baseNode,
 			context->currentFunction = saveCurrentFunction;
 
 			LeaveScope(context->symTable, scope);
+
+			if (node->body)
+			{
+				int stackSize = (context->symTable->maxStackSize + 15) & ~15;
+				node->body->stackSize = stackSize;
+			}
 		} break;
 
-		default:
-		{
-			Assert(false);
-		} break;
+		default: {} break;
 	}
 }
 
@@ -2275,6 +2281,8 @@ EarlyAnalyze(Node *baseNode,
 				type->kind = TypeKind_Struct;
 				type->structInfo() = push_struct<StructInfo>(arena);
 				type->structInfo()->name = node->name;
+				// TODO: maybe allocate from somewhere else since node->fields.count can be large
+				type->structInfo()->fields = push_bump_array<StructField>(arena, node->fields.count);
 
 				int offset = 0;
 				int maxFieldAlignment = 0;
@@ -2340,6 +2348,7 @@ EarlyAnalyze(Node *baseNode,
 				type->enumInfo() = push_struct<EnumInfo>(arena);
 				type->enumInfo()->name = node->name;
 				type->enumInfo()->underlyingType = node->underlyingType;
+				// TODO: maybe allocate from somewhere else since node->enumerators.count can be large
 				type->enumInfo()->enumerators = push_bump_array<EnumeratorInfo>(arena, node->enumerators.count);
 
 				i64 enumeratorValue = 0;
@@ -2441,15 +2450,19 @@ SemanticPass(Node *_program,
 			 SemanticContext *context,
 			 Arena *arena)
 {
-	context->cstringLiterals = push_bump_array<GenerateCStringLiteral>(arena, 32);
-	context->stringLiterals  = push_bump_array<GenerateStringLiteral>(arena, 32);
+	FunctionTable funcTable = {};
+	SymbolTable symTable = {};
+	SymbolTable globalTable = {};
+	TypeTable typeTable = {};
+	ConstantsTable constTable = {};
+	MacroTable macroTable = {};
 
-	context->funcTable   = push_struct<FunctionTable>(arena);
-	context->symTable    = push_struct<SymbolTable>(arena);
-	context->globalTable = push_struct<SymbolTable>(arena);
-	context->typeTable   = push_struct<TypeTable>(arena);
-	context->constTable  = push_struct<ConstantsTable>(arena);
-	context->macroTable  = push_struct<MacroTable>(arena);
+	context->funcTable   = &funcTable;
+	context->symTable    = &symTable;
+	context->globalTable = &globalTable;
+	context->typeTable   = &typeTable;
+	context->constTable  = &constTable;
+	context->macroTable  = &macroTable;
 
 	BlockNode *program = As<BlockNode>(_program);
 	for (Node *it : program->statements)
@@ -2464,22 +2477,6 @@ SemanticPass(Node *_program,
 
 	for (Node *it : program->statements)
 	{
-		if (it->kind == NodeKind_ProcDecl)
-		{
-			ProcDeclNode *functionDef = As<ProcDeclNode>(it);
-
-			// clear the symbol table for every function
-			memset(context->symTable, 0, sizeof(*context->symTable));
-
-			AnalyzeTopLevelStatement(functionDef, context);
-
-			if (functionDef->body)
-			{
-				BlockNode *functionBody = As<BlockNode>(functionDef->body);
-
-				int stackSize = (context->symTable->maxStackSize + 15) & ~15;
-				functionBody->stackSize = stackSize;
-			}
-		}
+		AnalyzeTopLevelStatement(it, context);
 	}
 }

@@ -390,7 +390,9 @@ GenerateBinaryExpression(Node *baseNode,
 				}
 				else if (node->op == BinaryOp_Divide)
 				{
-					Emit(context, "    cqo     \t\t;");
+					// TODO: this is wrong for huge uint64 values
+
+					Emit(context, "    cqo");
 
 					if (IsSignedInteger(node->inferredType))
 					{
@@ -411,11 +413,11 @@ GenerateBinaryExpression(Node *baseNode,
 
 					if (IsSignedInteger(node->inferredType))
 					{
-						Emit(context, "    idiv rcx\t\t; perform division");
+						Emit(context, "    idiv rcx\t\t; perform division for modulo");
 					}
 					else if (IsUnsignedInteger(node->inferredType))
 					{
-						Emit(context, "    div rcx\t\t; perform division");
+						Emit(context, "    div rcx\t\t; perform division for modulo");
 					}
 					else
 					{
@@ -738,10 +740,8 @@ GenerateExpression(Node *baseNode,
 				prefix = "";
 			}
 
-			Emit(context, "    lea rax, [%s%s]\t; load address of procedure '%s'",
-				 prefix,
-				 node->linkName,
-				 node->linkName);
+			Emit(context, "    lea rax, [%s%s]\t; load function address",
+				 prefix, node->linkName);
 			Emit(context, "    push rax");
 			Emit(context, "");
 		} break;
@@ -1583,8 +1583,6 @@ GenerateTopLevelStatement(Node *baseNode,
 				break;
 			}
 
-			BlockNode *functionBody = As<BlockNode>(node->body);
-
 			context->currentReturnType = node->returnType;
 
 			char *prefix = "proc_";
@@ -1601,7 +1599,7 @@ GenerateTopLevelStatement(Node *baseNode,
 			context->stackDepth--;
 
 			Emit(context, "    mov rbp, rsp");
-			Emit(context, "    sub rsp, %d", functionBody->stackSize);
+			Emit(context, "    sub rsp, %d", node->body->stackSize);
 			Emit(context, "");
 
 			char *paramRegs[] =

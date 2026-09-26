@@ -26,13 +26,16 @@ struct bump_array
 };
 
 template <typename T>
-inline void
+inline T *
 array_add(bump_array<T> *array, const IDENTITY(T) &value)
 {
 	Assert(array->count < array->capacity);
 
-	array->data[array->count] = value;
+	T *result = &array->data[array->count];
+	*result = value;
 	array->count++;
+
+	return result;
 }
 
 template <typename T>

@@ -28,11 +28,13 @@ int main(int argc, char *argv[])
 	{
 		if (argv[i][0] == '-')
 		{
-			if (strcmp(argv[i], "-print-code") == 0)
+			if (strcmp(argv[i], "-print-code") == 0
+				|| strcmp(argv[i], "--print-code") == 0)
 			{
 				options.printCode = true;
 			}
-			else if (strcmp(argv[i], "-verbose") == 0)
+			else if (strcmp(argv[i], "-verbose") == 0
+					 || strcmp(argv[i], "--verbose") == 0)
 			{
 				options.verboseMode = true;
 			}
@@ -59,9 +61,7 @@ int main(int argc, char *argv[])
 
 	if (options.outputFilePathNoExt.count == 0)
 	{
-		string outputFilePathNoExt = strip_extension(options.inputFilePath);
-
-		options.outputFilePathNoExt = outputFilePathNoExt;
+		options.outputFilePathNoExt = strip_extension(options.inputFilePath);
 	}
 
 	CompileResult result = Compile(&options);

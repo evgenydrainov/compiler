@@ -112,7 +112,7 @@ struct StructField
 struct StructInfo
 {
 	string name;
-	static_bump_array<StructField, 32> fields;
+	bump_array<StructField> fields;
 	int size;
 	int alignment;
 };

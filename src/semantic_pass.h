@@ -26,8 +26,8 @@ struct SemanticContext
 
 	Node *currentLoop;
 
-	bump_array<GenerateCStringLiteral> cstringLiterals;
-	bump_array<GenerateStringLiteral> stringLiterals;
+	dynamic_array<GenerateCStringLiteral> cstringLiterals;
+	dynamic_array<GenerateStringLiteral> stringLiterals;
 
 	Arena *arenaForAst;
 

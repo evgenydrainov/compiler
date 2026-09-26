@@ -13,38 +13,28 @@ struct Function
 
 struct FunctionTable
 {
-	Function functions[128];
-	int count;
+	dynamic_array<Function> functions;
 };
 
 inline Function *
 LookupFunction(FunctionTable *table,
 			   string name)
 {
-	Function *result = nullptr;
-
-	for (int i = 0;
-		 i < table->count;
-		 i++)
+	foreach (it, table->functions)
 	{
-		Function *function = &table->functions[i];
-		if (function->name == name)
+		if (it->name == name)
 		{
-			result = function;
-			break;
+			return it;
 		}
 	}
 
-	return result;
+	return nullptr;
 }
 
 inline Function *
 DeclareFunction(FunctionTable *table, string name)
 {
-	Assert(table->count < ArrayCount(table->functions));
-
-	Function *function = &table->functions[table->count++];
-	*function = {};
+	Function *function = array_add(&table->functions, {});
 	function->name = name;
 
 	return function;
