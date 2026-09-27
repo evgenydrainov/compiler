@@ -24,8 +24,22 @@ int main(int argc, char *argv[])
 
 	CompileOptions options = {};
 
+	bool readOutputFilePath = false;
+
 	for (int i = 1; i < argc; i++)
 	{
+		if (readOutputFilePath)
+		{
+			string outputFilePathNoExt = { argv[i], strlen(argv[i]) };
+			outputFilePathNoExt = get_absolute_filepath(outputFilePathNoExt);
+			outputFilePathNoExt = strip_extension(outputFilePathNoExt);
+
+			options.outputFilePathNoExt = outputFilePathNoExt;
+
+			readOutputFilePath = false;
+			continue;
+		}
+
 		if (argv[i][0] == '-')
 		{
 			if (strcmp(argv[i], "-print-code") == 0
@@ -37,6 +51,10 @@ int main(int argc, char *argv[])
 					 || strcmp(argv[i], "--verbose") == 0)
 			{
 				options.verboseMode = true;
+			}
+			else if (strcmp(argv[i], "-o") == 0)
+			{
+				readOutputFilePath = true;
 			}
 			else
 			{
@@ -51,6 +69,12 @@ int main(int argc, char *argv[])
 
 			options.inputFilePath = inputFilePath;
 		}
+	}
+
+	if (readOutputFilePath)
+	{
+		fprintf(stderr, "missing filename after '-o'\n");
+		exit(1);
 	}
 
 	if (options.inputFilePath.count == 0)
