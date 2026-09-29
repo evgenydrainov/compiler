@@ -598,6 +598,21 @@ CanImplicitlyCast(Type destType,
 	return false;
 }
 
+internal bool
+IsImplicitEnumExpression(Node *_node)
+{
+	if (_node->kind == NodeKind_FieldAccess)
+	{
+		FieldAccessNode *node = As<FieldAccessNode>(_node);
+		if (!node->expr)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 internal void
 AnalyzeBinaryExpression(Node *baseNode,
 						SemanticContext *context)
@@ -656,8 +671,16 @@ AnalyzeBinaryExpression(Node *baseNode,
 		{
 			// TODO: forbid non numeric types
 
-			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context);
+			if (IsImplicitEnumExpression(node->lhs))
+			{
+				AnalyzeExpression(node->rhs, context);
+				AnalyzeExpression(node->lhs, context, node->rhs->inferredType);
+			}
+			else
+			{
+				AnalyzeExpression(node->lhs, context);
+				AnalyzeExpression(node->rhs, context, node->lhs->inferredType);
+			}
 
 			// try to cast rhs into lhs
 			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
@@ -1434,9 +1457,25 @@ AnalyzeExpression(Node *baseNode,
 				break;
 			}
 
-			for (Node *expr : node->arguments)
+			for (usize i = 0;
+				 i < node->signature->params.count;
+				 i++)
 			{
-				AnalyzeExpression(expr, context);
+				ResolveType(&node->signature->params[i], context, node);
+			}
+
+			for (usize i = 0;
+				 i < node->arguments.count;
+				 i++)
+			{
+				Type _expectedType = {};
+
+				if (i < node->signature->params.count)
+				{
+					_expectedType = node->signature->params[i];
+				}
+
+				AnalyzeExpression(node->arguments[i], context, _expectedType);
 			}
 
 			for (usize i = 0;
@@ -1444,8 +1483,6 @@ AnalyzeExpression(Node *baseNode,
 				 i++)
 			{
 				Node *expr = node->arguments[i];
-
-				ResolveType(&node->signature->params[i], context, node);
 
 				if (CanImplicitlyCast(node->signature->params[i], expr, context))
 				{
@@ -1822,17 +1859,17 @@ AnalyzeStatement(Node *baseNode,
 		{
 			VarDeclNode *node = As<VarDeclNode>(baseNode);
 
+			ResolveType(&node->type, context, node);
+
 			if (node->expr)
 			{
-				AnalyzeExpression(node->expr, context);
+				AnalyzeExpression(node->expr, context, node->type);
 
 				if (node->type.kind == TypeKind_InferMe)
 				{
 					node->type = node->expr->inferredType;
 				}
 			}
-
-			ResolveType(&node->type, context, node);
 
 			if (node->type.kind == TypeKind_Void)
 			{
@@ -1979,7 +2016,7 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->expr)
 			{
-				AnalyzeExpression(node->expr, context);
+				AnalyzeExpression(node->expr, context, context->currentFunction->returnType);
 				
 				if (!CanImplicitlyCast(context->currentFunction->returnType, node->expr, context))
 				{
