@@ -2049,7 +2049,14 @@ AnalyzeStatement(Node *baseNode,
 		{
 			YieldNode *node = As<YieldNode>(baseNode);
 
-			node->yieldIndex = ++context->currentFunction->yieldIndex;
+			if (context->currentFunction->isCoroutine)
+			{
+				node->yieldIndex = ++context->currentFunction->yieldIndex;
+			}
+			else
+			{
+				Error(context, baseNode, "'yield' is not allowed in a function that was not marked with '#coroutine'");
+			}
 		} break;
 
 		case NodeKind_Break:
