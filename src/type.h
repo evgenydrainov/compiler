@@ -192,6 +192,12 @@ TypesEqual(Type a, Type b)
 		return a.name == b.name;
 	}
 
+	if (a.kind == TypeKind_Enum
+		&& b.kind == TypeKind_Enum)
+	{
+		return a.name == b.name;
+	}
+
 	if (a.kind == TypeKind_Array
 		&& b.kind == TypeKind_Array)
 	{
