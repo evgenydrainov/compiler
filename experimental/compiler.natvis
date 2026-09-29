@@ -1,0 +1,599 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  
+  <Type Name="string">
+    <DisplayString>{data,[count]} [size={count}]</DisplayString>
+    
+    <Expand>
+      <Item Name="[size]">count</Item>
+      <Item Name="[string]">data,[count]s8</Item>
+    </Expand>
+  </Type>
+  
+  <Type Name="slice&lt;*&gt;">
+    <DisplayString>{{ size={count} }}</DisplayString>
+    
+    <Expand>
+      <Item Name="[size]">count</Item>
+      
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="bump_array&lt;*&gt;">
+    <DisplayString>{{ size={count} }}</DisplayString>
+    
+    <Expand>
+      <Item Name="[size]">count</Item>
+      <Item Name="[capacity]">capacity</Item>
+      
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="dynamic_array&lt;*&gt;">
+    <DisplayString>{{ size={count} }}</DisplayString>
+
+    <Expand>
+      <Item Name="[size]">count</Item>
+      <Item Name="[capacity]">capacity</Item>
+
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="static_bump_array&lt;*,*&gt;">
+    <DisplayString>{{ size={count} }}</DisplayString>
+    
+    <Expand>
+      <Item Name="[size]">count</Item>
+      <Item Name="[capacity]">$T2</Item>
+      
+      <ArrayItems>
+        <Size>count</Size>
+        <ValuePointer>data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="list&lt;*&gt;">
+    <DisplayString>{{ size={count} }}</DisplayString>
+
+    <Expand>
+      <Item Name="[size]">count</Item>
+
+      <LinkedListItems>
+        <Size>count</Size>
+        <HeadPointer>head</HeadPointer>
+        <NextPointer>($T1 *)next</NextPointer>
+        <ValueNode>this</ValueNode>
+      </LinkedListItems>
+    </Expand>
+  </Type>
+
+  <!-- BEGIN GENERATED NODE VISUALIZERS (src/gen_natvis.py) -->
+  <!-- Node shows the fields of its derived type based on kind.
+       Inheritable="false" so the derived types don't pick this up and recurse. -->
+  <Type Name="Node" Inheritable="false">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <ExpandedItem Condition="kind == NodeKind_Binary">*(BinaryNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Assign">*(AssignNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_VarDecl">*(VarDeclNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Var">*(VarNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Int64Literal">*(Int64LiteralNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Float32Literal">*(Float32LiteralNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Float64Literal">*(Float64LiteralNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Block">*(BlockNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_If">*(IfNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_While">*(WhileNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Print">*(PrintNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Param">*(ParamNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_ProcDecl">*(ProcDeclNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Call">*(CallNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Return">*(ReturnNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_BoolLiteral">*(BoolLiteralNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_AddressOf">*(AddressOfNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Deref">*(DerefNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_StructFieldDecl">*(StructFieldDeclNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_StructDecl">*(StructDeclNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_FieldAccess">*(FieldAccessNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_ArrayIndexAccess">*(ArrayIndexAccessNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_String">*(StringNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_CString">*(CStringNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Unary">*(UnaryNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Asm">*(AsmNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_EnumeratorDecl">*(EnumeratorDeclNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_EnumDecl">*(EnumDeclNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Cast">*(CastNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_ConstantDecl">*(ConstantDeclNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Yield">*(YieldNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Break">*(BreakNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Continue">*(ContinueNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_For">*(ForNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Defer">*(DeferNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Case">*(CaseNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Switch">*(SwitchNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_NullLiteral">*(NullLiteralNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Sizeof">*(SizeofNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_MacroDecl">*(MacroDeclNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_ProcRef">*(ProcRefNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_MacroRef">*(MacroRefNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Proxy">*(ProxyNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_RangeBasedFor">*(RangeBasedForNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Foreach">*(ForeachNode *)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="BinaryNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="op">op</Item>
+      <Item Name="lhs">lhs</Item>
+      <Item Name="rhs">rhs</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="AssignNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="lhs">lhs</Item>
+      <Item Name="rhs">rhs</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="VarDeclNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="stackOffset">stackOffset</Item>
+      <Item Name="expr">expr</Item>
+      <Item Name="type">type</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="VarNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="stackOffset">stackOffset</Item>
+      <Item Name="isGlobal">isGlobal</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="Int64LiteralNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="value">value</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="Float32LiteralNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="value">value</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="Float64LiteralNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="value">value</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BlockNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="statements">statements</Item>
+      <Item Name="stackSize">stackSize</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="IfNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="condition">condition</Item>
+      <Item Name="thenBlock">thenBlock</Item>
+      <Item Name="elseBlock">elseBlock</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="WhileNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="condition">condition</Item>
+      <Item Name="body">body</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="PrintNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="expr">expr</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ParamNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="stackOffset">stackOffset</Item>
+      <Item Name="type">type</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ProcDeclNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="linkName">linkName</Item>
+      <Item Name="body">body</Item>
+      <Item Name="returnType">returnType</Item>
+      <Item Name="params">params</Item>
+      <Item Name="yieldIndex">yieldIndex</Item>
+      <Item Name="isForeign">isForeign</Item>
+      <Item Name="isCoroutine">isCoroutine</Item>
+      <Item Name="isVariadic">isVariadic</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="CallNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="callee">callee</Item>
+      <Item Name="arguments">arguments</Item>
+      <Item Name="signature">signature</Item>
+      <Item Name="returnSlotOffset">returnSlotOffset</Item>
+      <Item Name="calleeSlotOffset">calleeSlotOffset</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ReturnNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="expr">expr</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BoolLiteralNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="value">value</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="AddressOfNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="what">what</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="DerefNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="what">what</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="StructFieldDeclNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="type">type</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="StructDeclNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="fields">fields</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="FieldAccessNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="expr">expr</Item>
+      <Item Name="fieldName">fieldName</Item>
+      <Item Name="fieldOffset">fieldOffset</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ArrayIndexAccessNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="arrayExpr">arrayExpr</Item>
+      <Item Name="indexExpr">indexExpr</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="StringNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="value">value</Item>
+      <Item Name="uniqueId">uniqueId</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="CStringNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="value">value</Item>
+      <Item Name="uniqueId">uniqueId</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="UnaryNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="op">op</Item>
+      <Item Name="expr">expr</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="AsmNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="code">code</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="EnumeratorDeclNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="value">value</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="EnumDeclNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="enumerators">enumerators</Item>
+      <Item Name="underlyingType">underlyingType</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="CastNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="what">what</Item>
+      <Item Name="targetType">targetType</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ConstantDeclNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="expr">expr</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="YieldNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="yieldIndex">yieldIndex</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="BreakNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ContinueNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ForNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="init">init</Item>
+      <Item Name="cond">cond</Item>
+      <Item Name="incr">incr</Item>
+      <Item Name="body">body</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="DeferNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="what">what</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="CaseNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="label">label</Item>
+      <Item Name="body">body</Item>
+      <Item Name="labelValue">labelValue</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="SwitchNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="expr">expr</Item>
+      <Item Name="cases">cases</Item>
+      <Item Name="defaultBody">defaultBody</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="NullLiteralNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="SizeofNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="what">what</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="MacroDeclNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="name">name</Item>
+      <Item Name="body">body</Item>
+      <Item Name="params">params</Item>
+      <Item Name="dontBind">dontBind</Item>
+      <Item Name="isExpressionMacro">isExpressionMacro</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ProcRefNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="linkName">linkName</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="MacroRefNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="macro">macro</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ProxyNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="proxy">proxy</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="RangeBasedForNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="iteratorName">iteratorName</Item>
+      <Item Name="from">from</Item>
+      <Item Name="to">to</Item>
+      <Item Name="body">body</Item>
+      <Item Name="inclusiveUpperBound">inclusiveUpperBound</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ForeachNode">
+    <DisplayString>{kind,en}</DisplayString>
+
+    <Expand>
+      <Item Name="iteratorName">iteratorName</Item>
+      <Item Name="what">what</Item>
+      <Item Name="body">body</Item>
+      <Item Name="iterateByPointer">iterateByPointer</Item>
+      <Item Name="[Node]">*(Node *)this,!</Item>
+    </Expand>
+  </Type>
+
+  <!-- END GENERATED NODE VISUALIZERS -->
+
+</AutoVisualizer>
