@@ -119,6 +119,7 @@ RunTests()
 {
 	ChDir("tests");
 
+	TestReturnCode("00_temp", 0);
 	TestReturnCode("01_arithmetic", 0);
 	TestReturnCode("02_variables_scope", 0);
 	TestReturnCode("03_control_flow", 0);
@@ -202,7 +203,7 @@ RunExample(char *testName, char *folder)
 
 int main()
 {
-	//onlyRunThisTest = "26_macro";
+	//onlyRunThisTest = "00_temp";
 
 	char *currentDir = _getcwd(nullptr, 0);
 	if (!currentDir)
