@@ -1059,19 +1059,21 @@ GenerateExpression(Node *baseNode,
 					Emit(context, "    push rax");
 				}
 						
-				/*
-				if (function->isVariadic)
+				if (node->signature->isVariadic)
 				{
 					if (i >= 4)
 					{
-						if (node->expressions[i]->inferredType.kind == TypeKind_Float32)
+						if (paramType->kind == TypeKind_Float32)
 						{
-							// TODO: probably have to do promotion here?
-							Assert(false);
+							// do promotion
+							Emit(context, "    pop rax");
+							Emit(context, "    movd xmm0, eax");
+							Emit(context, "    cvtss2sd xmm0, xmm0");
+							Emit(context, "    movq rax, xmm0");
+							Emit(context, "    push rax");
 						}
 					}
 				}
-				*/
 			}
 
 			for (int i = 0;

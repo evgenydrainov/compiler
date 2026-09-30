@@ -16,8 +16,6 @@ fix crashes in the compiler
 
 fix type checking for binary ops and other places
 
-fix C ffi variadic float promotion if more than 4 args
-
 unary plus operator
 
 switch to signed size_t everywhere
@@ -27,3 +25,5 @@ optimize PeekToken()
 check that all control paths of a function return
 
 == != comparison for strings and maybe slices
+
+cast bool to integers
