@@ -192,15 +192,15 @@ Compile(CompileOptions *options)
 	semanticContext.arenaForAst = &arena;
 	SemanticPass(program, &semanticContext, &arena);
 
-	if (semanticContext.hadError)
-	{
-		return CompileResult_SemanticError;
-	}
-
 	if (options->printCode)
 	{
 		PrintContext context = {};
 		PrintProgram(&context, program);
+	}
+
+	if (semanticContext.hadError)
+	{
+		return CompileResult_SemanticError;
 	}
 
 	CodegenContext codegenContext = {};

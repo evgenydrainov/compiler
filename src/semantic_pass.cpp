@@ -1867,7 +1867,14 @@ AnalyzeStatement(Node *baseNode,
 
 				if (node->type.kind == TypeKind_InferMe)
 				{
-					node->type = node->expr->inferredType;
+					if (node->expr->inferredType.kind != TypeKind_Unknown)
+					{
+						node->type = node->expr->inferredType;
+					}
+					else
+					{
+						// unable to infer the type
+					}
 				}
 			}
 
