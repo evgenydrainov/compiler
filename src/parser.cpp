@@ -821,9 +821,10 @@ ParseCaseBlock(Parser *parser,
 
 	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
 
-	while (parser->current.kind != TokenKind_Case
-		   && parser->current.kind != TokenKind_CloseBrace
-		   && !parser->hadError)
+	while (!parser->hadError
+		   && parser->current.kind != TokenKind_Case
+		   && parser->current.kind != TokenKind_Default
+		   && parser->current.kind != TokenKind_CloseBrace)
 	{
 		Node *statement = ParseStatement(parser, lexer, arena);
 		if (parser->hadError)
