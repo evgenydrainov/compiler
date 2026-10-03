@@ -651,7 +651,7 @@ ParseAtom(Parser *parser,
 		}
 		else if (parser->current.kind == TokenKind_OpenBracket)
 		{
-			ArrayIndexAccessNode *node = MakeNode<ArrayIndexAccessNode>(parser->current.location, arena);
+			SubscriptNode *node = MakeNode<SubscriptNode>(parser->current.location, arena);
 			node->arrayExpr = result;
 
 			AdvanceToken(parser, lexer); // eat the '['

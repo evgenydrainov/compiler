@@ -110,9 +110,9 @@ IsLValue(Node *_node)
 			result = IsLValue(node->expr);
 		} break;
 
-		case NodeKind_ArrayIndexAccess:
+		case NodeKind_Subscript:
 		{
-			ArrayIndexAccessNode *node = As<ArrayIndexAccessNode>(_node);
+			SubscriptNode *node = As<SubscriptNode>(_node);
 			result = IsLValue(node->arrayExpr);
 		} break;
 
@@ -985,11 +985,11 @@ InstantiateMacro(Node *baseNode,
 			return result;
 		} break;
 
-		case NodeKind_ArrayIndexAccess:
+		case NodeKind_Subscript:
 		{
-			ArrayIndexAccessNode *node = As<ArrayIndexAccessNode>(baseNode);
+			SubscriptNode *node = As<SubscriptNode>(baseNode);
 
-			ArrayIndexAccessNode *result = MakeNode<ArrayIndexAccessNode>(node->location, arena);
+			SubscriptNode *result = MakeNode<SubscriptNode>(node->location, arena);
 			result->arrayExpr = InstantiateMacro(node->arrayExpr, context);
 			result->indexExpr = InstantiateMacro(node->indexExpr, context);
 
@@ -1735,17 +1735,17 @@ AnalyzeExpression(Node *baseNode,
 			}
 		} break;
 
-		case NodeKind_ArrayIndexAccess:
+		case NodeKind_Subscript:
 		{
-			ArrayIndexAccessNode *node = As<ArrayIndexAccessNode>(baseNode);
+			SubscriptNode *node = As<SubscriptNode>(baseNode);
 
 			AnalyzeExpression(node->arrayExpr, context);
 			AnalyzeExpression(node->indexExpr, context);
 
-			if (!IsSignedInteger(node->indexExpr->inferredType))
+			if (!IsInteger(node->indexExpr->inferredType))
 			{
 				Error(context, node->indexExpr,
-					  "array index must be a signed integer, but it is '%s'",
+					  "array index must be an integer, but it is '%s'",
 					  TypeToString(node->indexExpr->inferredType));
 				break;
 			}

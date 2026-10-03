@@ -160,9 +160,9 @@ PrintExpression(PrintContext *context,
 			Print(context, "." STR_FMT, STR_ARG(node->fieldName));
 		} break;
 
-		case NodeKind_ArrayIndexAccess:
+		case NodeKind_Subscript:
 		{
-			ArrayIndexAccessNode *node = As<ArrayIndexAccessNode>(_node);
+			SubscriptNode *node = As<SubscriptNode>(_node);
 
 			PrintExpression(context, node->arrayExpr);
 

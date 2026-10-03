@@ -26,7 +26,7 @@
 	X(StructDecl) \
 	X(StructFieldDecl) \
 	X(FieldAccess) \
-	X(ArrayIndexAccess) \
+	X(Subscript) \
 	X(String) \
 	X(CString) \
 	X(Unary) \
@@ -322,9 +322,9 @@ struct FieldAccessNode : public Node
 	int fieldOffset;
 };
 
-struct ArrayIndexAccessNode : public Node
+struct SubscriptNode : public Node
 {
-	static constexpr NodeKind KIND = NodeKind_ArrayIndexAccess;
+	static constexpr NodeKind KIND = NodeKind_Subscript;
 
 	Node *arrayExpr;
 	Node *indexExpr;

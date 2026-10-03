@@ -214,9 +214,9 @@ GenerateLValueAddress(Node *baseNode,
 			Emit(context, "");
 		} break;
 
-		case NodeKind_ArrayIndexAccess:
+		case NodeKind_Subscript:
 		{
-			ArrayIndexAccessNode *node = As<ArrayIndexAccessNode>(baseNode);
+			SubscriptNode *node = As<SubscriptNode>(baseNode);
 
 			int size = 0;
 
@@ -818,7 +818,7 @@ GenerateExpression(Node *baseNode,
 		case NodeKind_Var:
 		case NodeKind_Deref:
 		case NodeKind_FieldAccess:
-		case NodeKind_ArrayIndexAccess:
+		case NodeKind_Subscript:
 		{
 			int size = SizeOfType(baseNode->inferredType);
 

@@ -108,7 +108,7 @@
       <ExpandedItem Condition="kind == NodeKind_StructFieldDecl">*(StructFieldDeclNode *)this</ExpandedItem>
       <ExpandedItem Condition="kind == NodeKind_StructDecl">*(StructDeclNode *)this</ExpandedItem>
       <ExpandedItem Condition="kind == NodeKind_FieldAccess">*(FieldAccessNode *)this</ExpandedItem>
-      <ExpandedItem Condition="kind == NodeKind_ArrayIndexAccess">*(ArrayIndexAccessNode *)this</ExpandedItem>
+      <ExpandedItem Condition="kind == NodeKind_Subscript">*(SubscriptNode *)this</ExpandedItem>
       <ExpandedItem Condition="kind == NodeKind_String">*(StringNode *)this</ExpandedItem>
       <ExpandedItem Condition="kind == NodeKind_CString">*(CStringNode *)this</ExpandedItem>
       <ExpandedItem Condition="kind == NodeKind_Unary">*(UnaryNode *)this</ExpandedItem>
@@ -354,7 +354,7 @@
     </Expand>
   </Type>
 
-  <Type Name="ArrayIndexAccessNode">
+  <Type Name="SubscriptNode">
     <DisplayString>{kind,en}</DisplayString>
 
     <Expand>
