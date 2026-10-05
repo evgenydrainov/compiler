@@ -12,30 +12,20 @@ Entity :: struct
 	width: f32;
 	height: f32;
 
-	co: *mco_coro;
-
-	wait_timer: f32;
+	co: Coroutine;
+	co_frame: [128]u8;
 };
 
-this :: macro cast(*Entity)co.user_data;
-
-wait :: proc(co: *mco_coro, time: f32)
-{
-	this.wait_timer += time;
-	while this.wait_timer >= 1
-	{
-		mco_yield(co);
-		this.wait_timer -= 1;
-	}
-}
-
-enemy_script :: proc(co: *mco_coro)
+boss_script :: proc(co: *Coroutine) #coroutine
 {
 	while true
 	{
-		wait(co, 60);
+		for i in 1..60
+		{
+			yield;
+		}
 
-		launch_towards_point(co.user_data,
+		launch_towards_point(co.userdata,
 							 cast(f32)(rand()%GAME_WIDTH),
 							 cast(f32)(rand()%GAME_HEIGHT),
 							 0.1);
@@ -64,8 +54,14 @@ world_init :: proc(world: *World)
 	boss.width = 32;
 	boss.height = 32;
 
-	desc := mco_desc_init(enemy_script, 0);
-	mco_create(&boss.co, &desc);
+	// TODO: #assert(boss_script.frame_size <= boss.co_frame.count);
+
+	if boss_script.frame_size > boss.co_frame.count
+	{
+		printf("error: co_frame is too small\n"c);
+	}
+
+	coroutine_init(&boss.co, boss_script);
 }
 
 world_update :: proc(world: *World, delta: f32)
@@ -75,8 +71,7 @@ world_update :: proc(world: *World, delta: f32)
 
 	player_update(player, delta);
 
-	boss.co.user_data = boss;
-	mco_resume(boss.co);
+	coroutine_resume(&boss.co, &boss.co_frame, boss);
 
 	physics_update(player, delta);
 	physics_update(boss, delta);

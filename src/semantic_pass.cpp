@@ -1332,6 +1332,7 @@ AnalyzeExpression(Node *baseNode,
 			{
 				ProcRefNode *newNode = ReinterpretNode<ProcRefNode>(node);
 				newNode->linkName = function->linkName;
+				newNode->function = function;
 				newNode->inferredType.kind = TypeKind_Proc;
 				newNode->inferredType.procInfo() = function->info;
 
@@ -1440,7 +1441,16 @@ AnalyzeExpression(Node *baseNode,
 			}
 
 			node->signature = node->callee->inferredType.procInfo();
-			node->calleeSlotOffset = ReserveSpace(context->symTable, node->callee->inferredType);
+
+			if (node->callee->kind == NodeKind_ProcRef)
+			{
+				node->linkName = As<ProcRefNode>(node->callee)->linkName;
+				Assert(node->linkName); // must not be empty
+			}
+			else
+			{
+				node->calleeSlotOffset = ReserveSpace(context->symTable, node->callee->inferredType);
+			}
 
 			bool good = ((node->signature->isVariadic)
 						 ? (node->arguments.count >= node->signature->params.count)
@@ -1618,6 +1628,27 @@ AnalyzeExpression(Node *baseNode,
 			}
 
 			AnalyzeExpression(node->expr, context);
+
+			if (node->expr->kind == NodeKind_ProcRef)
+			{
+				if (node->fieldName == "frame_size")
+				{
+					int frameSize = As<ProcRefNode>(node->expr)->function->frameSize;
+
+					if (frameSize != -1)
+					{
+						Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
+						newNode->inferredType.kind = TypeKind_Int64;
+						newNode->value = frameSize;
+					}
+					else
+					{
+						Error(context, node, "unable to retrieve the frame size of this function");
+					}
+
+					break;
+				}
+			}
 
 			auto HandleField = [&](Type *type)
 			{
@@ -2274,8 +2305,11 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 			if (node->body)
 			{
-				int stackSize = (context->symTable->maxStackSize + 15) & ~15;
+				int stackSize = (int)align_forward(context->symTable->maxStackSize, 16);
 				node->body->stackSize = stackSize;
+
+				Function *function = LookupFunction(context->funcTable, node->name);
+				function->frameSize = stackSize;
 			}
 		} break;
 
@@ -2308,6 +2342,7 @@ EarlyAnalyze(Node *baseNode,
 				func->info->returnType = node->returnType;
 				func->info->isVariadic = node->isVariadic;
 				func->info->isForeign = node->isForeign;
+				func->info->isCoroutine = node->isCoroutine;
 				func->info->params = push_slice<Type>(arena, node->params.count);
 
 				for (usize i = 0; i < node->params.count; i++)

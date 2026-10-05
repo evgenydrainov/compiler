@@ -159,14 +159,12 @@ GenerateLValueAddress(Node *baseNode,
 			if (node->isGlobal)
 			{
 				Emit(context, "    lea rax, [rel %s]\t; load address of variable '%s'",
-					 node->name,
-					 node->name);
+					 node->name, node->name);
 			}
 			else
 			{
-				Emit(context, "    lea rax, [rbp - %d]\t; load address of variable '%s'",
-					 node->stackOffset,
-					 node->name);
+				Emit(context, "    lea rax, [%s - %d]\t; load address of variable '%s'",
+					 context->frameReg, node->stackOffset, node->name);
 			}
 			Emit(context, "    push rax");
 			Emit(context, "");
@@ -662,6 +660,19 @@ EmitCopyBytes(CodegenContext *context,
 	}
 }
 
+internal string
+GetSymbolNameForFunction(string linkName, bool isForeign)
+{
+	if (isForeign || linkName == "main")
+	{
+		return linkName;
+	}
+	else
+	{
+		return tprintf("proc_" STR_FMT, STR_ARG(linkName));
+	}
+}
+
 internal void
 GenerateExpression(Node *baseNode,
 				   CodegenContext *context)
@@ -733,15 +744,9 @@ GenerateExpression(Node *baseNode,
 		{
 			ProcRefNode *node = As<ProcRefNode>(baseNode);
 
-			char *prefix = "proc_";
-			if (node->inferredType.procInfo()->isForeign
-				|| node->linkName == "main")
-			{
-				prefix = "";
-			}
+			string symbolName = GetSymbolNameForFunction(node->linkName, node->inferredType.procInfo()->isForeign);
 
-			Emit(context, "    lea rax, [%s%s]\t; load function address",
-				 prefix, node->linkName);
+			Emit(context, "    lea rax, [%s]\t; load function address", symbolName);
 			Emit(context, "    push rax");
 			Emit(context, "");
 		} break;
@@ -957,11 +962,14 @@ GenerateExpression(Node *baseNode,
 			int numArgumentsInRegs = Min(numArguments, 4);
 			int numArgumentsOnStack = numArguments - numArgumentsInRegs;
 
-			GenerateExpression(node->callee, context);
+			if (!node->linkName)
+			{
+				GenerateExpression(node->callee, context);
 
-			Emit(context, "    pop rax");
-			Emit(context, "    mov qword [rbp - %d], rax\t; save the call target",
-				 node->calleeSlotOffset);
+				Emit(context, "    pop rax");
+				Emit(context, "    mov qword [%s - %d], rax\t; save the call target",
+					 context->frameReg, node->calleeSlotOffset);
+			}
 
 			int padding = ((context->stackDepth + numArgumentsOnStack) % 2) ? 8 : 0;
 			if (padding)
@@ -1041,7 +1049,7 @@ GenerateExpression(Node *baseNode,
 					}
 					else
 					{
-						Emit(context, "    lea rdi, [rbp - %d]", expr->paramCopyOffset);
+						Emit(context, "    lea rdi, [%s - %d]", context->frameReg, expr->paramCopyOffset);
 
 						GenerateLValueAddress(expr, context);
 						Emit(context, "    pop rsi");
@@ -1055,7 +1063,7 @@ GenerateExpression(Node *baseNode,
 				{
 					// pass the first argument: it is the address of the
 					// function's return value
-					Emit(context, "    lea rax, [rbp - %d]", node->returnSlotOffset);
+					Emit(context, "    lea rax, [%s - %d]", context->frameReg, node->returnSlotOffset);
 					Emit(context, "    push rax");
 				}
 						
@@ -1116,7 +1124,16 @@ GenerateExpression(Node *baseNode,
 
 			Emit(context, "    sub rsp, 32\t\t; reserve shadow space");
 
-			Emit(context, "    call qword [rbp - %d]", node->calleeSlotOffset);
+			if (node->linkName)
+			{
+				string symbolName = GetSymbolNameForFunction(node->linkName, node->signature->isForeign);
+
+				Emit(context, "    call %s", symbolName);
+			}
+			else
+			{
+				Emit(context, "    call qword [%s - %d]", context->frameReg, node->calleeSlotOffset);
+			}
 
 			Emit(context, "    add rsp, 32\t\t; free shadow space");
 
@@ -1446,13 +1463,13 @@ GenerateStatement(Node *baseNode,
 
 					Emit(context, "    pop rsi");
 
-					Emit(context, "    mov rdi, [rbp - 8]"); // [rbp - 8] is the first argument
+					Emit(context, "    mov rdi, [%s - 8]", context->frameReg); // [rbp - 8] is the first argument
 
 					EmitCopyBytes(context, "rdi", "rsi", SizeOfType(node->expr->inferredType));
 
 					EmitDefers(context, 0);
 
-					Emit(context, "    mov rax, [rbp - 8]"); // ABI: also return the pointer
+					Emit(context, "    mov rax, [%s - 8]", context->frameReg); // ABI: also return the pointer
 				}
 			}
 			else
@@ -1481,9 +1498,9 @@ GenerateStatement(Node *baseNode,
 		{
 			YieldNode *node = As<YieldNode>(baseNode);
 
-			Emit(context, "    mov rax, [rbp - 8]");
-			Emit(context, "    mov qword [rax], %d", node->yieldIndex);
-			Emit(context, "    jmp .epilogue");
+			Emit(context, "    mov rax, [%s - 8]", context->frameReg);
+			Emit(context, "    mov qword [rax], %d\t\t; set coroutine.state", node->yieldIndex);
+			Emit(context, "    jmp .yielded");
 			Emit(context, ".coroutine_state_%d:", node->yieldIndex);
 			Emit(context, "");
 		} break;
@@ -1587,21 +1604,31 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			context->currentReturnType = node->returnType;
 
-			char *prefix = "proc_";
-			if (node->isForeign
-				|| node->linkName == "main")
-			{
-				prefix = "";
-			}
+			string symbolName = GetSymbolNameForFunction(node->linkName, node->isForeign);
 
-			Emit(context, "%s%s:", prefix, node->linkName);
+			Emit(context, "%s:", symbolName);
 
 			// doesn't affect stack depth
 			Emit(context, "    push rbp");
 			context->stackDepth--;
 
 			Emit(context, "    mov rbp, rsp");
-			Emit(context, "    sub rsp, %d", node->body->stackSize);
+
+			if (node->isCoroutine)
+			{
+				context->frameReg = "r12";
+
+				Emit(context, "    sub rsp, 16");
+				Emit(context, "    mov [rbp - 8], r12\t\t; save callee-saved r12");
+				Emit(context, "    mov r12, [rcx + 8]\t\t; coroutine.frame");
+				Emit(context, "    add r12, %d\t\t; locals are at [r12 - offset]", node->body->stackSize);
+			}
+			else
+			{
+				context->frameReg = "rbp";
+
+				Emit(context, "    sub rsp, %d", node->body->stackSize);
+			}
 			Emit(context, "");
 
 			char *paramRegs[] =
@@ -1653,22 +1680,22 @@ GenerateTopLevelStatement(Node *baseNode,
 					{
 						if (param->type.kind == TypeKind_Float32)
 						{
-							Emit(context, "    movss [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
+							Emit(context, "    movss [%s - %d], xmm%d\t\t; unpack argument", context->frameReg, param->stackOffset, i);
 						}
 						else if (param->type.kind == TypeKind_Float64)
 						{
-							Emit(context, "    movsd [rbp - %d], xmm%d\t\t; unpack argument", param->stackOffset, i);
+							Emit(context, "    movsd [%s - %d], xmm%d\t\t; unpack argument", context->frameReg, param->stackOffset, i);
 						}
 						else
 						{
-							Emit(context, "    mov [rbp - %d], %s\t\t; unpack argument", param->stackOffset, paramRegs[i]);
+							Emit(context, "    mov [%s - %d], %s\t\t; unpack argument", context->frameReg, param->stackOffset, paramRegs[i]);
 						}
 					}
 					else
 					{
 						// this argument is passed by reference
 
-						Emit(context, "    lea rdi, [rbp - %d]", param->stackOffset);
+						Emit(context, "    lea rdi, [%s - %d]", context->frameReg, param->stackOffset);
 
 						Emit(context, "    mov rsi, %s", paramRegs[i]);
 
@@ -1679,7 +1706,7 @@ GenerateTopLevelStatement(Node *baseNode,
 				{
 					// unpack the first argument, which is the pointer of this
 					// function's return value
-					Emit(context, "    mov [rbp - 8], %s", paramRegs[i]);
+					Emit(context, "    mov [%s - 8], %s", context->frameReg, paramRegs[i]);
 				}
 			}
 
@@ -1696,13 +1723,13 @@ GenerateTopLevelStatement(Node *baseNode,
 				if (IsRegisterSized(param->type))
 				{
 					Emit(context, "    mov rax, [rbp + %d]\t\t; unpack stack argument %d", callerOffset, i+1);
-					Emit(context, "    mov [rbp - %d], rax", param->stackOffset);
+					Emit(context, "    mov [%s - %d], rax", context->frameReg, param->stackOffset);
 				}
 				else
 				{
 					// this argument is passed by reference
 
-					Emit(context, "    lea rdi, [rbp - %d]", param->stackOffset);
+					Emit(context, "    lea rdi, [%s - %d]", context->frameReg, param->stackOffset);
 
 					Emit(context, "    mov rsi, [rbp + %d]", callerOffset);
 
@@ -1713,8 +1740,8 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			if (node->isCoroutine)
 			{
-				Emit(context, "    mov rax, [rbp - 8]");
-				Emit(context, "    mov rax, [rax]");
+				Emit(context, "    mov rax, [%s - 8]", context->frameReg);
+				Emit(context, "    mov rax, [rax]\t\t; coroutine.state");
 				Emit(context, "");
 
 				for (int i = 0;
@@ -1726,7 +1753,7 @@ GenerateTopLevelStatement(Node *baseNode,
 				}
 				Emit(context, "");
 
-				Emit(context, "    jmp .epilogue");
+				Emit(context, "    jmp .yielded");
 				Emit(context, "");
 
 				Emit(context, ".coroutine_state_0:");
@@ -1734,14 +1761,16 @@ GenerateTopLevelStatement(Node *baseNode,
 
 			GenerateBlock(node->body, context);
 
+			Emit(context, ".epilogue:");
+
 			if (node->isCoroutine)
 			{
-				Emit(context, "    mov rax, qword [rbp - 8]");
-				Emit(context, "    mov qword [rax], -1");
-				Emit(context, "");
+				Emit(context, "    mov rax, [%s - 8]", context->frameReg);
+				Emit(context, "    mov qword [rax], -1\t\t; mark the coroutine as finished");
+				Emit(context, ".yielded:");
+				Emit(context, "    mov r12, [rbp - 8]\t\t; restore r12");
 			}
 
-			Emit(context, ".epilogue:");
 			Emit(context, "    mov rsp, rbp");
 
 			// doesn't affect stack depth
@@ -1842,20 +1871,15 @@ Generate_x86_64(Node *_program,
 		{
 			ProcDeclNode *node = As<ProcDeclNode>(it);
 
-			char *prefix = "proc_";
-			if (node->isForeign
-				|| node->linkName == "main")
-			{
-				prefix = "";
-			}
+			string symbolName = GetSymbolNameForFunction(node->linkName, node->isForeign);
 
 			if (node->isForeign)
 			{
-				fprintf(out, "extern %s" STR_FMT "\n", prefix, STR_ARG(node->linkName));
+				fprintf(out, "extern " STR_FMT "\n", STR_ARG(symbolName));
 			}
 			else
 			{
-				fprintf(out, "global %s" STR_FMT "\n", prefix, STR_ARG(node->linkName));
+				fprintf(out, "global " STR_FMT "\n", STR_ARG(symbolName));
 			}
 		}
 	}

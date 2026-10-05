@@ -4,16 +4,6 @@ string :: struct
 	count: int;
 };
 
-Coroutine :: struct
-{
-	state: int;
-	userdata: *void;
-	i: int;
-	j: int;
-	k: int;
-	l: int;
-};
-
 fminf  :: proc(a: f32, b: f32) -> f32 #foreign;
 fmaxf  :: proc(a: f32, b: f32) -> f32 #foreign;
 sqrtf  :: proc(x: f32)         -> f32 #foreign;
@@ -143,4 +133,36 @@ __foreach_expansion_by_value :: macro(array, it, body) #no_bind
 		it := *__it;
 		body;
 	}
+}
+
+Coroutine :: struct
+{
+	// has to be at offset 0
+	state: int;
+
+	// has to be at offset 8
+	frame: *void;
+
+	func: proc(co: *Coroutine) #coroutine;
+	
+	userdata: *void;
+};
+
+coroutine_init :: proc(co: *Coroutine,
+					   func: proc(co: *Coroutine) #coroutine)
+{
+	co.func = func;
+	co.state = 0;
+}
+
+coroutine_resume :: proc(co: *Coroutine, frame: *void, userdata: *void)
+{
+	co.frame = frame;
+	co.userdata = userdata;
+	co.func(co);
+}
+
+coroutine_is_finished :: proc(co: *Coroutine) -> bool
+{
+	return co.state == -1;
 }

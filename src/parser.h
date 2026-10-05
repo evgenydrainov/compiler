@@ -267,6 +267,8 @@ struct CallNode : public Node
 	
 	int returnSlotOffset;
 	int calleeSlotOffset;
+
+	string linkName;
 };
 
 struct ReturnNode : public Node
@@ -471,11 +473,14 @@ struct MacroDeclNode : public Node
 	bool isExpressionMacro;
 };
 
+struct Function;
+
 struct ProcRefNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_ProcRef;
 
 	string linkName;
+	Function *function;
 };
 
 struct Macro;

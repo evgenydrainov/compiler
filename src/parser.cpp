@@ -248,9 +248,33 @@ ParseType(Parser *parser,
 
 		if (parser->current.kind == TokenKind_Arrow)
 		{
-			AdvanceToken(parser, lexer); // eat the '->'
-
+			ExpectToken(parser, lexer, TokenKind_Arrow);
 			type.procInfo()->returnType = ParseType(parser, lexer, arena);
+		}
+
+		while (parser->current.kind == TokenKind_Hash)
+		{
+			ExpectToken(parser, lexer, TokenKind_Hash);
+
+			if (parser->current.str == "foreign")
+			{
+				ExpectToken(parser, lexer, TokenKind_Identifier);
+				type.procInfo()->isForeign = true;
+			}
+			else if (parser->current.str == "variadic")
+			{
+				ExpectToken(parser, lexer, TokenKind_Identifier);
+				type.procInfo()->isVariadic = true;
+			}
+			else if (parser->current.str == "coroutine")
+			{
+				ExpectToken(parser, lexer, TokenKind_Identifier);
+				type.procInfo()->isCoroutine = true;
+			}
+			else
+			{
+				UnexpectedCurrentToken(parser);
+			}
 		}
 
 		return type;

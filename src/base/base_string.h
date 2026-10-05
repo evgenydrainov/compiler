@@ -61,6 +61,11 @@ struct string
 
 	char *begin() { return &data[0]; }
 	char *end()   { return &data[count]; }
+
+	operator bool() const
+	{
+		return count > 0;
+	}
 };
 
 inline bool

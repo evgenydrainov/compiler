@@ -9,6 +9,8 @@ struct Function
 	string linkName;
 
 	ProcInfo *info;
+
+	int frameSize;
 };
 
 struct FunctionTable
@@ -36,6 +38,7 @@ DeclareFunction(FunctionTable *table, string name)
 {
 	Function *function = array_add(&table->functions, {});
 	function->name = name;
+	function->frameSize = -1;
 
 	return function;
 }

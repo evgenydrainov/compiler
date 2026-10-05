@@ -136,6 +136,7 @@ struct ProcInfo
 	Type returnType;
 	bool isVariadic;
 	bool isForeign;
+	bool isCoroutine;
 };
 
 inline bool
@@ -155,6 +156,11 @@ AreEqual(ProcInfo *a, ProcInfo *b)
 	}
 
 	if (a->isForeign != b->isForeign)
+	{
+		return false;
+	}
+
+	if (a->isCoroutine != b->isCoroutine)
 	{
 		return false;
 	}
@@ -482,6 +488,21 @@ WriteType(Type type, string_builder *builder)
 			}
 
 			builder_write(builder, ")");
+
+			if (type.procInfo()->isForeign)
+			{
+				builder_write(builder, " #foreign");
+			}
+
+			if (type.procInfo()->isVariadic)
+			{
+				builder_write(builder, " #variadic");
+			}
+
+			if (type.procInfo()->isCoroutine)
+			{
+				builder_write(builder, " #coroutine");
+			}
 		} break;
 	}
 }

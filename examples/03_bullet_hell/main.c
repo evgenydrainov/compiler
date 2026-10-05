@@ -1,5 +1,4 @@
 #import "raylib/raylib.c"
-#import "minicoro/minicoro.c"
 
 #include "util.c"
 #include "world.c"

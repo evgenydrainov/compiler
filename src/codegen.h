@@ -16,6 +16,8 @@ struct CodegenContext
 
 	Type currentReturnType;
 
+	char *frameReg;
+
 	slice<GenerateCStringLiteral> cstringLiterals;
 	slice<GenerateStringLiteral> stringLiterals;
 
