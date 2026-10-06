@@ -2237,6 +2237,24 @@ AnalyzeStatement(Node *baseNode,
 
 			AnalyzeStatement(newNode, context);
 		} break;
+
+		case NodeKind_StaticAssert:
+		{
+			StaticAssertNode *node = As<StaticAssertNode>(baseNode);
+
+			AnalyzeExpression(node->what, context);
+
+			i64 value = EvaluateConstantExpression(node->what, context);
+
+			if (value != 0)
+			{
+				// success
+			}
+			else
+			{
+				Error(context, node, "static assertion failed");
+			}
+		} break;
 	}
 }
 

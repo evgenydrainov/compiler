@@ -1583,6 +1583,11 @@ GenerateStatement(Node *baseNode,
 
 			Emit(context, ".end_%d:", uniqueId);
 		} break;
+
+		case NodeKind_StaticAssert:
+		{
+			// do nothing
+		} break;
 	}
 }
 

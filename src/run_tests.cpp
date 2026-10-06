@@ -218,6 +218,6 @@ int main()
 	RunFailureTests();
 	TestExampleCompiles("main", "01_raylib");
 	TestExampleCompiles("breakout", "02_breakout");
-	TestExampleCompiles("main", "03_bullet_hell");
+	TestExampleCompiles("bullet_hell", "03_bullet_hell");
 	TestExampleCompiles("main", "04_no_libc");
 }

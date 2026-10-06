@@ -1274,6 +1274,32 @@ ParseStatement(Parser *parser,
 		return ParseAsmBlock(parser, lexer, arena);
 	}
 
+	if (parser->current.kind == TokenKind_Hash)
+	{
+		ExpectToken(parser, lexer, TokenKind_Hash);
+
+		if (parser->current.str == "assert")
+		{
+			ExpectToken(parser, lexer, TokenKind_Identifier);
+
+			StaticAssertNode *node = MakeNode<StaticAssertNode>(parser->current.location, arena);
+
+			ExpectToken(parser, lexer, TokenKind_OpenParen);
+
+			node->what = ParseExpression(parser, lexer, 0, arena);
+
+			ExpectToken(parser, lexer, TokenKind_CloseParen);
+
+			return node;
+		}
+		else
+		{
+			UnexpectedCurrentToken(parser);
+
+			return nullptr;
+		}
+	}
+
 	if (parser->current.kind == TokenKind_Semicolon)
 	{
 		// bare semicolon - empty statement
@@ -1285,6 +1311,7 @@ ParseStatement(Parser *parser,
 	}
 
 	Node *expr = ParseExpression(parser, lexer, 0, arena);
+
 	if (parser->current.kind == TokenKind_Equal)
 	{
 		// assignment

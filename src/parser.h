@@ -49,7 +49,8 @@
 	X(MacroRef) \
 	X(Proxy) \
 	X(RangeBasedFor) \
-	X(Foreach)
+	X(Foreach) \
+	X(StaticAssert)
 
 #define GENERATE_NODE_KIND_ENUM(Name) NodeKind_##Name,
 
@@ -523,6 +524,13 @@ struct ForeachNode : public Node
 	Node *body;
 
 	bool iterateByPointer;
+};
+
+struct StaticAssertNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_StaticAssert;
+
+	Node *what;
 };
 
 template <typename T>
