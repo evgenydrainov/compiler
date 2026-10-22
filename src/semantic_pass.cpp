@@ -2332,7 +2332,14 @@ AnalyzeStatement(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node, "static assertion failed");
+				if (node->message)
+				{
+					Error(context, node, "static assertion failed: %s", node->message);
+				}
+				else
+				{
+					Error(context, node, "static assertion failed");
+				}
 			}
 		} break;
 	}

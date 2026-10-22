@@ -531,6 +531,7 @@ struct StaticAssertNode : public Node
 	static constexpr NodeKind KIND = NodeKind_StaticAssert;
 
 	Node *what;
+	string message;
 };
 
 template <typename T>

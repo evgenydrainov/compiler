@@ -54,7 +54,8 @@ world_init :: proc(world: *World)
 	boss.width = 32;
 	boss.height = 32;
 
-	#assert(boss_script.frame_size <= boss.co_frame.count);
+	#assert(boss_script.frame_size <= boss.co_frame.count,
+			"increase the size of the co_frame buffer");
 	coroutine_init(&boss.co, boss_script);
 }
 

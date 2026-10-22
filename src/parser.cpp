@@ -1288,6 +1288,14 @@ ParseStatement(Parser *parser,
 
 			node->what = ParseExpression(parser, lexer, 0, arena);
 
+			if (parser->current.kind == TokenKind_Comma)
+			{
+				ExpectToken(parser, lexer, TokenKind_Comma);
+
+				node->message = parser->current.str;
+				ExpectToken(parser, lexer, TokenKind_String);
+			}
+
 			ExpectToken(parser, lexer, TokenKind_CloseParen);
 
 			return node;
