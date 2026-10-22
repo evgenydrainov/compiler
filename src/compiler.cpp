@@ -143,7 +143,7 @@ Compile(CompileOptions *options)
 		string builtinFilePath = string_concat(options->exeFileDir, "modules/builtin.c");
 
 		string builtinFileSrc = read_entire_file(builtinFilePath);
-		if (builtinFileSrc.count == 0)
+		if (!builtinFileSrc)
 		{
 			fprintf(stderr, "cannot open file " STR_FMT_QUOTED " for reading\n", STR_ARG(builtinFilePath));
 			return CompileResult_CannotReadFile;
@@ -157,7 +157,7 @@ Compile(CompileOptions *options)
 
 	{
 		string sourceCode = read_entire_file(options->inputFilePath);
-		if (sourceCode.count == 0)
+		if (!sourceCode)
 		{
 			fprintf(stderr, "cannot open file " STR_FMT_QUOTED " for reading\n", STR_ARG(options->inputFilePath));
 			return CompileResult_CannotReadFile;

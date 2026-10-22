@@ -1,3 +1,7 @@
+iterate over array by index,value
+
+some kind of typeof() operator and compile-time type comparison
+
 #embed file
 
 floating-point constants (and typed constants)

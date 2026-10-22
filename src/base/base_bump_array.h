@@ -43,7 +43,7 @@ inline bump_array<T>
 push_bump_array(Arena *arena, usize capacity)
 {
 	bump_array<T> result = {};
-	result.data = push_array<T>(arena, capacity);
+	result.data = (T *)push_size(arena, capacity*sizeof(T));
 	result.capacity = capacity;
 
 	return result;

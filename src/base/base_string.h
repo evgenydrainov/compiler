@@ -64,7 +64,7 @@ struct string
 
 	operator bool() const
 	{
-		return count > 0;
+		return count != 0;
 	}
 };
 

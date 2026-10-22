@@ -290,12 +290,12 @@ ResolveType(Type *type,
 			}
 			else
 			{
-				Error(context, nodeForError,
-					  "undeclared type '%s' (there is no struct or enum with this name)",
-					  type->name);
+				Error(context, nodeForError, "undeclared type '%s'", type->name);
 
-				local_persist StructInfo dummyStructInfo;
-				type->structInfo() = &dummyStructInfo; // avoid crash
+				// local_persist StructInfo dummyStructInfo;
+				// type->structInfo() = &dummyStructInfo; // avoid crash
+
+				type->kind = TypeKind_Unknown;
 			}
 		}
 		else
@@ -613,6 +613,16 @@ IsImplicitEnumExpression(Node *_node)
 	return false;
 }
 
+internal bool
+IsPoisoned(Type type)
+{
+	// TODO: maybe make a separate TypeKind_Poison, since a default-initialized
+	// Type will have kind=TypeKind_Unknown, and this may hide some bugs in the
+	// compiler, because errors related to this default-initialized Type will
+	// not be printed.
+	return (type.kind == TypeKind_Unknown);
+}
+
 internal void
 AnalyzeBinaryExpression(Node *baseNode,
 						SemanticContext *context)
@@ -656,10 +666,14 @@ AnalyzeBinaryExpression(Node *baseNode,
 				break;
 			}
 
-			Error(context, node, "operator '%s': invalid operands '%s' and '%s'",
-				  GetBinaryOpSymbol(node->op),
-				  TypeToString(node->lhs->inferredType),
-				  TypeToString(node->rhs->inferredType));
+			if (!IsPoisoned(node->lhs->inferredType)
+				&& !IsPoisoned(node->rhs->inferredType))
+			{
+				Error(context, node, "operator '%s': invalid operands '%s' and '%s'",
+					  GetBinaryOpSymbol(node->op),
+					  TypeToString(node->lhs->inferredType),
+					  TypeToString(node->rhs->inferredType));
+			}
 		} break;
 
 		case BinaryOp_Less:
@@ -696,10 +710,14 @@ AnalyzeBinaryExpression(Node *baseNode,
 				break;
 			}
 
-			Error(context, node, "operator '%s': invalid operands '%s' and '%s'",
-				  GetBinaryOpSymbol(node->op),
-				  TypeToString(node->lhs->inferredType),
-				  TypeToString(node->rhs->inferredType));
+			if (!IsPoisoned(node->lhs->inferredType)
+				&& !IsPoisoned(node->rhs->inferredType))
+			{
+				Error(context, node, "operator '%s': invalid operands '%s' and '%s'",
+					  GetBinaryOpSymbol(node->op),
+					  TypeToString(node->lhs->inferredType),
+					  TypeToString(node->rhs->inferredType));
+			}
 		} break;
 
 		case BinaryOp_LogicalAnd:
@@ -715,10 +733,14 @@ AnalyzeBinaryExpression(Node *baseNode,
 				break;
 			}
 
-			Error(context, node, "operator '%s': both operands must be 'bool', but they are '%s' and '%s'",
-				  GetBinaryOpSymbol(node->op),
-				  TypeToString(node->lhs->inferredType),
-				  TypeToString(node->rhs->inferredType));
+			if (!IsPoisoned(node->lhs->inferredType)
+				&& !IsPoisoned(node->rhs->inferredType))
+			{
+				Error(context, node, "operator '%s': both operands must be 'bool', but they are '%s' and '%s'",
+					  GetBinaryOpSymbol(node->op),
+					  TypeToString(node->lhs->inferredType),
+					  TypeToString(node->rhs->inferredType));
+			}
 		} break;
 	}
 }
@@ -828,6 +850,7 @@ InstantiateMacro(Node *baseNode,
 						else
 						{
 							VarNode *result = MakeNode<VarNode>(node->location, arena);
+							// TODO: don't use temporary memory here
 							result->name = tprintf("$arg_%d_%d", i, context->uniqueId);
 							return result;
 						}
@@ -1114,7 +1137,7 @@ InstantiateMacro(Node *baseNode,
 				list_append(&result->cases, caseNode);
 			}
 
-			return nullptr;
+			return result;
 		} break;
 
 		case NodeKind_NullLiteral:
@@ -1261,37 +1284,49 @@ AnalyzeExpression(Node *baseNode,
 
 			AnalyzeExpression(node->expr, context);
 
-			if (node->op == UnaryOp_Negate
-				|| node->op == UnaryOp_BitNegate)
+			bool good = false;
+
+			if (node->op == UnaryOp_Negate)
 			{
-				if (IsSignedInteger(node->expr->inferredType)
-					|| IsFloatingPoint(node->expr->inferredType))
+				good = (IsSignedInteger(node->expr->inferredType)
+						|| IsFloatingPoint(node->expr->inferredType));
+				if (good)
 				{
 					node->inferredType = node->expr->inferredType;
 				}
-				else
+			}
+			else if (node->op == UnaryOp_BitNegate)
+			{
+				good = (IsInteger(node->expr->inferredType));
+				if (good)
 				{
-					Error(context, node->expr,
-						  "cannot negate '%s': operand must be a signed integer or a float",
-						  TypeToString(node->expr->inferredType));
+					node->inferredType = node->expr->inferredType;
 				}
 			}
 			else if (node->op == UnaryOp_LogicalNot)
 			{
-				if (node->expr->inferredType.kind == TypeKind_Bool)
+				// TODO: check strings for truthiness
+				// if !str {}
+				good = (node->expr->inferredType.kind == TypeKind_Bool);
+				if (good)
 				{
 					node->inferredType.kind = TypeKind_Bool;
-				}
-				else
-				{
-					Error(context, node->expr,
-						  "cannot negate '%s': operand must be 'bool'",
-						  TypeToString(node->expr->inferredType));
 				}
 			}
 			else
 			{
 				Assert(false);
+			}
+
+			if (!good)
+			{
+				if (!IsPoisoned(node->expr->inferredType))
+				{
+					Error(context, node->expr,
+						  "operator '%s': invalid operand '%s'",
+						  GetUnaryOpSymbol(node->op),
+						  TypeToString(node->expr->inferredType));
+				}
 			}
 		} break;
 
@@ -1435,8 +1470,11 @@ AnalyzeExpression(Node *baseNode,
 
 			if (node->callee->inferredType.kind != TypeKind_Proc)
 			{
-				Error(context, node->callee, "cannot call a value of type '%s'",
-					  TypeToString(node->callee->inferredType));
+				if (!IsPoisoned(node->callee->inferredType))
+				{
+					Error(context, node->callee, "cannot call a value of type '%s'",
+						  TypeToString(node->callee->inferredType));
+				}
 				break;
 			}
 
@@ -1471,6 +1509,7 @@ AnalyzeExpression(Node *baseNode,
 				 i < node->signature->params.count;
 				 i++)
 			{
+				// TODO: the nodeForError argument is wrong here
 				ResolveType(&node->signature->params[i], context, node);
 			}
 
@@ -1503,11 +1542,15 @@ AnalyzeExpression(Node *baseNode,
 				}
 				else
 				{
-					Error(context, expr,
-						  "cannot pass '%s' as argument %d: expected '%s'",
-						  TypeToString(expr->inferredType),
-						  (int)(i + 1),
-						  TypeToString(node->signature->params[i]));
+					if (!IsPoisoned(expr->inferredType)
+						&& !IsPoisoned(node->signature->params[i]))
+					{
+						Error(context, expr,
+							  "cannot pass '%s' as argument %d: expected '%s'",
+							  TypeToString(expr->inferredType),
+							  (int)(i + 1),
+							  TypeToString(node->signature->params[i]));
+					}
 				}
 			}
 
@@ -1556,8 +1599,11 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node->what, "cannot dereference '%s': it is not a pointer",
-					  TypeToString(node->what->inferredType));
+				if (!IsPoisoned(node->what->inferredType))
+				{
+					Error(context, node->what, "cannot dereference '%s': it is not a pointer",
+						  TypeToString(node->what->inferredType));
+				}
 			}
 		} break;
 
@@ -1760,9 +1806,12 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node->expr, "cannot access field '%s' of '%s': it is not a struct",
-					  node->fieldName,
-					  TypeToString(node->expr->inferredType));
+				if (!IsPoisoned(node->expr->inferredType))
+				{
+					Error(context, node->expr, "cannot access field '%s' of '%s': it is not a struct",
+						  node->fieldName,
+						  TypeToString(node->expr->inferredType));
+				}
 			}
 		} break;
 
@@ -1775,9 +1824,12 @@ AnalyzeExpression(Node *baseNode,
 
 			if (!IsInteger(node->indexExpr->inferredType))
 			{
-				Error(context, node->indexExpr,
-					  "array index must be an integer, but it is '%s'",
-					  TypeToString(node->indexExpr->inferredType));
+				if (!IsPoisoned(node->indexExpr->inferredType))
+				{
+					Error(context, node->indexExpr,
+						  "array index must be an integer, but it is '%s'",
+						  TypeToString(node->indexExpr->inferredType));
+				}
 				break;
 			}
 
@@ -1793,9 +1845,12 @@ AnalyzeExpression(Node *baseNode,
 			}
 			else
 			{
-				Error(context, node->arrayExpr,
-					  "cannot index '%s': it is not an array or a pointer",
-					  TypeToString(node->arrayExpr->inferredType));
+				if (!IsPoisoned(node->arrayExpr->inferredType))
+				{
+					Error(context, node->arrayExpr,
+						  "cannot index '%s': it is not an array or a pointer",
+						  TypeToString(node->arrayExpr->inferredType));
+				}
 			}
 		} break;
 
@@ -1859,9 +1914,13 @@ AnalyzeExpression(Node *baseNode,
 				}
 			}
 
-			Error(context, node, "cannot cast '%s' to '%s'",
-				  TypeToString(node->what->inferredType),
-				  TypeToString(node->targetType));
+			if (!IsPoisoned(node->what->inferredType)
+				&& !IsPoisoned(node->targetType))
+			{
+				Error(context, node, "cannot cast '%s' to '%s'",
+					  TypeToString(node->what->inferredType),
+					  TypeToString(node->targetType));
+			}
 		} break;
 
 		case NodeKind_Proxy:
@@ -1929,11 +1988,15 @@ AnalyzeStatement(Node *baseNode,
 			{
 				if (!CanImplicitlyCast(symbol->type, node->expr, context))
 				{
-					Error(context, node->expr,
-						  "cannot initialize '%s' of type '%s' with a value of type '%s'",
-						  node->name,
-						  TypeToString(symbol->type),
-						  TypeToString(node->expr->inferredType));
+					if (!IsPoisoned(node->expr->inferredType)
+						&& !IsPoisoned(symbol->type))
+					{
+						Error(context, node->expr,
+							  "cannot initialize '%s' of type '%s' with a value of type '%s'",
+							  node->name,
+							  TypeToString(symbol->type),
+							  TypeToString(node->expr->inferredType));
+					}
 				}
 			}
 		} break;
@@ -1949,9 +2012,13 @@ AnalyzeStatement(Node *baseNode,
 			{
 				if (!CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
 				{
-					Error(context, node->rhs, "cannot assign a value of type '%s' to '%s'",
-						  TypeToString(node->rhs->inferredType),
-						  TypeToString(node->lhs->inferredType));
+					if (!IsPoisoned(node->rhs->inferredType)
+						&& !IsPoisoned(node->lhs->inferredType))
+					{
+						Error(context, node->rhs, "cannot assign a value of type '%s' to '%s'",
+							  TypeToString(node->rhs->inferredType),
+							  TypeToString(node->lhs->inferredType));
+					}
 				}
 			}
 			else
@@ -1979,9 +2046,12 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->condition->inferredType.kind != TypeKind_Bool)
 			{
-				Error(context, node->condition,
-					  "'if' condition must be of type 'bool', but it is '%s'",
-					  TypeToString(node->condition->inferredType));
+				if (!IsPoisoned(node->condition->inferredType))
+				{
+					Error(context, node->condition,
+						  "'if' condition must be of type 'bool', but it is '%s'",
+						  TypeToString(node->condition->inferredType));
+				}
 			}
 		} break;
 
@@ -2000,9 +2070,12 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->condition->inferredType.kind != TypeKind_Bool)
 			{
-				Error(context, node->condition,
-					  "'while' condition must be of type 'bool', but it is '%s'",
-					  TypeToString(node->condition->inferredType));
+				if (!IsPoisoned(node->condition->inferredType))
+				{
+					Error(context, node->condition,
+						  "'while' condition must be of type 'bool', but it is '%s'",
+						  TypeToString(node->condition->inferredType));
+				}
 			}
 		} break;
 
@@ -2030,9 +2103,12 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->cond->inferredType.kind != TypeKind_Bool)
 			{
-				Error(context, node->cond,
-					  "'for' condition must be of type 'bool', but it is '%s'",
-					  TypeToString(node->cond->inferredType));
+				if (!IsPoisoned(node->cond->inferredType))
+				{
+					Error(context, node->cond,
+						  "'for' condition must be of type 'bool', but it is '%s'",
+						  TypeToString(node->cond->inferredType));
+				}
 			}
 		} break;
 
@@ -2052,26 +2128,30 @@ AnalyzeStatement(Node *baseNode,
 		{
 			ReturnNode *node = As<ReturnNode>(baseNode);
 
+			bool good = false;
+			Type exprType = {};
+
 			if (node->expr)
 			{
 				AnalyzeExpression(node->expr, context, context->currentFunction->returnType);
-				
-				if (!CanImplicitlyCast(context->currentFunction->returnType, node->expr, context))
-				{
-					Error(context, node,
-						  "cannot return a value of type '%s' from '%s': its return type is '%s'",
-						  TypeToString(node->expr->inferredType),
-						  context->currentFunction->name,
-						  TypeToString(context->currentFunction->returnType));
-				}
+
+				good = CanImplicitlyCast(context->currentFunction->returnType, node->expr, context);
+				exprType = node->expr->inferredType;
 			}
 			else
 			{
-				// bare return;
+				good = (context->currentFunction->returnType.kind == TypeKind_Void);
+				exprType.kind = TypeKind_Void;
+			}
 
-				if (context->currentFunction->returnType.kind != TypeKind_Void)
+			if (!good)
+			{
+				if (!IsPoisoned(exprType)
+					&& !IsPoisoned(context->currentFunction->returnType))
 				{
-					Error(context, node, "'%s' must return a value of type '%s'",
+					Error(context, node,
+						  "cannot return a value of type '%s' from '%s': its return type is '%s'",
+						  TypeToString(exprType),
 						  context->currentFunction->name,
 						  TypeToString(context->currentFunction->returnType));
 				}

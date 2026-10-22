@@ -47,10 +47,22 @@ inline slice<T>
 copy_into_slice(static_bump_array<T, N> array, Arena *arena)
 {
 	slice<T> result = {};
-	result.data = push_array<T>(arena, array.count);
+	result.data = (T *)push_size(arena, array.count*sizeof(T));
 	result.count = array.count;
 
 	memcpy(result.data, array.data, array.count*sizeof(T));
+
+	return result;
+}
+
+template <typename T, usize N>
+inline T
+array_pop(static_bump_array<T, N> *array)
+{
+	Assert(array->count > 0);
+
+	T result = array->data[array->count - 1];
+	array->count--;
 
 	return result;
 }

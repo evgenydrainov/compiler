@@ -749,7 +749,7 @@ IncludeFile(Lexer *lexer,
 	}
 
 	string fileData = read_entire_file(filePath);
-	if (fileData.count == 0)
+	if (!fileData)
 	{
 		return ErrorToken(lexer, "cannot open included file", location);
 	}
@@ -784,8 +784,7 @@ GetToken(Lexer *lexer)
 	{
 		if (lexer->includeStack.count > 0)
 		{
-			LexerFrame frame = lexer->includeStack[lexer->includeStack.count - 1];
-			lexer->includeStack.count--;
+			LexerFrame frame = array_pop(&lexer->includeStack);
 
 			lexer->current = frame.current;
 			lexer->line = frame.line;

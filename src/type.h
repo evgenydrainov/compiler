@@ -288,7 +288,8 @@ SizeOfType(Type type)
 		case TypeKind_Unknown:
 		case TypeKind_InferMe:
 		{
-			Assert(false);
+			// Assert(false);
+			result = 1;
 		} break;
 	}
 

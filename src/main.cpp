@@ -77,13 +77,13 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (options.inputFilePath.count == 0)
+	if (!options.inputFilePath)
 	{
 		fprintf(stderr, "no input files provided\n");
 		exit(1);
 	}
 
-	if (options.outputFilePathNoExt.count == 0)
+	if (!options.outputFilePathNoExt)
 	{
 		options.outputFilePathNoExt = strip_extension(options.inputFilePath);
 	}

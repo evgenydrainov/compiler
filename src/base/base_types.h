@@ -110,12 +110,12 @@ struct is_same<T, T>
 };
 
 template <typename T>
-struct identity
+struct type_identity
 {
 	typedef T type;
 };
 
-#define IDENTITY(Type) typename identity<Type>::type
+#define IDENTITY(Type) typename type_identity<Type>::type
 
 #define ANSI_COLOR_RESET   "\x1b[0m"
 #define ANSI_COLOR_BLACK   "\x1b[30m"

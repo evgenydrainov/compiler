@@ -59,14 +59,6 @@ push_struct(Arena *arena)
 	return result;
 }
 
-template <typename T>
-inline T *
-push_array(Arena *arena, usize count)
-{
-	T *result = (T *)push_size(arena, count*sizeof(T));
-	return result;
-}
-
 inline Arena
 push_arena(Arena *arena, usize capacity)
 {
