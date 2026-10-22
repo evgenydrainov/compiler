@@ -218,7 +218,7 @@ ParseType(Parser *parser,
 	{
 		AdvanceToken(parser, lexer); // eat the 'proc'
 
-		static_bump_array<Type, 32> params = {};
+		small_array<Type, 32> params = {};
 
 		ExpectToken(parser, lexer, TokenKind_OpenParen);
 
@@ -408,7 +408,7 @@ ParseCallArguments(Parser *parser,
 				   CallNode *node,
 				   Arena *arena)
 {
-	static_bump_array<Node *, 32> arguments = {};
+	small_array<Node *, 32> arguments = {};
 
 	AdvanceToken(parser, lexer); // eat the '('
 
@@ -1381,7 +1381,7 @@ ParseFunctionDefinition(Parser *parser,
 	// function definition
 	// main :: proc(foo: int) -> i64 { statements; }
 
-	static_bump_array<ParamNode *, 32> params = {};
+	small_array<ParamNode *, 32> params = {};
 
 	ProcDeclNode *node = MakeNode<ProcDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;

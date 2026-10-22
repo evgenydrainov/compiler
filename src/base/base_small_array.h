@@ -6,7 +6,7 @@
 #include <string.h> // for memcpy
 
 template <typename T, usize N>
-struct static_bump_array
+struct small_array
 {
 	static constexpr usize capacity = N;
 
@@ -31,7 +31,7 @@ struct static_bump_array
 
 template <typename T, usize N>
 inline T *
-array_add(static_bump_array<T, N> *array, const IDENTITY(T) &value)
+array_add(small_array<T, N> *array, const IDENTITY(T) &value)
 {
 	Assert(array->count < array->capacity);
 
@@ -44,7 +44,7 @@ array_add(static_bump_array<T, N> *array, const IDENTITY(T) &value)
 
 template <typename T, usize N>
 inline slice<T>
-copy_into_slice(static_bump_array<T, N> array, Arena *arena)
+copy_into_slice(small_array<T, N> array, Arena *arena)
 {
 	slice<T> result = {};
 	result.data = (T *)push_size(arena, array.count*sizeof(T));
@@ -57,7 +57,7 @@ copy_into_slice(static_bump_array<T, N> array, Arena *arena)
 
 template <typename T, usize N>
 inline T
-array_pop(static_bump_array<T, N> *array)
+array_pop(small_array<T, N> *array)
 {
 	Assert(array->count > 0);
 

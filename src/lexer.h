@@ -221,7 +221,7 @@ struct Lexer
 	char *lineStart;
 	int line;
 
-	static_bump_array<LexerFrame, MAX_INCLUDE_DEPTH> includeStack;
+	small_array<LexerFrame, MAX_INCLUDE_DEPTH> includeStack;
 
 	LexerContext *context;
 };

@@ -51,7 +51,7 @@
     </Expand>
   </Type>
 
-  <Type Name="static_bump_array&lt;*,*&gt;">
+  <Type Name="small_array&lt;*,*&gt;">
     <DisplayString>{{ size={count} }}</DisplayString>
     
     <Expand>

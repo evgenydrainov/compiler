@@ -18,7 +18,7 @@ add_executable(
     src/base/base_list.h
     src/base/base_process.h
     src/base/base_slice.h
-    src/base/base_static_bump_array.h
+    src/base/base_small_array.h
     src/base/base_string.h
     src/base/base_string_builder.h
     src/base/base_types.h

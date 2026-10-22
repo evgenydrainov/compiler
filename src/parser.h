@@ -468,7 +468,7 @@ struct MacroDeclNode : public Node
 	string name;
 	Node *body;
 
-	static_bump_array<ParamNode *, 32> params;
+	small_array<ParamNode *, 32> params;
 
 	bool dontBind;
 	bool isExpressionMacro;

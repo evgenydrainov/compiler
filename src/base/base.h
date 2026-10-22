@@ -9,7 +9,7 @@
 #include "base_list.h"
 #include "base_process.h"
 #include "base_slice.h"
-#include "base_static_bump_array.h"
+#include "base_small_array.h"
 #include "base_string.h"
 #include "base_string_builder.h"
 #include "base_types.h"
