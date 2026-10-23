@@ -10,17 +10,20 @@ project(compiler)
 add_executable(
     compiler
     src/base/base_arena.h
+    src/base/base_assert.h
     src/base/base_bump_array.h
     src/base/base_defer.h
     src/base/base_dynamic_array.h
     src/base/base_enum.h
     src/base/base_file.h
     src/base/base_list.h
+    src/base/base_math.h
     src/base/base_process.h
     src/base/base_slice.h
     src/base/base_small_array.h
     src/base/base_string.h
     src/base/base_string_builder.h
+    src/base/base_time.h
     src/base/base_types.h
     src/base/base.h
     src/codegen.cpp
@@ -40,6 +43,8 @@ add_executable(
     src/print.h
     src/print_code.cpp
     src/print_code.h
+    src/profiler.cpp
+    src/profiler.h
     src/semantic_pass.cpp
     src/semantic_pass.h
     src/symbol_table.h

@@ -46,7 +46,7 @@ DeclareSymbol(SymbolTable *table,
 
 	table->stackSize += size;
 
-	table->maxStackSize = Max(table->maxStackSize, table->stackSize);
+	table->maxStackSize = max(table->maxStackSize, table->stackSize);
 
 	Symbol *symbol = array_add(&table->symbols, {});
 	symbol->name = name;
@@ -65,7 +65,7 @@ ReserveSpace(SymbolTable *table,
 
 	table->stackSize += size;
 
-	table->maxStackSize = Max(table->maxStackSize, table->stackSize);
+	table->maxStackSize = max(table->maxStackSize, table->stackSize);
 
 	int stackOffset = table->stackSize;
 	return stackOffset;

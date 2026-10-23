@@ -5,6 +5,7 @@
 #include "codegen.h"
 #include "semantic_pass.h"
 #include "print_code.h"
+#include "profiler.h"
 
 #pragma warning(push, 0)
 #define MICROSOFT_CRAZINESS_IMPLEMENTATION
@@ -68,12 +69,13 @@ FindLinker()
 {
 	Find_Result res = find_visual_studio_and_windows_sdk();
 
-	if (res.windows_sdk_version == 0)
+	if (res.windows_sdk_version != 0)
 	{
-		fprintf(stderr, "could not find link.exe\n");
+		return res;
 	}
 
-	return res;
+	fprintf(stderr, "could not find link.exe\n");
+	exit(1);
 }
 
 internal int
@@ -129,6 +131,8 @@ PrintArenaUsage(Arena *arena)
 CompileResult
 Compile(CompileOptions *options)
 {
+	PROFILE_FUNCTION();
+
 	options->exeFileDir = get_executable_dir();
 	string modulesDir = string_concat(options->exeFileDir, "modules/");
 
@@ -173,7 +177,7 @@ Compile(CompileOptions *options)
 	}
 
 	Arena arena = {};
-	arena.capacity = Megabytes(4);
+	arena.capacity = megabytes(4);
 	arena.data = (u8 *)malloc(arena.capacity);
 
 	Parser parser = {};
@@ -229,6 +233,8 @@ Compile(CompileOptions *options)
 	}
 
 	{
+		PROFILE_SCOPE("nasm.exe");
+
 		string nasmPath = FindNasm(options);
 
 		dynamic_array<string> commandLine = {};
@@ -244,12 +250,14 @@ Compile(CompileOptions *options)
 
 		if (CompilerRunProcess(options, commandLine) != 0)
 		{
-			return CompileResult_NasmError;
+			return CompileResult_AssemblerError;
 		}
 	}
 
 	if (options->useVendorLld)
 	{
+		PROFILE_SCOPE("lld-link.exe");
+
 		string lldExePath = FindLLDLink(options);
 
 		dynamic_array<string> commandLine = {};
@@ -275,6 +283,8 @@ Compile(CompileOptions *options)
 	}
 	else
 	{
+		PROFILE_SCOPE("link.exe");
+
 		Find_Result res = FindLinker();
 
 		string linkExePath = tprintf("\"%s\\link.exe\"", res.vs_exe_path_a);

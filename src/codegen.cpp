@@ -1,5 +1,6 @@
 #include "codegen.h"
 #include "print.h"
+#include "profiler.h"
 #include <string.h> // for strlen
 #include <stdarg.h>
 #include <stdio.h>
@@ -959,7 +960,7 @@ GenerateExpression(Node *baseNode,
 				numArguments++;
 			}
 
-			int numArgumentsInRegs = Min(numArguments, 4);
+			int numArgumentsInRegs = min(numArguments, 4);
 			int numArgumentsOnStack = numArguments - numArgumentsInRegs;
 
 			if (!node->linkName)
@@ -1652,7 +1653,7 @@ GenerateTopLevelStatement(Node *baseNode,
 				numParams++;
 			}
 
-			int numParamsInRegs = Min(numParams, 4);
+			int numParamsInRegs = min(numParams, 4);
 
 			auto GetParam = [&](int i) -> ParamNode *
 			{
@@ -1863,6 +1864,8 @@ void
 Generate_x86_64(Node *_program,
 				CodegenContext *context)
 {
+	PROFILE_FUNCTION();
+
 	FILE *out = context->out;
 
 	fprintf(out, "default rel\n");

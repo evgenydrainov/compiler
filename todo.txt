@@ -1,3 +1,7 @@
+struct set member offset
+
+lexer synchronization
+
 iterate over array by index,value
 
 some kind of typeof() operator and compile-time type comparison
@@ -31,3 +35,5 @@ check that all control paths of a function return
 == != comparison for strings and maybe slices
 
 cast bool to integers
+
+remove unused keywords

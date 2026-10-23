@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "compiler.h"
+#include "profiler.h"
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -1816,6 +1817,8 @@ ParseProgram(Parser *parser,
 			 Lexer *lexer,
 			 Arena *arena)
 {
+	PROFILE_FUNCTION();
+
 	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
 
 	while (!parser->hadError

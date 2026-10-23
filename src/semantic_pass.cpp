@@ -6,6 +6,7 @@
 #include "constants_table.h"
 #include "macro_table.h"
 #include "print.h"
+#include "profiler.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -2492,7 +2493,7 @@ EarlyAnalyze(Node *baseNode,
 						int alignment = AlignmentOfType(field->type);
 
 						offset = (int)align_forward(offset, alignment);
-						maxFieldAlignment = Max(maxFieldAlignment, alignment);
+						maxFieldAlignment = max(maxFieldAlignment, alignment);
 
 						fieldInfo.offset = offset;
 						offset += size;
@@ -2641,6 +2642,8 @@ SemanticPass(Node *_program,
 			 SemanticContext *context,
 			 Arena *arena)
 {
+	PROFILE_FUNCTION();
+
 	FunctionTable funcTable = {};
 	SymbolTable symTable = {};
 	SymbolTable globalTable = {};

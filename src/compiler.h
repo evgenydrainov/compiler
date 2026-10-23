@@ -23,7 +23,7 @@ enum CompileResult : u32
 	CompileResult_CannotWriteFile,
 	CompileResult_ParseError,
 	CompileResult_SemanticError,
-	CompileResult_NasmError,
+	CompileResult_AssemblerError,
 	CompileResult_LinkerError,
 };
 

@@ -3,23 +3,22 @@
 #include <string.h>
 
 #include "compiler.h"
+#include "profiler.h"
 
 Arena g_tempArena;
 
 void AssertionHandler(char *file, int line, char *condition)
 {
 	fprintf(stderr, "%s:%d: assertion failed: %s\n", file, line, condition);
-
 #ifndef NDEBUG
 	__debugbreak();
 #endif
-
 	exit(1);
 }
 
 int main(int argc, char *argv[])
 {
-	g_tempArena.capacity = Megabytes(1);
+	g_tempArena.capacity = megabytes(1);
 	g_tempArena.data = (u8 *)malloc(g_tempArena.capacity);
 
 	CompileOptions options = {};
@@ -89,6 +88,22 @@ int main(int argc, char *argv[])
 	}
 
 	CompileResult result = Compile(&options);
+
+#if ENABLE_PROFILER
+	Assert(g_profiler.numRecords <= array_length(g_profiler.records));
+
+	if (options.verboseMode)
+	{
+		printf("[VERBOSE] profiler time records:\n");
+
+		for (int i = 0; i < g_profiler.numRecords; i++)
+		{
+			TimeRecord *it = &g_profiler.records[i];
+			f64 milliseconds = it->cycleCount * 1000.0 / (f64)get_performance_frequency();
+			printf("[VERBOSE]   %s: %.2fms\n", it->functionName, milliseconds);
+		}
+	}
+#endif
 
 	return result;
 }

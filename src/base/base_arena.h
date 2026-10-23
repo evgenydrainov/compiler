@@ -2,6 +2,8 @@
 
 #include "base_types.h"
 #include "base_slice.h"
+#include "base_assert.h"
+#include "base_math.h"
 #include <string.h> // for memset
 #include <stdlib.h> // for malloc
 

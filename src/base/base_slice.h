@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base_types.h"
+#include "base_assert.h"
 
 template <typename T>
 struct dynamic_array;
