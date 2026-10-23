@@ -480,9 +480,7 @@ ParseAtom_Inner(Parser *parser,
 	{
 		StringNode *node = MakeNode<StringNode>(parser->current.location, arena);
 
-		Assert(parser->current.str.count >= 2);
-		node->value.data = parser->current.str.data + 1;
-		node->value.count = parser->current.str.count - 2;
+		node->value = string_slice(parser->current.str, 1, -1);
 		node->uniqueId = parser->uniqueLabelId++;
 
 		AdvanceToken(parser, lexer);
@@ -494,9 +492,7 @@ ParseAtom_Inner(Parser *parser,
 	{
 		CStringNode *node = MakeNode<CStringNode>(parser->current.location, arena);
 
-		Assert(parser->current.str.count >= 3);
-		node->value.data = parser->current.str.data + 1;
-		node->value.count = parser->current.str.count - 3;
+		node->value = string_slice(parser->current.str, 1, -2);
 		node->uniqueId = parser->uniqueLabelId++;
 
 		AdvanceToken(parser, lexer);
@@ -1450,11 +1446,7 @@ ParseFunctionDefinition(Parser *parser,
 
 			if (parser->current.kind == TokenKind_String)
 			{
-				node->linkName = parser->current.str;
-
-				Assert(node->linkName.count >= 2);
-				node->linkName.data++;
-				node->linkName.count -= 2;
+				node->linkName = string_slice(parser->current.str, 1, -1);
 
 				AdvanceToken(parser, lexer);
 			}
@@ -1771,9 +1763,7 @@ ParseTopLevelStatement(Parser *parser,
 			AdvanceToken(parser, lexer);
 			AdvanceToken(parser, lexer);
 
-			string libPath = parser->current.str;
-			libPath.count -= 2;
-			libPath.data++;
+			string libPath = string_slice(parser->current.str, 1, -1);
 
 			if (is_path_absolute(libPath))
 			{

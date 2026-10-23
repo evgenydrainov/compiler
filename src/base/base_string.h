@@ -250,3 +250,27 @@ inline slice<char>::slice(string str)
 	: data(str.data), count(str.count)
 {
 }
+
+inline string
+string_slice(string str, isize from, isize to)
+{
+	if (from < 0)
+	{
+		from += str.count;
+	}
+
+	if (to < 0)
+	{
+		to += str.count;
+	}
+
+	Assert(from >= 0 && from <= (isize)str.count);
+	Assert(to >= 0 && to <= (isize)str.count);
+	Assert(from <= to);
+
+	string result = {};
+	result.data = str.data + from;
+	result.count = to - from;
+
+	return result;
+}

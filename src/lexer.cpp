@@ -958,9 +958,7 @@ GetToken(Lexer *lexer)
 
 		Token filePathToken = ParseString(lexer, {});
 
-		Assert(filePathToken.str.count >= 2);
-		string filePath = { filePathToken.str.data + 1, filePathToken.str.count - 2 };
-
+		string filePath = string_slice(filePathToken.str, 1, -1);
 		string searchDir = strip_filename(lexer->fileName);
 		string fullFilePath = string_concat(searchDir, filePath);
 
@@ -986,9 +984,7 @@ GetToken(Lexer *lexer)
 
 		Token filePathToken = ParseString(lexer, {});
 
-		Assert(filePathToken.str.count >= 2);
-		string filePath = { filePathToken.str.data + 1, filePathToken.str.count - 2 };
-
+		string filePath = string_slice(filePathToken.str, 1, -1);
 		string fullFilePath = string_concat(lexer->context->modulesDir, filePath);
 
 		return IncludeFile(lexer, location, fullFilePath);
