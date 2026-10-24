@@ -2,6 +2,12 @@
 
 #include "base/base.h"
 
+enum VCRuntimeType : u32
+{
+	VCRuntimeType_Static,
+	VCRuntimeType_Dynamic,
+};
+
 struct CompileOptions
 {
 	string inputFilePath;
@@ -10,10 +16,13 @@ struct CompileOptions
 	string exeFileDir;
 
 	dynamic_array<string> libraries;
+	dynamic_array<string> systemLibraries;
 
 	bool useVendorLld;
 	bool printCode;
 	bool verboseMode;
+
+	VCRuntimeType vcruntimeType;
 };
 
 enum CompileResult : u32

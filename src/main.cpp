@@ -55,6 +55,16 @@ int main(int argc, char *argv[])
 			{
 				readOutputFilePath = true;
 			}
+			else if (strcmp(argv[i], "-static-vcruntime") == 0
+					 || strcmp(argv[i], "--static-vcruntime") == 0)
+			{
+				options.vcruntimeType = VCRuntimeType_Static;
+			}
+			else if (strcmp(argv[i], "-dynamic-vcruntime") == 0
+					 || strcmp(argv[i], "--dynamic-vcruntime") == 0)
+			{
+				options.vcruntimeType = VCRuntimeType_Dynamic;
+			}
 			else
 			{
 				fprintf(stderr, "unknown option '%s'\n", argv[i]);

@@ -1756,12 +1756,11 @@ ParseTopLevelStatement(Parser *parser,
 
 	if (parser->current.kind == TokenKind_Hash)
 	{
-		Token peekToken = PeekToken(lexer);
+		ExpectToken(parser, lexer, TokenKind_Hash);
 
-		if (peekToken.str == "link_library")
+		if (parser->current.str == "link_library")
 		{
-			AdvanceToken(parser, lexer);
-			AdvanceToken(parser, lexer);
+			ExpectToken(parser, lexer, TokenKind_Identifier);
 
 			string libPath = string_slice(parser->current.str, 1, -1);
 
@@ -1784,10 +1783,24 @@ ParseTopLevelStatement(Parser *parser,
 			return nullptr;
 		}
 
-		if (peekToken.str == "use_vendor_lld")
+		if (parser->current.str == "link_system_library")
 		{
-			AdvanceToken(parser, lexer);
-			AdvanceToken(parser, lexer);
+			ExpectToken(parser, lexer, TokenKind_Identifier);
+
+			string libName = string_slice(parser->current.str, 1, -1);
+
+			array_add(&parser->options->systemLibraries, libName);
+
+			ExpectToken(parser, lexer, TokenKind_String);
+
+			ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+			return nullptr;
+		}
+
+		if (parser->current.str == "use_vendor_lld")
+		{
+			ExpectToken(parser, lexer, TokenKind_Identifier);
 
 			parser->options->useVendorLld = true;
 

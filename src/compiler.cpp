@@ -296,7 +296,7 @@ Compile(CompileOptions *options)
 		defer { array_free(&commandLine); };
 
 		array_add(&commandLine, linkExePath);
-		array_add(&commandLine, "/nologo");
+		array_add(&commandLine, "/NOLOGO");
 		array_add(&commandLine, "/DEBUG");
 		array_add(&commandLine, "/INCREMENTAL:NO");
 		array_add(&commandLine, "/OPT:REF");
@@ -309,13 +309,20 @@ Compile(CompileOptions *options)
 			array_add(&commandLine, lib);
 		}
 
-		array_add(&commandLine, "libcmt.lib");
-		array_add(&commandLine, "legacy_stdio_definitions.lib");
-		array_add(&commandLine, "kernel32.lib");
-		array_add(&commandLine, "user32.lib");
-		array_add(&commandLine, "gdi32.lib");
-		array_add(&commandLine, "shell32.lib");
-		array_add(&commandLine, "winmm.lib");
+		for (string lib : options->systemLibraries)
+		{
+			array_add(&commandLine, lib);
+		}
+
+		if (options->vcruntimeType == VCRuntimeType_Static)
+		{
+			array_add(&commandLine, "libcmt.lib");
+		}
+		else if (options->vcruntimeType == VCRuntimeType_Dynamic)
+		{
+			array_add(&commandLine, "msvcrt.lib");
+			array_add(&commandLine, "legacy_stdio_definitions.lib");
+		}
 
 		array_add(&commandLine, vsLibpathArg);
 		array_add(&commandLine, ucrtLibpathArg);

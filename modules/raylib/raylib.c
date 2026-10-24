@@ -1,4 +1,8 @@
 #link_library "raylib_x86-64_vs2022_mt.lib";
+#link_system_library "user32.lib";
+#link_system_library "gdi32.lib";
+#link_system_library "shell32.lib";
+#link_system_library "winmm.lib";
 
 // Vector2, 2 components
 Vector2 :: struct {
