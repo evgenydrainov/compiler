@@ -1852,6 +1852,21 @@ AnalyzeExpression(Node *baseNode,
 						  "cannot index '%s': it is not an array or a pointer",
 						  TypeToString(node->arrayExpr->inferredType));
 				}
+				break;
+			}
+
+			if (node->arrayExpr->inferredType.kind == TypeKind_Array)
+			{
+				int arrayLength = node->arrayExpr->inferredType.array().length;
+
+				i64 index;
+				if (TryEvaluateConstantExpression(node->indexExpr, context, &index))
+				{
+					if (!(index >= 0 && index < arrayLength))
+					{
+						Error(context, node, "index '%lld' is out of bounds", index);
+					}
+				}
 			}
 		} break;
 

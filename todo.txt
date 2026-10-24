@@ -12,7 +12,7 @@ floating-point constants (and typed constants)
 
 pointer arithmetic maybe
 
-run-time and compile-time bounds checking
+run-time bounds checking
 
 struct literals
 
