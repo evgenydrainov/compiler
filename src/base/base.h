@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base_allocator.h"
 #include "base_arena.h"
 #include "base_assert.h"
 #include "base_bump_array.h"

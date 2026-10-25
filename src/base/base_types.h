@@ -87,3 +87,5 @@ struct type_identity
 #define ANSI_COLOR_WHITE   "\x1b[37m"
 
 #define NO_STEP_INTO __declspec(non_user_code)
+
+constexpr usize DEFAULT_ALIGNMENT = 2*sizeof(void *);

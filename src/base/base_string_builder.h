@@ -21,7 +21,7 @@ builder_init(string_builder *builder, Arena *arena)
 inline void
 builder_write(string_builder *builder, string str)
 {
-	builder->data = (char *)grow_allocation(builder->arena, builder->data, builder->count, builder->count + str.count);
+	builder->data = (char *)resize_allocation(builder->arena, builder->data, builder->count, builder->count + str.count);
 	for (char ch : str)
 	{
 		builder->data[builder->count++] = ch;
@@ -36,7 +36,7 @@ builder_write_fmt(string_builder *builder, char *format, ...)
 
 	int length = vsnprintf(nullptr, 0, format, args);
 
-	builder->data = (char *)grow_allocation(builder->arena, builder->data, builder->count, builder->count + length + 1);
+	builder->data = (char *)resize_allocation(builder->arena, builder->data, builder->count, builder->count + length + 1);
 
 	vsnprintf(builder->data + builder->count, length + 1, format, args);
 

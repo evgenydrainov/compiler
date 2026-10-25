@@ -2,7 +2,7 @@
 
 #include "base_types.h"
 #include "base_slice.h"
-#include <stdlib.h> // for realloc
+#include "base_allocator.h"
 
 template <typename T>
 struct dynamic_array
@@ -10,6 +10,7 @@ struct dynamic_array
 	T *data;
 	usize count;
 	usize capacity;
+	Allocator allocator;
 
 	T &operator[](usize index)
 	{
@@ -42,12 +43,14 @@ array_reserve(dynamic_array<T> *array, usize want_capacity)
 		new_capacity = 8;
 	}
 
+	// TODO: change grow strategy for arena allocator maybe
 	while (new_capacity < want_capacity)
 	{
 		new_capacity *= 2;
 	}
 
-	array->data = (T *)realloc(array->data, new_capacity*sizeof(T));
+	array->data = (T *)reallocate(array->data, array->capacity*sizeof(T),
+								  new_capacity*sizeof(T), array->allocator);
 	array->capacity = new_capacity;
 }
 
@@ -55,7 +58,7 @@ template <typename T>
 inline void
 array_free(dynamic_array<T> *array)
 {
-	free(array->data);
+	free(array->data, array->capacity*sizeof(T), array->allocator);
 	array->data = nullptr;
 	array->count = 0;
 	array->capacity = 0;

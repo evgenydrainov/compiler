@@ -4,10 +4,9 @@
 #include "base_slice.h"
 #include "base_assert.h"
 #include "base_math.h"
+#include "base_allocator.h"
 #include <string.h> // for memset
 #include <stdlib.h> // for malloc
-
-constexpr usize DEFAULT_ALIGNMENT = 2 * sizeof(void *);
 
 struct Arena
 {
@@ -82,24 +81,98 @@ push_slice(Arena *arena, usize count)
 	return result;
 }
 
-inline void *
-grow_allocation(Arena *arena, void *ptr, usize oldSize, usize newSize)
+inline bool
+is_last_allocation(Arena *arena, void *ptr, usize size)
 {
-	Assert(newSize >= oldSize);
+	return (arena->data + arena->pos == (u8 *)ptr + size);
+}
 
+inline void *
+resize_allocation(Arena *arena, void *ptr, usize old_size, usize new_size)
+{
 	if (!ptr)
 	{
-		return push_size(arena, newSize);
+		return push_size(arena, new_size);
 	}
 
-	// assert that this allocation was the last one for this arena
-	Assert(arena->data + arena->pos == (u8 *)ptr + oldSize);
+	if (new_size >= old_size)
+	{
+		// grow
 
-	usize growSize = newSize - oldSize;
+		if (is_last_allocation(arena, ptr, old_size))
+		{
+			// fast path
 
-	// assert that reallocation will not happen in push_size()
-	Assert(arena->pos + growSize <= arena->capacity);
-	push_size(arena, growSize, 1);
+			usize grow_size = new_size - old_size;
 
-	return ptr;
+			// assert that reallocation will not happen in push_size()
+			Assert(arena->pos + grow_size <= arena->capacity);
+			push_size(arena, grow_size, 1);
+
+			return ptr;
+		}
+		else
+		{
+			// slow path - we have to make a new allocation and copy the data
+
+			void *new_ptr = push_size(arena, new_size);
+			memcpy(new_ptr, ptr, old_size);
+			return new_ptr;
+		}
+	}
+	else
+	{
+		// shrink
+
+		if (is_last_allocation(arena, ptr, old_size))
+		{
+			usize shrink_size = old_size - new_size;
+
+			arena->pos -= shrink_size;
+
+			return ptr;
+		}
+		else
+		{
+			// can't shrink - do nothing
+			return ptr;
+		}
+	}
+}
+
+inline void *
+arena_allocator_proc(AllocatorMode mode,
+					 usize size, usize alignment,
+					 void *old_memory, usize old_size,
+					 void *userdata)
+{
+	Arena *arena = (Arena *)userdata;
+
+	switch (mode)
+	{
+	case AllocatorMode_Allocate:
+		return push_size(arena, size, alignment);
+
+	case AllocatorMode_Resize:
+		return resize_allocation(arena, old_memory, old_size, size);
+
+	case AllocatorMode_Free:
+		resize_allocation(arena, old_memory, old_size, 0);
+		return nullptr;
+	}
+
+	Assert(false);
+	return nullptr;
+}
+
+inline Allocator
+arena_allocator(Arena *arena)
+{
+	return {arena_allocator_proc, arena};
+}
+
+inline Allocator
+temp_allocator()
+{
+	return {arena_allocator_proc, &g_tempArena};
 }

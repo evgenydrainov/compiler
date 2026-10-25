@@ -31,7 +31,7 @@ Write(FILE *out, PrintFormatSpec spec, i32 value)
 	}
 	else
 	{
-		Assert("invalid format specifier for this type");
+		Assert(!"invalid format specifier for this type");
 	}
 }
 
@@ -48,7 +48,7 @@ Write(FILE *out, PrintFormatSpec spec, u32 value)
 	}
 	else
 	{
-		Assert("invalid format specifier for this type");
+		Assert(!"invalid format specifier for this type");
 	}
 }
 
@@ -61,7 +61,7 @@ Write(FILE *out, PrintFormatSpec spec, i64 value)
 	}
 	else
 	{
-		Assert("invalid format specifier for this type");
+		Assert(!"invalid format specifier for this type");
 	}
 }
 
@@ -78,7 +78,7 @@ Write(FILE *out, PrintFormatSpec spec, u64 value)
 	}
 	else
 	{
-		Assert("invalid format specifier for this type");
+		Assert(!"invalid format specifier for this type");
 	}
 }
 
@@ -91,7 +91,7 @@ Write(FILE *out, PrintFormatSpec spec, f32 value)
 	}
 	else
 	{
-		Assert("invalid format specifier for this type");
+		Assert(!"invalid format specifier for this type");
 	}
 }
 
@@ -104,7 +104,7 @@ Write(FILE *out, PrintFormatSpec spec, f64 value)
 	}
 	else
 	{
-		Assert("invalid format specifier for this type");
+		Assert(!"invalid format specifier for this type");
 	}
 }
 
@@ -117,7 +117,7 @@ Write(FILE *out, PrintFormatSpec spec, const char *str)
 	}
 	else
 	{
-		Assert("invalid format specifier for this type");
+		Assert(!"invalid format specifier for this type");
 	}
 }
 
@@ -130,7 +130,7 @@ Write(FILE *out, PrintFormatSpec spec, string str)
 	}
 	else
 	{
-		Assert("invalid format specifier for this type");
+		Assert(!"invalid format specifier for this type");
 	}
 }
 

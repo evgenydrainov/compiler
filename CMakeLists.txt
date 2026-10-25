@@ -9,6 +9,8 @@ project(compiler)
 
 add_executable(
     compiler
+    src/base/base.h
+    src/base/base_allocator.h
     src/base/base_arena.h
     src/base/base_assert.h
     src/base/base_bump_array.h
@@ -25,7 +27,6 @@ add_executable(
     src/base/base_string_builder.h
     src/base/base_time.h
     src/base/base_types.h
-    src/base/base.h
     src/codegen.cpp
     src/codegen.h
     src/compiler.cpp

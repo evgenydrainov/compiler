@@ -81,8 +81,7 @@ is_whitespace(char c)
 inline string
 trim_left(string str)
 {
-	while (str.count > 0
-		   && is_whitespace(str[0]))
+	while (str && is_whitespace(str[0]))
 	{
 		str.data++;
 		str.count--;
@@ -273,4 +272,13 @@ string_slice(string str, isize from, isize to)
 	result.count = to - from;
 
 	return result;
+}
+
+inline void
+string_advance(string *str, usize count = 1)
+{
+	Assert(str->count >= count);
+
+	str->count -= count;
+	str->data += count;
 }
