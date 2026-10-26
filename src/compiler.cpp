@@ -24,9 +24,11 @@
 internal string
 FindNasm(CompileOptions *options)
 {
-	string nasmPath = tprintf(STR_FMT "vendor\\nasm\\nasm.exe", STR_ARG(options->exeFileDir));
+	string nasmPath = string_format(temp_allocator(), "%svendor\\nasm\\nasm.exe", options->exeFileDir);
 
-	if (_access(nasmPath.data, 0) == 0)
+	char *cstr = to_cstring(nasmPath, temp_allocator());
+
+	if (_access(cstr, 0) == 0)
 	{
 		return nasmPath;
 	}
@@ -53,9 +55,11 @@ FindNasm(CompileOptions *options)
 internal string
 FindLLDLink(CompileOptions *options)
 {
-	string lldPath = tprintf(STR_FMT "vendor\\LLVM\\lld-link.exe", STR_ARG(options->exeFileDir));
+	string lldPath = string_format(temp_allocator(), "%svendor\\LLVM\\lld-link.exe", options->exeFileDir);
 
-	if (_access(lldPath.data, 0) == 0)
+	char *cstr = to_cstring(lldPath, temp_allocator());
+
+	if (_access(cstr, 0) == 0)
 	{
 		return lldPath;
 	}
@@ -120,9 +124,9 @@ PrintSize(usize value)
 internal void
 PrintArenaUsage(Arena *arena)
 {
-	f32 percentage = 100.0f*(arena->pos/(float)arena->capacity);
+	f32 percentage = 100.0f*(arena->maxPos/(float)arena->capacity);
 	printf("%.2f%% (", percentage);
-	PrintSize(arena->pos);
+	PrintSize(arena->maxPos);
 	printf(" / ");
 	PrintSize(arena->capacity);
 	printf(") (num times reallocated: %u)\n", arena->numTimesReallocated);
@@ -133,20 +137,19 @@ Compile(CompileOptions *options)
 {
 	PROFILE_FUNCTION();
 
-	options->exeFileDir = get_executable_dir();
-	string modulesDir = string_concat(options->exeFileDir, "modules/");
+	options->exeFileDir = get_executable_dir(heap_allocator());
 
 	LexerContext lexerContext = {};
 	lexerContext.compilerExeFileDir = options->exeFileDir;
-	lexerContext.modulesDir = modulesDir;
+	lexerContext.modulesDir = string_concat(options->exeFileDir, "modules/", heap_allocator());
 
 	Lexer lexer = {};
 	lexer.context = &lexerContext;
 
 	{
-		string builtinFilePath = string_concat(options->exeFileDir, "modules/builtin.c");
+		string builtinFilePath = string_concat(options->exeFileDir, "modules/builtin.c", heap_allocator());
 
-		string builtinFileSrc = read_entire_file(builtinFilePath);
+		string builtinFileSrc = read_entire_file(builtinFilePath, heap_allocator());
 		if (!builtinFileSrc)
 		{
 			fprintf(stderr, "cannot open file " STR_FMT_QUOTED " for reading\n", STR_ARG(builtinFilePath));
@@ -160,7 +163,7 @@ Compile(CompileOptions *options)
 	}
 
 	{
-		string sourceCode = read_entire_file(options->inputFilePath);
+		string sourceCode = read_entire_file(options->inputFilePath, heap_allocator());
 		if (!sourceCode)
 		{
 			fprintf(stderr, "cannot open file " STR_FMT_QUOTED " for reading\n", STR_ARG(options->inputFilePath));
@@ -186,6 +189,8 @@ Compile(CompileOptions *options)
 
 	Node *program = ParseProgram(&parser, &lexer, &arena);
 
+	reset_temporary_storage();
+
 	if (!program
 		|| parser.hadError)
 	{
@@ -196,10 +201,14 @@ Compile(CompileOptions *options)
 	semanticContext.arenaForAst = &arena;
 	SemanticPass(program, &semanticContext, &arena);
 
+	reset_temporary_storage();
+
 	if (options->printCode)
 	{
 		PrintContext context = {};
 		PrintProgram(&context, program);
+
+		reset_temporary_storage();
 	}
 
 	if (semanticContext.hadError)
@@ -211,12 +220,12 @@ Compile(CompileOptions *options)
 	codegenContext.cstringLiterals = semanticContext.cstringLiterals;
 	codegenContext.stringLiterals = semanticContext.stringLiterals;
 
-	string asmFilePath = string_concat(options->outputFilePathNoExt, ".asm");
-	string objFilePath = string_concat(options->outputFilePathNoExt, ".obj");
-
-	char *asmFilePathCStr = to_cstring(asmFilePath);
+	string asmFilePath = string_concat(options->outputFilePathNoExt, ".asm", heap_allocator());
+	string objFilePath = string_concat(options->outputFilePathNoExt, ".obj", heap_allocator());
 
 	{
+		char *asmFilePathCStr = to_cstring(asmFilePath, temp_allocator());
+
 		FILE *out;
 		fopen_s(&out, asmFilePathCStr, "wb");
 
@@ -229,6 +238,8 @@ Compile(CompileOptions *options)
 		codegenContext.out = out;
 		Generate_x86_64(program, &codegenContext);
 
+		reset_temporary_storage();
+
 		fclose(out);
 	}
 
@@ -238,7 +249,7 @@ Compile(CompileOptions *options)
 		string nasmPath = FindNasm(options);
 
 		dynamic_array<string> commandLine = {};
-		defer { array_free(&commandLine); };
+		commandLine.allocator = temp_allocator();
 
 		array_add(&commandLine, nasmPath);
 		array_add(&commandLine, "-g");
@@ -261,7 +272,7 @@ Compile(CompileOptions *options)
 		string lldExePath = FindLLDLink(options);
 
 		dynamic_array<string> commandLine = {};
-		defer { array_free(&commandLine); };
+		commandLine.allocator = temp_allocator();
 
 		array_add(&commandLine, lldExePath);
 		array_add(&commandLine, "/DEBUG");
@@ -287,13 +298,13 @@ Compile(CompileOptions *options)
 
 		Find_Result res = FindLinker();
 
-		string linkExePath = tprintf("\"%s\\link.exe\"", res.vs_exe_path_a);
-		string vsLibpathArg = tprintf("/LIBPATH:\"%s\"", res.vs_library_path_a);
-		string ucrtLibpathArg = tprintf("/LIBPATH:\"%s\"", res.windows_sdk_ucrt_library_path_a);
-		string umLibpathArg = tprintf("/LIBPATH:\"%s\"", res.windows_sdk_um_library_path_a);
+		string linkExePath    = string_format(temp_allocator(), "\"%s\\link.exe\"", res.vs_exe_path_a);
+		string vsLibpathArg   = string_format(temp_allocator(), "/LIBPATH:\"%s\"",  res.vs_library_path_a);
+		string ucrtLibpathArg = string_format(temp_allocator(), "/LIBPATH:\"%s\"",  res.windows_sdk_ucrt_library_path_a);
+		string umLibpathArg   = string_format(temp_allocator(), "/LIBPATH:\"%s\"",  res.windows_sdk_um_library_path_a);
 
 		dynamic_array<string> commandLine = {};
-		defer { array_free(&commandLine); };
+		commandLine.allocator = temp_allocator();
 
 		array_add(&commandLine, linkExePath);
 		array_add(&commandLine, "/NOLOGO");
@@ -342,6 +353,8 @@ Compile(CompileOptions *options)
 		printf("[VERBOSE] temp arena usage: ");
 		PrintArenaUsage(&g_tempArena);
 	}
+
+	reset_temporary_storage();
 
 	return CompileResult_Success;
 }

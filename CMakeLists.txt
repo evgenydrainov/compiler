@@ -18,6 +18,7 @@ add_executable(
     src/base/base_dynamic_array.h
     src/base/base_enum.h
     src/base/base_file.h
+    src/base/base_format.h
     src/base/base_list.h
     src/base/base_math.h
     src/base/base_process.h
@@ -84,7 +85,6 @@ set(FLAGS
     /wd4201 /wd4100 /wd4189 /wd4127 /wd4505 /wd4200
     /we4062 /we5262
     /Zc:strictStrings-
-    /MT
 )
 target_compile_options(compiler PRIVATE ${FLAGS})
 target_compile_options(run_tests PRIVATE ${FLAGS})
@@ -94,6 +94,10 @@ set(LINK_FLAGS
 )
 target_link_options(compiler PRIVATE ${LINK_FLAGS})
 target_link_options(run_tests PRIVATE ${LINK_FLAGS})
+
+set_property(TARGET compiler PROPERTY
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+)
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/distrib)
 

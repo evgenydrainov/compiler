@@ -8,11 +8,20 @@
 #include <string.h> // for memset
 #include <stdlib.h> // for malloc
 
+#ifndef CLEAR_TEMP_MEMORY_WHEN_RESETTING
+#  ifdef NDEBUG
+#    define CLEAR_TEMP_MEMORY_WHEN_RESETTING 0
+#  else
+#    define CLEAR_TEMP_MEMORY_WHEN_RESETTING 1
+#  endif
+#endif
+
 struct Arena
 {
 	u8 *data;
 	usize pos;
 	usize capacity;
+	usize maxPos;
 	u32 numTimesReallocated;
 };
 
@@ -37,6 +46,8 @@ push_size(Arena *arena,
 
 	void *result = arena->data + alignedPos;
 	arena->pos = alignedPos + size;
+
+	arena->maxPos = max(arena->maxPos, arena->pos);
 
 	memset(result, 0, size);
 
@@ -165,14 +176,23 @@ arena_allocator_proc(AllocatorMode mode,
 	return nullptr;
 }
 
-inline Allocator
+NO_STEP_INTO inline Allocator
 arena_allocator(Arena *arena)
 {
 	return {arena_allocator_proc, arena};
 }
 
-inline Allocator
+NO_STEP_INTO inline Allocator
 temp_allocator()
 {
 	return {arena_allocator_proc, &g_tempArena};
+}
+
+inline void
+reset_temporary_storage()
+{
+#if CLEAR_TEMP_MEMORY_WHEN_RESETTING
+	memset(g_tempArena.data, 0xff, g_tempArena.capacity);
+#endif
+	g_tempArena.pos = 0;
 }

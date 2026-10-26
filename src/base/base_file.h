@@ -2,7 +2,7 @@
 
 #include "base_types.h"
 #include "base_string.h"
-
+#include "base_allocator.h"
 #include <stdlib.h> // for malloc
 #include <stdio.h> // for fopen
 
@@ -21,24 +21,20 @@ GetFullPathNameA(const char *lpFileName,
 }
 
 inline string
-get_executable_filepath()
+get_executable_filepath(Allocator allocator)
 {
-	char *buf = (char *)push_size(&g_tempArena, 260);
+	char *buffer = (char *)mem_alloc(260, DEFAULT_ALIGNMENT, allocator);
 
-	u32 size = GetModuleFileNameA(nullptr, buf, 260);
+	u32 size = GetModuleFileNameA(nullptr, buffer, 260);
 	Assert(size != 0);
 
-	string result = {};
-	result.data = buf;
-	result.count = size;
-
-	return result;
+	return {buffer, size};
 }
 
 inline string
-get_absolute_filepath(string relative_path)
+get_absolute_filepath(string relative_path, Allocator allocator)
 {
-	char *relative_path_cstr = to_cstring(relative_path);
+	char *relative_path_cstr = to_cstring(relative_path, temp_allocator());
 
 	u32 absolute_path_size = GetFullPathNameA(relative_path_cstr, 0, nullptr, nullptr);
 	if (absolute_path_size == 0)
@@ -46,7 +42,7 @@ get_absolute_filepath(string relative_path)
 		return {};
 	}
 
-	char *absolute_path = (char *)push_size(&g_tempArena, absolute_path_size);
+	char *absolute_path = (char *)mem_alloc(absolute_path_size, DEFAULT_ALIGNMENT, allocator);
 
 	u32 written = GetFullPathNameA(relative_path_cstr, absolute_path_size, absolute_path, nullptr);
 	if (!(written != 0 && written < absolute_path_size))
@@ -54,7 +50,7 @@ get_absolute_filepath(string relative_path)
 		return {};
 	}
 
-	string result;
+	string result = {};
 	result.data = absolute_path;
 	result.count = absolute_path_size - 1;
 
@@ -62,7 +58,7 @@ get_absolute_filepath(string relative_path)
 }
 
 inline string
-read_entire_file(char *filepath)
+read_entire_file(char *filepath, Allocator allocator)
 {
 	string result = {};
 	
@@ -71,16 +67,16 @@ read_entire_file(char *filepath)
 	if (file)
 	{
 		fseek(file, 0, SEEK_END);
-		usize fileSize = ftell(file);
+		usize filesize = ftell(file);
 
-		char *fileData = (char *)malloc(fileSize + 1);
-		if (fileData)
+		char *filedata = (char *)mem_alloc(filesize + 1, DEFAULT_ALIGNMENT, allocator);
+		if (filedata)
 		{
 			fseek(file, 0, SEEK_SET);
-			if (fread(fileData, 1, fileSize, file) == fileSize)
+			if (fread(filedata, 1, filesize, file) == filesize)
 			{
-				fileData[fileSize] = 0;
-				result = {fileData, fileSize};
+				filedata[filesize] = 0;
+				result = {filedata, filesize};
 			}
 		}
 		
@@ -91,16 +87,18 @@ read_entire_file(char *filepath)
 }
 
 inline string
-read_entire_file(string filepath)
+read_entire_file(string filepath, Allocator allocator)
 {
-	char *cstr = to_cstring(filepath);
-	return read_entire_file(cstr);
+	char *cstr = to_cstring(filepath, temp_allocator());
+
+	return read_entire_file(cstr, allocator);
 }
 
 inline string
-get_executable_dir()
+get_executable_dir(Allocator allocator)
 {
-	string exe_file_path = get_executable_filepath();
+	string exe_file_path = get_executable_filepath(allocator);
 	string exe_file_dir = strip_filename(exe_file_path);
+
 	return exe_file_dir;
 }

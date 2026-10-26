@@ -25,8 +25,8 @@ struct Allocator
 inline Allocator heap_allocator();
 
 inline void *
-allocate(usize size, usize alignment,
-		 Allocator allocator)
+mem_alloc(usize size, usize alignment,
+		  Allocator allocator)
 {
 	if (!allocator.proc)
 	{
@@ -36,7 +36,7 @@ allocate(usize size, usize alignment,
 }
 
 inline void *
-reallocate(void *old_memory, usize old_size, usize new_size,
+mem_resize(void *old_memory, usize old_size, usize new_size,
 		   Allocator allocator)
 {
 	if (!allocator.proc)
@@ -47,8 +47,8 @@ reallocate(void *old_memory, usize old_size, usize new_size,
 }
 
 inline void
-free(void *old_memory, usize old_size,
-	 Allocator allocator)
+mem_free(void *old_memory, usize old_size,
+		 Allocator allocator)
 {
 	if (!allocator.proc)
 	{
@@ -80,7 +80,7 @@ heap_allocator_proc(AllocatorMode mode,
 	return nullptr;
 }
 
-inline Allocator
+NO_STEP_INTO inline Allocator
 heap_allocator()
 {
 	return {heap_allocator_proc, nullptr};

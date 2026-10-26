@@ -851,8 +851,7 @@ InstantiateMacro(Node *baseNode,
 						else
 						{
 							VarNode *result = MakeNode<VarNode>(node->location, arena);
-							// TODO: don't use temporary memory here
-							result->name = tprintf("$arg_%d_%d", i, context->uniqueId);
+							result->name = string_format(arena_allocator(arena), "$arg_%d_%d", i, context->uniqueId);
 							return result;
 						}
 					}
@@ -1445,7 +1444,7 @@ AnalyzeExpression(Node *baseNode,
 				{
 					for (int i = 0; i < node->arguments.count; i++)
 					{
-						string name = tprintf("$arg_%d_%d", i, instContext.uniqueId);
+						string name = string_format(arena_allocator(context->arenaForAst), "$arg_%d_%d", i, instContext.uniqueId);
 
 						VarDeclNode *varDecl = MakeNode<VarDeclNode>(node->location, context->arenaForAst);
 						varDecl->name = name;

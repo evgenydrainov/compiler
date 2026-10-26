@@ -1,60 +1,51 @@
 #pragma once
 
 #include "base_types.h"
-#include "base_arena.h"
 #include "base_string.h"
-#include <stdarg.h>
+#include "base_allocator.h"
+#include "base_dynamic_array.h"
+#include <stdio.h> // for snprintf
 
 struct string_builder
 {
-	Arena *arena;
-	char *data;
-	usize count;
+	dynamic_array<char> buffer;
 };
 
 inline void
-builder_init(string_builder *builder, Arena *arena)
+builder_init(string_builder *builder, Allocator allocator)
 {
-	builder->arena = arena;
+	builder->buffer.allocator = allocator;
+}
+
+inline void
+builder_write(string_builder *builder, char ch)
+{
+	array_add(&builder->buffer, ch);
 }
 
 inline void
 builder_write(string_builder *builder, string str)
 {
-	builder->data = (char *)resize_allocation(builder->arena, builder->data, builder->count, builder->count + str.count);
-	for (char ch : str)
-	{
-		builder->data[builder->count++] = ch;
-	}
+	array_add_many(&builder->buffer, str);
 }
 
 inline void
-builder_write_fmt(string_builder *builder, char *format, ...)
+builder_write(string_builder *builder, int value)
 {
-	va_list args;
-	va_start(args, format);
+	int length = snprintf(nullptr, 0, "%d", value) + 1;
 
-	int length = vsnprintf(nullptr, 0, format, args);
+	array_reserve(&builder->buffer, builder->buffer.count + length);
 
-	builder->data = (char *)resize_allocation(builder->arena, builder->data, builder->count, builder->count + length + 1);
+	snprintf(builder->buffer.end(), length, "%d", value);
 
-	vsnprintf(builder->data + builder->count, length + 1, format, args);
-
-	builder->count += length + 1;
+	builder->buffer.count += length;
 
 	// pop the null terminator
-	builder->count--;
-	builder->arena->pos--;
-
-	va_end(args);
+	builder->buffer.count--;
 }
 
 inline string
 builder_to_string(string_builder builder)
 {
-	string result = {};
-	result.data = builder.data;
-	result.count = builder.count;
-
-	return result;
+	return {builder.buffer.data, builder.buffer.count};
 }

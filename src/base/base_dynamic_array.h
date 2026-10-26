@@ -49,7 +49,7 @@ array_reserve(dynamic_array<T> *array, usize want_capacity)
 		new_capacity *= 2;
 	}
 
-	array->data = (T *)reallocate(array->data, array->capacity*sizeof(T),
+	array->data = (T *)mem_resize(array->data, array->capacity*sizeof(T),
 								  new_capacity*sizeof(T), array->allocator);
 	array->capacity = new_capacity;
 }
@@ -58,7 +58,7 @@ template <typename T>
 inline void
 array_free(dynamic_array<T> *array)
 {
-	free(array->data, array->capacity*sizeof(T), array->allocator);
+	mem_free(array->data, array->capacity*sizeof(T), array->allocator);
 	array->data = nullptr;
 	array->count = 0;
 	array->capacity = 0;

@@ -748,7 +748,7 @@ IncludeFile(Lexer *lexer,
 		return ErrorToken(lexer, "#include nesting too deep (circular include?)", location);
 	}
 
-	string fileData = read_entire_file(filePath);
+	string fileData = read_entire_file(filePath, heap_allocator());
 	if (!fileData)
 	{
 		return ErrorToken(lexer, "cannot open included file", location);
@@ -960,7 +960,7 @@ GetToken(Lexer *lexer)
 
 		string filePath = string_slice(filePathToken.str, 1, -1);
 		string searchDir = strip_filename(lexer->fileName);
-		string fullFilePath = string_concat(searchDir, filePath);
+		string fullFilePath = string_concat(searchDir, filePath, temp_allocator());
 
 		return IncludeFile(lexer, location, fullFilePath);
 	}
@@ -985,7 +985,7 @@ GetToken(Lexer *lexer)
 		Token filePathToken = ParseString(lexer, {});
 
 		string filePath = string_slice(filePathToken.str, 1, -1);
-		string fullFilePath = string_concat(lexer->context->modulesDir, filePath);
+		string fullFilePath = string_concat(lexer->context->modulesDir, filePath, temp_allocator());
 
 		return IncludeFile(lexer, location, fullFilePath);
 	}

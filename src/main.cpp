@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 		if (readOutputFilePath)
 		{
 			string outputFilePathNoExt = { argv[i], strlen(argv[i]) };
-			outputFilePathNoExt = get_absolute_filepath(outputFilePathNoExt);
+			outputFilePathNoExt = get_absolute_filepath(outputFilePathNoExt, heap_allocator());
 			outputFilePathNoExt = strip_extension(outputFilePathNoExt);
 
 			options.outputFilePathNoExt = outputFilePathNoExt;
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 		else
 		{
 			string inputFilePath = { argv[i], strlen(argv[i]) };
-			inputFilePath = get_absolute_filepath(inputFilePath);
+			inputFilePath = get_absolute_filepath(inputFilePath, heap_allocator());
 
 			options.inputFilePath = inputFilePath;
 		}

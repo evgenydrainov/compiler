@@ -1772,7 +1772,7 @@ ParseTopLevelStatement(Parser *parser,
 			{
 				string dir = strip_filename(lexer->fileName);
 
-				string fullLibPath = string_concat(dir, libPath);
+				string fullLibPath = string_concat(dir, libPath, heap_allocator());
 				array_add(&parser->options->libraries, fullLibPath);
 			}
 

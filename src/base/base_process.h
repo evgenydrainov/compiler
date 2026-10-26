@@ -26,7 +26,7 @@ create_process(slice<string> commandLine, subprocess_s *out_process)
 	*out_process = {};
 
 	dynamic_array<char> commandLineCombined = {};
-	defer { array_free(&commandLineCombined); };
+	commandLineCombined.allocator = temp_allocator();
 
 	for (string arg : commandLine)
 	{

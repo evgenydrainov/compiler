@@ -1,12 +1,10 @@
 #pragma once
 
 #include "base_types.h"
-#include "base_arena.h"
 #include "base_slice.h"
-
+#include "base_allocator.h"
 #include <string.h> // for memcpy
 #include <stdio.h> // for snprintf
-#include <stdarg.h> // for varargs
 
 #define STR_FMT "%.*s"
 #define STR_FMT_QUOTED "'%.*s'"
@@ -17,26 +15,26 @@ struct string
 	char *data;
 	usize count;
 
-	string() = default;
+	NO_STEP_INTO string() = default;
 
-	string(char *data, usize count) : data(data), count(count) {}
+	NO_STEP_INTO string(char *data, usize count) : data(data), count(count) {}
 
 	template <usize N>
-	string(const char (&str)[N]) : data((char *)str), count(N-1) {}
+	NO_STEP_INTO string(const char (&str)[N]) : data((char *)str), count(N-1) {}
 
-	char &operator[](usize index)
+	NO_STEP_INTO char &operator[](usize index)
 	{
 		Assert(index >= 0 && index < count);
 		return data[index];
 	}
 
-	const char &operator[](usize index) const
+	NO_STEP_INTO const char &operator[](usize index) const
 	{
 		Assert(index >= 0 && index < count);
 		return data[index];
 	}
 
-	bool operator==(const string &other) const
+	NO_STEP_INTO bool operator==(const string &other) const
 	{
 		if (count != other.count)
 		{
@@ -54,15 +52,15 @@ struct string
 		return true;
 	}
 
-	bool operator!=(const string &other) const
+	NO_STEP_INTO bool operator!=(const string &other) const
 	{
 		return !(*this == other);
 	}
 
-	char *begin() { return &data[0]; }
-	char *end()   { return &data[count]; }
+	NO_STEP_INTO char *begin() { return &data[0]; }
+	NO_STEP_INTO char *end()   { return &data[count]; }
 
-	operator bool() const
+	NO_STEP_INTO operator bool() const
 	{
 		return count != 0;
 	}
@@ -122,11 +120,11 @@ strip_filename(string filepath)
 }
 
 inline string
-string_concat(string a, string b)
+string_concat(string a, string b, Allocator allocator)
 {
 	string result = {};
 	result.count = a.count + b.count;
-	result.data = (char *)push_size(&g_tempArena, result.count);
+	result.data = (char *)mem_alloc(result.count, DEFAULT_ALIGNMENT, allocator);
 
 	memcpy(result.data, a.data, a.count);
 
@@ -136,12 +134,10 @@ string_concat(string a, string b)
 }
 
 inline char *
-to_cstring(string str)
+to_cstring(string str, Allocator allocator)
 {
-	char *result = (char *)push_size(&g_tempArena, str.count + 1);
-
+	char *result = (char *)mem_alloc(str.count + 1, DEFAULT_ALIGNMENT, allocator);
 	memcpy(result, str.data, str.count);
-
 	result[str.count] = 0;
 
 	return result;
@@ -167,34 +163,6 @@ strip_extension(string filepath)
 	}
 
 	return filepath;
-}
-
-inline string
-vtprintf(char *format, va_list args)
-{
-	int length = vsnprintf(nullptr, 0, format, args);
-
-	char *buffer = (char *)push_size(&g_tempArena, length+1);
-	vsnprintf(buffer, length+1, format, args);
-
-	string result = {};
-	result.data = buffer;
-	result.count = length;
-
-	return result;
-}
-
-inline string
-tprintf(char *format, ...)
-{
-	va_list args;
-	va_start(args, format);
-
-	string result = vtprintf(format, args);
-
-	va_end(args);
-
-	return result;
 }
 
 inline bool

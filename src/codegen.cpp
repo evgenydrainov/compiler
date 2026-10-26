@@ -670,7 +670,7 @@ GetSymbolNameForFunction(string linkName, bool isForeign)
 	}
 	else
 	{
-		return tprintf("proc_" STR_FMT, STR_ARG(linkName));
+		return string_format(temp_allocator(), "proc_%s", linkName);
 	}
 }
 

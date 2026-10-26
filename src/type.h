@@ -451,7 +451,7 @@ WriteType(Type type, string_builder *builder)
 
 		case TypeKind_Array:
 		{
-			builder_write_fmt(builder, "[%d]", type.array().length);
+			builder_print(builder, "[%d]", type.array().length);
 			WriteType(*type.array().elementType, builder);
 		} break;
 
@@ -481,7 +481,7 @@ WriteType(Type type, string_builder *builder)
 					builder_write(builder, ", ");
 				}
 
-				builder_write_fmt(builder, "a%d: ", index++);
+				builder_print(builder, "a%d: ", index++);
 
 				WriteType(it, builder);
 
@@ -512,7 +512,7 @@ inline string
 TypeToString(Type type)
 {
 	string_builder builder = {};
-	builder_init(&builder, &g_tempArena);
+	builder_init(&builder, temp_allocator());
 
 	WriteType(type, &builder);
 
