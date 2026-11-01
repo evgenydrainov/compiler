@@ -2312,10 +2312,13 @@ AnalyzeStatement(Node *baseNode,
 
 			Node *itExpr = MakeVarNode(node->location, node->iteratorName, context->arenaForAst);
 
-			Node *arguments[3] =
+			Node *indexExpr = MakeVarNode(node->location, node->indexName, context->arenaForAst);
+
+			Node *arguments[4] =
 			{
 				node->what,
 				itExpr,
+				indexExpr,
 				node->body,
 			};
 

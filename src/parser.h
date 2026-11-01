@@ -519,6 +519,7 @@ struct ForeachNode : public Node
 	static constexpr NodeKind KIND = NodeKind_Foreach;
 
 	string iteratorName;
+	string indexName;
 
 	Node *what;
 	Node *body;

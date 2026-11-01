@@ -112,29 +112,32 @@ __range_based_for_expansion_inclusive :: macro(from, to, it, body) #no_bind
 	}
 }
 
-__foreach_expansion_by_pointer :: macro(array, it, body) #no_bind
+__foreach_expansion_by_pointer :: macro(array, it, index, body) #no_bind
 {
 	// TODO: don't do this copy for static arrays
 	__array := array;
 
-	it := &__array.data[0];
-	__end := &__array.data[__array.count];
-	for ; it != __end; it = &it[1] // it += 1
+	index := 0;
+	__count := __array.count;
+
+	for ; index < __count; index += 1;
 	{
+		it := &array[index];
 		body;
 	}
 }
 
-__foreach_expansion_by_value :: macro(array, it, body) #no_bind
+__foreach_expansion_by_value :: macro(array, it, index, body) #no_bind
 {
 	// TODO: don't do this copy for static arrays
 	__array := array;
 
-	__it := &__array.data[0];
-	__end := &__array.data[__array.count];
-	for ; __it != __end; __it = &__it[1] // it += 1
+	index := 0;
+	__count := __array.count;
+
+	for ; index < __count; index += 1;
 	{
-		it := *__it;
+		it := __array[index];
 		body;
 	}
 }

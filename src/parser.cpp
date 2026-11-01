@@ -942,13 +942,25 @@ ParseForeachStatement(Parser *parser,
 					  Lexer *lexer,
 					  Arena *arena)
 {
-	AdvanceToken(parser, lexer); // eat the 'for'
+	ExpectToken(parser, lexer, TokenKind_For);
+
+	string indexName = "__index";
+
+	Token peek = PeekToken(lexer);
+	if (peek.kind == TokenKind_Comma)
+	{
+		// for index, value in what { }
+
+		indexName = parser->current.str;
+		ExpectToken(parser, lexer, TokenKind_Identifier);
+		ExpectToken(parser, lexer, TokenKind_Comma);
+	}
 
 	bool iterateByPointer = false;
 
 	if (parser->current.kind == TokenKind_Star)
 	{
-		AdvanceToken(parser, lexer); // eat the '*'
+		ExpectToken(parser, lexer, TokenKind_Star);
 		iterateByPointer = true;
 	}
 
@@ -997,6 +1009,7 @@ ParseForeachStatement(Parser *parser,
 
 		ForeachNode *node = MakeNode<ForeachNode>(parser->current.location, arena);
 		node->iteratorName = iteratorName;
+		node->indexName = indexName;
 		node->what = what;
 		node->iterateByPointer = iterateByPointer;
 
@@ -1194,8 +1207,9 @@ ParseStatement(Parser *parser,
 		Token peek0 = PeekToken(lexer, 1);
 		Token peek1 = PeekToken(lexer, 2);
 
-		if (peek1.kind == TokenKind_In
-			|| peek0.kind == TokenKind_Star)
+		if (peek0.kind == TokenKind_Star
+			|| peek1.kind == TokenKind_In
+			|| peek1.kind == TokenKind_Comma)
 		{
 			return ParseForeachStatement(parser, lexer, arena);
 		}

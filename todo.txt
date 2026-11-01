@@ -2,8 +2,6 @@ struct set member offset
 
 lexer synchronization
 
-iterate over array by index,value
-
 some kind of typeof() operator and compile-time type comparison
 
 #embed file
