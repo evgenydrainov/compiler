@@ -301,11 +301,11 @@ FindField(StructInfo *info, string name)
 {
 	Assert(info, "type was not resolved");
 
-	foreach (it, info->fields)
+	for (auto &it : info->fields)
 	{
-		if (it->name == name)
+		if (it.name == name)
 		{
-			return it;
+			return &it;
 		}
 	}
 
@@ -317,11 +317,11 @@ FindEnumerator(EnumInfo *info, string name)
 {
 	Assert(info, "type was not resolved");
 
-	foreach (it, info->enumerators)
+	for (auto &it : info->enumerators)
 	{
-		if (it->name == name)
+		if (it.name == name)
 		{
-			return it;
+			return &it;
 		}
 	}
 

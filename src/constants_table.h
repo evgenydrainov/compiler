@@ -17,11 +17,11 @@ inline Constant *
 LookupConstant(ConstantsTable *table,
 			   string name)
 {
-	foreach (it, table->constants)
+	for (auto &it : table->constants)
 	{
-		if (it->name == name)
+		if (it.name == name)
 		{
-			return it;
+			return &it;
 		}
 	}
 

@@ -19,11 +19,11 @@ inline Macro *
 LookupMacro(MacroTable *table,
 			string name)
 {
-	foreach (it, table->macros)
+	for (auto &it : table->macros)
 	{
-		if (it->name == name)
+		if (it.name == name)
 		{
-			return it;
+			return &it;
 		}
 	}
 

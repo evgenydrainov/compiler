@@ -7,8 +7,6 @@
 #define local_persist static
 #define global_variable static
 
-#define foreach(it, array) for (auto it = (array).begin(); it != (array).end(); it++)
-
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;

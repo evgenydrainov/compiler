@@ -22,11 +22,11 @@ inline Function *
 LookupFunction(FunctionTable *table,
 			   string name)
 {
-	foreach (it, table->functions)
+	for (auto &it : table->functions)
 	{
-		if (it->name == name)
+		if (it.name == name)
 		{
-			return it;
+			return &it;
 		}
 	}
 

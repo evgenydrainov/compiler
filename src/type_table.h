@@ -12,11 +12,11 @@ inline Type *
 LookupType(TypeTable *table,
 		   string name)
 {
-	foreach (it, table->types)
+	for (auto &it : table->types)
 	{
-		if (it->name == name)
+		if (it.name == name)
 		{
-			return it;
+			return &it;
 		}
 	}
 
