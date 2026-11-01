@@ -306,6 +306,7 @@ struct StructFieldDeclNode : public Node
 
 	string name;
 	Type type;
+	int explicitSetOffset;
 };
 
 struct StructDeclNode : public Node

@@ -2509,7 +2509,15 @@ EarlyAnalyze(Node *baseNode,
 						int size = SizeOfType(field->type);
 						int alignment = AlignmentOfType(field->type);
 
-						offset = (int)align_forward(offset, alignment);
+						if (field->explicitSetOffset != -1)
+						{
+							offset = field->explicitSetOffset;
+						}
+						else
+						{
+							offset = (int)align_forward(offset, alignment);
+						}
+
 						maxFieldAlignment = max(maxFieldAlignment, alignment);
 
 						fieldInfo.offset = offset;

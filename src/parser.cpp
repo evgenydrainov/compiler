@@ -1578,7 +1578,7 @@ ParseStructDefinition(Parser *parser,
 	StructDeclNode *node = MakeNode<StructDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
 
-	AdvanceToken(parser, lexer); // eat the struct name
+	ExpectToken(parser, lexer, TokenKind_Identifier);
 
 	ExpectToken(parser, lexer, TokenKind_Colon);
 	ExpectToken(parser, lexer, TokenKind_Colon);
@@ -1588,12 +1588,36 @@ ParseStructDefinition(Parser *parser,
 	ExpectToken(parser, lexer, TokenKind_OpenBrace);
 
 	bool multipleDeclarations = false;
+	int explicitSetOffset = -1;
 
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseBrace)
 	{
+		if (parser->current.kind == TokenKind_Hash)
+		{
+			ExpectToken(parser, lexer, TokenKind_Hash);
+
+			if (parser->current.str == "offset")
+			{
+				ExpectToken(parser, lexer, TokenKind_Identifier);
+
+				explicitSetOffset = (int)parser->current.int64Value;
+
+				ExpectToken(parser, lexer, TokenKind_Int64Literal);
+				ExpectToken(parser, lexer, TokenKind_Semicolon);
+			}
+			else
+			{
+				UnexpectedCurrentToken(parser);
+			}
+
+			continue;
+		}
+
 		StructFieldDeclNode *field = MakeNode<StructFieldDeclNode>(parser->current.location, arena);
 		field->name = parser->current.str;
+		field->explicitSetOffset = explicitSetOffset;
+		explicitSetOffset = -1;
 
 		ExpectToken(parser, lexer, TokenKind_Identifier);
 
