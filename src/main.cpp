@@ -7,9 +7,9 @@
 
 Arena g_tempArena;
 
-void AssertionHandler(char *file, int line, char *condition)
+void AssertionHandler(char *file, int line, char *condition, char *message)
 {
-	fprintf(stderr, "%s:%d: assertion failed: %s\n", file, line, condition);
+	fprintf(stderr, "%s:%d: assertion failed: %s\n", file, line, (message) ? message : condition);
 #ifndef NDEBUG
 	__debugbreak();
 #endif

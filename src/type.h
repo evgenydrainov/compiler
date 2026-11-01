@@ -265,21 +265,21 @@ SizeOfType(Type type)
 
 		case TypeKind_Enum:
 		{
-			Assert(type.enumInfo() && "type was not resolved");
+			Assert(type.enumInfo(), "type was not resolved");
 
 			result = SizeOfType(type.enumInfo()->underlyingType);
 		} break;
 
 		case TypeKind_Struct:
 		{
-			Assert(type.structInfo() && "type was not resolved");
+			Assert(type.structInfo(), "type was not resolved");
 
 			result = type.structInfo()->size;
 		} break;
 
 		case TypeKind_Array:
 		{
-			Assert(type.array().length != 0 && "type was not resolved");
+			Assert(type.array().length != 0, "type was not resolved");
 
 			int elementSize = SizeOfType(*type.array().elementType);
 			result = type.array().length * elementSize;
@@ -299,7 +299,7 @@ SizeOfType(Type type)
 inline StructField *
 FindField(StructInfo *info, string name)
 {
-	Assert(info && "type was not resolved");
+	Assert(info, "type was not resolved");
 
 	foreach (it, info->fields)
 	{
@@ -315,7 +315,7 @@ FindField(StructInfo *info, string name)
 inline EnumeratorInfo *
 FindEnumerator(EnumInfo *info, string name)
 {
-	Assert(info && "type was not resolved");
+	Assert(info, "type was not resolved");
 
 	foreach (it, info->enumerators)
 	{
@@ -379,14 +379,14 @@ AlignmentOfType(Type type)
 	{
 		case TypeKind_Struct:
 		{
-			Assert(type.structInfo() && "type was not resolved");
+			Assert(type.structInfo(), "type was not resolved");
 
 			result = type.structInfo()->alignment;
 		} break;
 
 		case TypeKind_Array:
 		{
-			Assert(type.array().length != 0 && "type was not resolved");
+			Assert(type.array().length != 0, "type was not resolved");
 
 			result = AlignmentOfType(*type.array().elementType);
 		} break;

@@ -11,9 +11,9 @@
 #endif
 
 #if ENABLE_ASSERTIONS
-#  define Assert(condition) ((condition) ? (void)0 : AssertionHandler(__FILE__, __LINE__, #condition))
+#  define Assert(condition, ...) ((condition) ? (void)0 : AssertionHandler(__FILE__, __LINE__, #condition, ##__VA_ARGS__))
 #else
-#  define Assert(condition) ((void)0)
+#  define Assert(condition, ...) ((void)0)
 #endif
 
-void AssertionHandler(char *file, int line, char *condition);
+void AssertionHandler(char *file, int line, char *condition, char *message = nullptr);

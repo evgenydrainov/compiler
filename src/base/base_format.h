@@ -71,7 +71,7 @@ write_until_placeholder(FormatContext *context)
 			}
 			else
 			{
-				Assert(!"invalid print format specifier");
+				Assert(false, "invalid print format specifier");
 			}
 
 			string_advance(&context->format);
@@ -93,7 +93,7 @@ string_format_impl(FormatContext *context)
 {
 	while (write_until_placeholder(context))
 	{
-		Assert(!"more placeholders than arguments");
+		Assert(false, "more placeholders than arguments");
 	}
 }
 
@@ -105,7 +105,7 @@ string_format_impl(FormatContext *context,
 	bool found = write_until_placeholder(context);
 	if (!found)
 	{
-		Assert(!"more arguments than placeholders");
+		Assert(false, "more arguments than placeholders");
 	}
 
 	type_formatter(context, first);

@@ -32,7 +32,7 @@ push_size(Arena *arena,
 		  usize size,
 		  usize alignment = DEFAULT_ALIGNMENT)
 {
-	Assert(size <= arena->capacity && "allocation too large");
+	Assert(size <= arena->capacity);
 
 	usize alignedPos = align_forward(arena->pos, alignment);
 

@@ -32,6 +32,32 @@ builder_write(string_builder *builder, string str)
 inline void
 builder_write(string_builder *builder, int value)
 {
+#if 1
+	if (value == 0)
+	{
+		array_add(&builder->buffer, '0');
+		return;
+	}
+
+	if (value < 0)
+	{
+		array_add(&builder->buffer, '-');
+		value = -value;
+	}
+
+	int magnitude = 1;
+	for (int v = value/10; v > 0; v /= 10)
+	{
+		magnitude *= 10;
+	}
+
+	while (magnitude > 0)
+	{
+		char ch = '0' + ((value / magnitude) % 10);
+		array_add(&builder->buffer, ch);
+		magnitude /= 10;
+	}
+#else
 	int length = snprintf(nullptr, 0, "%d", value) + 1;
 
 	array_reserve(&builder->buffer, builder->buffer.count + length);
@@ -42,6 +68,7 @@ builder_write(string_builder *builder, int value)
 
 	// pop the null terminator
 	builder->buffer.count--;
+#endif
 }
 
 inline string

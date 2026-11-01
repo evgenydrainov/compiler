@@ -31,7 +31,7 @@ Write(FILE *out, PrintFormatSpec spec, i32 value)
 	}
 	else
 	{
-		Assert(!"invalid format specifier for this type");
+		Assert(false, "invalid format specifier for this type");
 	}
 }
 
@@ -48,7 +48,7 @@ Write(FILE *out, PrintFormatSpec spec, u32 value)
 	}
 	else
 	{
-		Assert(!"invalid format specifier for this type");
+		Assert(false, "invalid format specifier for this type");
 	}
 }
 
@@ -61,7 +61,7 @@ Write(FILE *out, PrintFormatSpec spec, i64 value)
 	}
 	else
 	{
-		Assert(!"invalid format specifier for this type");
+		Assert(false, "invalid format specifier for this type");
 	}
 }
 
@@ -78,7 +78,7 @@ Write(FILE *out, PrintFormatSpec spec, u64 value)
 	}
 	else
 	{
-		Assert(!"invalid format specifier for this type");
+		Assert(false, "invalid format specifier for this type");
 	}
 }
 
@@ -91,7 +91,7 @@ Write(FILE *out, PrintFormatSpec spec, f32 value)
 	}
 	else
 	{
-		Assert(!"invalid format specifier for this type");
+		Assert(false, "invalid format specifier for this type");
 	}
 }
 
@@ -104,7 +104,7 @@ Write(FILE *out, PrintFormatSpec spec, f64 value)
 	}
 	else
 	{
-		Assert(!"invalid format specifier for this type");
+		Assert(false, "invalid format specifier for this type");
 	}
 }
 
@@ -117,7 +117,7 @@ Write(FILE *out, PrintFormatSpec spec, const char *str)
 	}
 	else
 	{
-		Assert(!"invalid format specifier for this type");
+		Assert(false, "invalid format specifier for this type");
 	}
 }
 
@@ -130,7 +130,7 @@ Write(FILE *out, PrintFormatSpec spec, string str)
 	}
 	else
 	{
-		Assert(!"invalid format specifier for this type");
+		Assert(false, "invalid format specifier for this type");
 	}
 }
 
@@ -195,7 +195,7 @@ WriteUntilPlaceholder(FILE *out,
 		}
 		else
 		{
-			Assert(!"unknown format specifier");
+			Assert(false, "unknown format specifier");
 		}
 
 		fmt = p + length;
@@ -217,7 +217,7 @@ PrintFormat_Impl(FILE *out,
 	PrintFormatSpec spec = {};
 	while (WriteUntilPlaceholder(out, fmt, end, spec))
 	{
-		Assert(!"more placeholders than arguments");
+		Assert(false, "more placeholders than arguments");
 	}
 }
 
@@ -233,7 +233,7 @@ PrintFormat_Impl(FILE *out,
 	bool found = WriteUntilPlaceholder(out, fmt, end, spec);
 	if (!found)
 	{
-		Assert(!"more arguments than placeholders");
+		Assert(false, "more arguments than placeholders");
 	}
 	Write(out, spec, first);
 	PrintFormat_Impl(out, fmt, end, rest...);
