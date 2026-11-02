@@ -38,8 +38,7 @@
 // And finally I fixed 3 compiler warnings.
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #ifndef MICROSOFT_CRAZINESS_HEADER_GUARD
@@ -191,14 +190,14 @@ DECLARE_INTERFACE_ (ISetupInstance, IUnknown)
     STDMETHOD_(ULONG, Release)   (THIS) PURE;
 
     // ISetupInstance methods
-    STDMETHOD(GetInstanceId)(THIS_ _Out_ BSTR* pbstrInstanceId) PURE;
-    STDMETHOD(GetInstallDate)(THIS_ _Out_ LPFILETIME pInstallDate) PURE;
-    STDMETHOD(GetInstallationName)(THIS_ _Out_ BSTR* pbstrInstallationName) PURE;
-    STDMETHOD(GetInstallationPath)(THIS_ _Out_ BSTR* pbstrInstallationPath) PURE;
-    STDMETHOD(GetInstallationVersion)(THIS_ _Out_ BSTR* pbstrInstallationVersion) PURE;
-    STDMETHOD(GetDisplayName)(THIS_ _In_ LCID lcid, _Out_ BSTR* pbstrDisplayName) PURE;
-    STDMETHOD(GetDescription)(THIS_ _In_ LCID lcid, _Out_ BSTR* pbstrDescription) PURE;
-    STDMETHOD(ResolvePath)(THIS_ _In_opt_z_ LPCOLESTR pwszRelativePath, _Out_ BSTR* pbstrAbsolutePath) PURE;
+    STDMETHOD(GetInstanceId)(THIS_ BSTR* pbstrInstanceId) PURE;
+    STDMETHOD(GetInstallDate)(THIS_ LPFILETIME pInstallDate) PURE;
+    STDMETHOD(GetInstallationName)(THIS_ BSTR* pbstrInstallationName) PURE;
+    STDMETHOD(GetInstallationPath)(THIS_ BSTR* pbstrInstallationPath) PURE;
+    STDMETHOD(GetInstallationVersion)(THIS_ BSTR* pbstrInstallationVersion) PURE;
+    STDMETHOD(GetDisplayName)(THIS_ LCID lcid, BSTR* pbstrDisplayName) PURE;
+    STDMETHOD(GetDescription)(THIS_ LCID lcid, BSTR* pbstrDescription) PURE;
+    STDMETHOD(ResolvePath)(THIS_ LPCOLESTR pwszRelativePath, BSTR* pbstrAbsolutePath) PURE;
 
     END_INTERFACE
 };
@@ -215,10 +214,10 @@ DECLARE_INTERFACE_ (IEnumSetupInstances, IUnknown)
     STDMETHOD_(ULONG, Release)   (THIS) PURE;
 
     // IEnumSetupInstances methods
-    STDMETHOD(Next)(THIS_ _In_ ULONG celt, _Out_writes_to_(celt, *pceltFetched) ISetupInstance** rgelt, _Out_opt_ _Deref_out_range_(0, celt) ULONG* pceltFetched) PURE;
-    STDMETHOD(Skip)(THIS_ _In_ ULONG celt) PURE;
+    STDMETHOD(Next)(THIS_ ULONG celt, ISetupInstance** rgelt, ULONG* pceltFetched) PURE;
+    STDMETHOD(Skip)(THIS_ ULONG celt) PURE;
     STDMETHOD(Reset)(THIS) PURE;
-    STDMETHOD(Clone)(THIS_ _Deref_out_opt_ IEnumSetupInstances** ppenum) PURE;
+    STDMETHOD(Clone)(THIS_ IEnumSetupInstances** ppenum) PURE;
 
     END_INTERFACE
 };
@@ -235,9 +234,9 @@ DECLARE_INTERFACE_ (ISetupConfiguration, IUnknown)
     STDMETHOD_(ULONG, Release)   (THIS) PURE;
 
     // ISetupConfiguration methods
-    STDMETHOD(EnumInstances)(THIS_ _Out_ IEnumSetupInstances** ppEnumInstances) PURE;
-    STDMETHOD(GetInstanceForCurrentProcess)(THIS_ _Out_ ISetupInstance** ppInstance) PURE;
-    STDMETHOD(GetInstanceForPath)(THIS_ _In_z_ LPCWSTR wzPath, _Out_ ISetupInstance** ppInstance) PURE;
+    STDMETHOD(EnumInstances)(THIS_ IEnumSetupInstances** ppEnumInstances) PURE;
+    STDMETHOD(GetInstanceForCurrentProcess)(THIS_ ISetupInstance** ppInstance) PURE;
+    STDMETHOD(GetInstanceForPath)(THIS_ LPCWSTR wzPath, ISetupInstance** ppInstance) PURE;
 
     END_INTERFACE
 };
@@ -261,28 +260,25 @@ typedef struct {
 bool os_file_exists(wchar_t *name) {
     // @Robustness: What flags do we really want to check here?
 
-    auto attrib = GetFileAttributesW(name);
+    DWORD attrib = GetFileAttributesW(name);
     if (attrib == INVALID_FILE_ATTRIBUTES) return false;
     if (attrib & FILE_ATTRIBUTE_DIRECTORY) return false;
 
     return true;
 }
 
-#define concat2(a, b) concat(a, b, NULL, NULL)
-#define concat3(a, b, c) concat(a, b, c, NULL)
-#define concat4(a, b, c, d) concat(a, b, c, d)
 wchar_t *concat(wchar_t *a, wchar_t *b, wchar_t *c, wchar_t *d) {
     // Concatenate up to 4 wide strings together. Allocated with malloc.
     // If you don't like that, use a programming language that actually
     // helps you with using custom allocators. Or just edit the code.
 
-    auto len_a = wcslen(a);
-    auto len_b = wcslen(b);
+    size_t len_a = wcslen(a);
+    size_t len_b = wcslen(b);
 
-    auto len_c = 0;
+    size_t len_c = 0;
     if (c) len_c = wcslen(c);
 
-    auto len_d = 0;
+    size_t len_d = 0;
     if (d) len_d = wcslen(d);
 
     wchar_t *result = (wchar_t *)malloc((len_a + len_b + len_c + len_d + 1) * 2);
@@ -295,6 +291,18 @@ wchar_t *concat(wchar_t *a, wchar_t *b, wchar_t *c, wchar_t *d) {
     result[len_a + len_b + len_c + len_d] = 0;
 
     return result;
+}
+
+wchar_t *concat2(wchar_t *a, wchar_t *b) {
+    return concat(a, b, NULL, NULL);
+}
+
+wchar_t *concat3(wchar_t *a, wchar_t *b, wchar_t *c) {
+    return concat(a, b, c, NULL);
+}
+
+wchar_t *concat4(wchar_t *a, wchar_t *b, wchar_t *c, wchar_t *d) {
+    return concat(a, b, c, d);
 }
 
 typedef void (*Visit_Proc_W)(wchar_t *short_name, wchar_t *full_name, Version_Data *data);
@@ -665,11 +673,11 @@ Find_Result find_visual_studio_and_windows_sdk() {
 
     find_visual_studio_by_fighting_through_microsoft_craziness(&result);
 
-    result.windows_sdk_root_a = wide_to_string(result.windows_sdk_root);
-    result.windows_sdk_um_library_path_a = wide_to_string(result.windows_sdk_um_library_path);
+    result.windows_sdk_root_a              = wide_to_string(result.windows_sdk_root);
+    result.windows_sdk_um_library_path_a   = wide_to_string(result.windows_sdk_um_library_path);
     result.windows_sdk_ucrt_library_path_a = wide_to_string(result.windows_sdk_ucrt_library_path);
-    result.vs_exe_path_a = wide_to_string(result.vs_exe_path);
-    result.vs_library_path_a = wide_to_string(result.vs_library_path);
+    result.vs_exe_path_a                   = wide_to_string(result.vs_exe_path);
+    result.vs_library_path_a               = wide_to_string(result.vs_library_path);
 
     return result;
 }
@@ -679,5 +687,5 @@ Find_Result find_visual_studio_and_windows_sdk() {
 #endif  // MICROSOFT_CRAZINESS_IMPLEMENTATION
 
 #ifdef __cplusplus
-}
+} // extern "C"
 #endif
