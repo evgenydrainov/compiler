@@ -307,6 +307,7 @@ struct StructFieldDeclNode : public Node
 	string name;
 	Type type;
 	int explicitSetOffset;
+	bool importMembers;
 };
 
 struct StructDeclNode : public Node

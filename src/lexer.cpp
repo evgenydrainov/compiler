@@ -249,6 +249,14 @@ IdentifierType(string str)
 			}
 		} break;
 
+		case 'u':
+		{
+			if (str == "using")
+			{
+				result = TokenKind_Using;
+			}
+		} break;
+
 		case 'w':
 		{
 			if (str == "while")

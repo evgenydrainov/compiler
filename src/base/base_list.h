@@ -43,6 +43,8 @@ template <typename TNode>
 inline void
 list_append(list<TNode> *list, IDENTITY(TNode) *node)
 {
+	Assert(!node->next);
+
 	if (list->head)
 	{
 		list->tail->next = node;

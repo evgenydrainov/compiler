@@ -2483,74 +2483,91 @@ EarlyAnalyze(Node *baseNode,
 		{
 			StructDeclNode *node = As<StructDeclNode>(baseNode);
 
-			if (!LookupType(context->typeTable, node->name))
-			{
-				Type *type = DeclareType(context->typeTable, node->name);
-
-				type->kind = TypeKind_Struct;
-				type->structInfo() = push_struct<StructInfo>(arena);
-				type->structInfo()->name = node->name;
-				// TODO: maybe allocate from somewhere else since node->fields.count can be large
-				type->structInfo()->fields = push_bump_array<StructField>(arena, node->fields.count);
-
-				int offset = 0;
-				int maxFieldAlignment = 0;
-
-				for (StructFieldDeclNode *field : node->fields)
-				{
-					if (!FindField(type->structInfo(), field->name))
-					{
-						ResolveType(&field->type, context, field);
-
-						StructField fieldInfo = {};
-						fieldInfo.name = field->name;
-						fieldInfo.type = field->type;
-
-						int size = SizeOfType(field->type);
-						int alignment = AlignmentOfType(field->type);
-
-						if (field->explicitSetOffset != -1)
-						{
-							offset = field->explicitSetOffset;
-						}
-						else
-						{
-							offset = (int)align_forward(offset, alignment);
-						}
-
-						maxFieldAlignment = max(maxFieldAlignment, alignment);
-
-						fieldInfo.offset = offset;
-						offset += size;
-
-						array_add(&type->structInfo()->fields, fieldInfo);
-					}
-					else
-					{
-						Error(context, field,
-							  "struct '%s' already has a field '%s'",
-							  node->name,
-							  field->name);
-					}
-				}
-
-				if (offset == 0 && maxFieldAlignment == 0)
-				{
-					type->structInfo()->size = 1;
-					type->structInfo()->alignment = 1;
-				}
-				else
-				{
-					type->structInfo()->size = (int)align_forward(offset, maxFieldAlignment);
-					type->structInfo()->alignment = maxFieldAlignment;
-				}
-			}
-			else
+			if (LookupType(context->typeTable, node->name))
 			{
 				Error(context, node,
 					  "cannot declare struct '%s': a type with this name already exists",
 					  node->name);
+				break;
 			}
+
+			Type *type = DeclareType(context->typeTable, node->name);
+
+			type->kind = TypeKind_Struct;
+			type->structInfo() = push_struct<StructInfo>(arena);
+			type->structInfo()->name = node->name;
+
+			int offset = 0;
+			int maxFieldAlignment = 0;
+
+			for (auto *field : node->fields)
+			{
+				if (FindField(type->structInfo(), field->name))
+				{
+					Error(context, field, "struct '%s' already has a field '%s'",
+							node->name, field->name);
+					continue;
+				}
+
+				ResolveType(&field->type, context, field);
+
+				int size = SizeOfType(field->type);
+				int alignment = AlignmentOfType(field->type);
+
+				maxFieldAlignment = max(maxFieldAlignment, alignment);
+
+				if (field->explicitSetOffset != -1)
+				{
+					offset = field->explicitSetOffset;
+				}
+				else
+				{
+					offset = (int)align_forward(offset, alignment);
+				}
+
+				{
+					auto *fieldInfo = push_struct<StructField>(arena);
+					fieldInfo->name = field->name;
+					fieldInfo->type = field->type;
+					fieldInfo->offset = offset;
+
+					list_append(&type->structInfo()->fields, fieldInfo);
+				}
+
+				if (field->importMembers)
+				{
+					if (field->type.kind == TypeKind_Struct)
+					{
+						for (const auto *importField : field->type.structInfo()->fields)
+						{
+							// TODO: check for name collisions
+
+							auto *fieldInfo = push_struct<StructField>(arena);
+							fieldInfo->name = importField->name;
+							fieldInfo->type = importField->type;
+							fieldInfo->offset = offset + importField->offset;
+
+							list_append(&type->structInfo()->fields, fieldInfo);
+						}
+					}
+				}
+
+				offset += size;
+			}
+
+			if (offset == 0 && maxFieldAlignment == 0)
+			{
+				type->structInfo()->size = 1;
+				type->structInfo()->alignment = 1;
+			}
+			else
+			{
+				type->structInfo()->size = (int)align_forward(offset, maxFieldAlignment);
+				type->structInfo()->alignment = maxFieldAlignment;
+			}
+
+			Assert(type->structInfo()->size >= 1);
+			Assert(type->structInfo()->alignment >= 1);
 		} break;
 
 		case NodeKind_EnumDecl:

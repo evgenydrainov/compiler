@@ -1614,9 +1614,18 @@ ParseStructDefinition(Parser *parser,
 			continue;
 		}
 
+		bool importMembers = false;
+
+		if (parser->current.kind == TokenKind_Using)
+		{
+			ExpectToken(parser, lexer, TokenKind_Using);
+			importMembers = true;
+		}
+
 		StructFieldDeclNode *field = MakeNode<StructFieldDeclNode>(parser->current.location, arena);
 		field->name = parser->current.str;
 		field->explicitSetOffset = explicitSetOffset;
+		field->importMembers = importMembers;
 		explicitSetOffset = -1;
 
 		ExpectToken(parser, lexer, TokenKind_Identifier);

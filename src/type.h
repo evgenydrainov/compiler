@@ -104,6 +104,7 @@ struct Type
 
 struct StructField
 {
+	StructField *next;
 	string name;
 	Type type;
 	int offset;
@@ -112,7 +113,7 @@ struct StructField
 struct StructInfo
 {
 	string name;
-	bump_array<StructField> fields;
+	list<StructField> fields;
 	int size;
 	int alignment;
 };
@@ -301,11 +302,11 @@ FindField(StructInfo *info, string name)
 {
 	Assert(info, "type was not resolved");
 
-	for (auto &it : info->fields)
+	for (auto *it : info->fields)
 	{
-		if (it.name == name)
+		if (it->name == name)
 		{
-			return &it;
+			return it;
 		}
 	}
 
