@@ -1390,17 +1390,24 @@ GenerateStatement(Node *baseNode,
 
 			Emit(context, ".loop_%d:", uniqueId);
 
-			GenerateExpression(node->cond, context);
+			if (node->cond)
+			{
+				GenerateExpression(node->cond, context);
 
-			Emit(context, "    pop rax\t\t; load the comparison result");
-			Emit(context, "    cmp rax, 0");
-			Emit(context, "    je .end_%d", uniqueId);
-			Emit(context, "");
+				Emit(context, "    pop rax\t\t; load the comparison result");
+				Emit(context, "    cmp rax, 0");
+				Emit(context, "    je .end_%d", uniqueId);
+				Emit(context, "");
+			}
 
-			GenerateBlock(node->body, context);
+			GenerateStatement(node->body, context);
 
 			Emit(context, ".continue_%d:", uniqueId);
-			GenerateStatement(node->incr, context);
+
+			if (node->incr)
+			{
+				GenerateStatement(node->incr, context);
+			}
 
 			Emit(context, "    jmp .loop_%d", uniqueId);
 			Emit(context, ".end_%d:", uniqueId);

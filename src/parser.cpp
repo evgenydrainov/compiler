@@ -918,21 +918,47 @@ ParseForStatement(Parser *parser,
 				  Arena *arena)
 {
 	// for init; cond; incr { statements; }
-
+	
 	ForNode *node = MakeNode<ForNode>(parser->current.location, arena);
 
-	// eat the 'for'
-	AdvanceToken(parser, lexer);
+	ExpectToken(parser, lexer, TokenKind_For);
+
+	// TODO: decide if to keep this syntax or not
+	// for (init; cond; incr) { statements; }
+	// for (;;) { statements; }
+	bool parenthesis = false;
+
+	if (parser->current.kind == TokenKind_OpenParen)
+	{
+		ExpectToken(parser, lexer, TokenKind_OpenParen);
+		parenthesis = true;
+	}
 
 	node->init = ParseStatement(parser, lexer, arena);
 
-	node->cond = ParseExpression(parser, lexer, 0, arena);
+	if (parser->current.kind != TokenKind_Semicolon)
+	{
+		node->cond = ParseExpression(parser, lexer, 0, arena);
+	}
+
 	ExpectToken(parser, lexer, TokenKind_Semicolon);
 
-	parser->numInsertSemicolons++;
-	node->incr = ParseStatement(parser, lexer, arena);
+	if (!(parenthesis && parser->current.kind == TokenKind_CloseParen))
+	{
+		int saveNumInsertSemicolons = parser->numInsertSemicolons;
+		parser->numInsertSemicolons++;
 
-	node->body = ParseBlock(parser, lexer, arena);
+		node->incr = ParseStatement(parser, lexer, arena);
+
+		parser->numInsertSemicolons = saveNumInsertSemicolons;
+	}
+
+	if (parenthesis)
+	{
+		ExpectToken(parser, lexer, TokenKind_CloseParen);
+	}
+
+	node->body = ParseBlockOrSingleStatement(parser, lexer, arena);
 
 	return node;
 }

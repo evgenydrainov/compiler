@@ -2104,27 +2104,35 @@ AnalyzeStatement(Node *baseNode,
 			{
 				AnalyzeStatement(node->init, context);
 			}
-			AnalyzeExpression(node->cond, context);
-			AnalyzeStatement(node->incr, context);
+
+			if (node->cond)
+			{
+				AnalyzeExpression(node->cond, context);
+
+				if (node->cond->inferredType.kind != TypeKind_Bool)
+				{
+					if (!IsPoisoned(node->cond->inferredType))
+					{
+						Error(context, node->cond,
+							  "'for' condition must be of type 'bool', but it is '%s'",
+							  TypeToString(node->cond->inferredType));
+					}
+				}
+			}
+
+			if (node->incr)
+			{
+				AnalyzeStatement(node->incr, context);
+			}
 
 			Node *saveCurrentLoop = context->currentLoop;
 			context->currentLoop = node;
 
-			AnalyzeBlock(node->body, context);
+			AnalyzeStatement(node->body, context);
 
 			context->currentLoop = saveCurrentLoop;
 
 			LeaveScope(context->symTable, scope);
-
-			if (node->cond->inferredType.kind != TypeKind_Bool)
-			{
-				if (!IsPoisoned(node->cond->inferredType))
-				{
-					Error(context, node->cond,
-						  "'for' condition must be of type 'bool', but it is '%s'",
-						  TypeToString(node->cond->inferredType));
-				}
-			}
 		} break;
 
 		case NodeKind_Print:
