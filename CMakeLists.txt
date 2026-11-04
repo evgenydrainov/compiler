@@ -49,6 +49,7 @@ add_executable(
     src/profiler.h
     src/semantic_pass.cpp
     src/semantic_pass.h
+    src/subprocess.h
     src/symbol_table.h
     src/type.h
     src/type_table.h
@@ -92,7 +93,8 @@ target_link_options(compiler PRIVATE ${LINK_FLAGS})
 target_link_options(run_tests PRIVATE ${LINK_FLAGS})
 
 set_property(TARGET compiler PROPERTY
-    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    MSVC_RUNTIME_LIBRARY
+    "$<$<CONFIG:Debug>:MultiThreadedDebugDLL>$<$<NOT:$<CONFIG:Debug>>:MultiThreaded>"
 )
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/distrib)

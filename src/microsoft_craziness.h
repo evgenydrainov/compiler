@@ -37,14 +37,10 @@
 // this MSVC version reports a different kind of path which can cause trouble later.
 // And finally I fixed 3 compiler warnings.
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifndef MICROSOFT_CRAZINESS_HEADER_GUARD
 #define MICROSOFT_CRAZINESS_HEADER_GUARD
 
-#include <string.h>
+#include <wchar.h> // for wchar_t
 
 typedef struct
 {
@@ -153,12 +149,180 @@ void free_resources(Find_Result *result);
 #define MICROSOFT_CRAZINESS_IMPLEMENTATION_GUARD
 
 
-#define NOMINMAX
-#include <windows.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
 #include <io.h>         // For _get_osfhandle
+
+
+#define INVALID_FILE_ATTRIBUTES  ((unsigned long)-1)
+#define FILE_ATTRIBUTE_DIRECTORY 0x00000010
+#define INVALID_HANDLE_VALUE     ((void *)(intptr_t)-1)
+#define HKEY_LOCAL_MACHINE       (( HKEY ) (uintptr_t)((long)0x80000002) )
+#define KEY_QUERY_VALUE          (0x0001)
+#define KEY_WOW64_32KEY          (0x0200)
+#define KEY_ENUMERATE_SUB_KEYS   (0x0008)
+#define ERROR_FILE_NOT_FOUND     2L
+#define REG_SZ                   ( 1ul )
+#define CP_UTF8                  65001
+
+#ifdef __cplusplus
+#define REFIID const GUID &
+#else
+#define REFIID const GUID *
+#endif
+
+typedef struct _GUID GUID;
+typedef struct _FILETIME *LPFILETIME;
+typedef struct _WIN32_FIND_DATAW WIN32_FIND_DATAW;
+typedef struct _FILETIME FILETIME;
+typedef union _LARGE_INTEGER LARGE_INTEGER;
+typedef struct HKEY__ *HKEY;
+typedef struct IUnknown IUnknown;
+typedef struct ISetupInstance ISetupInstance;
+typedef struct IEnumSetupInstances IEnumSetupInstances;
+typedef struct ISetupConfiguration ISetupConfiguration;
+
+typedef struct
+{
+    unsigned long dwLowDateTime;
+    unsigned long dwHighDateTime;
+} filetime_s;
+
+typedef struct
+{
+    unsigned long dwFileAttributes;
+    filetime_s ftCreationTime;
+    filetime_s ftLastAccessTime;
+    filetime_s ftLastWriteTime;
+    unsigned long nFileSizeHigh;
+    unsigned long nFileSizeLow;
+    unsigned long dwReserved0;
+    unsigned long dwReserved1;
+    wchar_t  cFileName[ 260 ];
+    wchar_t  cAlternateFileName[ 14 ];
+} win32_find_dataw_s;
+
+typedef struct
+{
+    unsigned long  Data1;
+    unsigned short Data2;
+    unsigned short Data3;
+    unsigned char  Data4[ 8 ];
+} guid_s;
+
+typedef union
+{
+    struct
+    {
+        unsigned long LowPart;
+        long HighPart;
+    };
+    struct
+    {
+        unsigned long LowPart;
+        long HighPart;
+    } u;
+    long long QuadPart;
+} large_integer_s;
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+__declspec(dllimport) unsigned long __stdcall GetFileAttributesW(const wchar_t *lpFileName);
+__declspec(dllimport) int __stdcall GetFileSizeEx(void *hFile, LARGE_INTEGER *lpFileSize);
+
+__declspec(dllimport) int __stdcall FindNextFileW(void *hFindFile, WIN32_FIND_DATAW *lpFindFileData);
+__declspec(dllimport) int __stdcall FindClose(void *hFindFile);
+__declspec(dllimport) void * __stdcall FindFirstFileW(const wchar_t *lpFileName, WIN32_FIND_DATAW *lpFindFileData);
+
+__declspec(dllimport) long __stdcall RegQueryValueExW(HKEY hKey, const wchar_t *lpValueName, unsigned long *lpReserved, unsigned long *lpType, unsigned char *lpData, unsigned long *lpcbData);
+__declspec(dllimport) long __stdcall RegOpenKeyExA(HKEY hKey, const char *lpSubKey, unsigned long ulOptions, unsigned long samDesired, HKEY *phkResult);
+__declspec(dllimport) long __stdcall RegCloseKey(HKEY hKey);
+
+__declspec(dllimport) long __stdcall CoInitialize(void *pvReserved);
+__declspec(dllimport) long __stdcall CoCreateInstance(REFIID rclsid, IUnknown *pUnkOuter, unsigned long dwClsContext, REFIID riid, void **ppv);
+
+__declspec(dllimport) void __stdcall SysFreeString(wchar_t *bstrString);
+
+__declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned int CodePage, unsigned long dwFlags, const wchar_t *lpWideCharStr, int cchWideChar, char *lpMultiByteStr, int cbMultiByte, const char *lpDefaultChar, int *lpUsedDefaultChar);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+
+// COM objects for the ridiculous Microsoft craziness.
+
+typedef struct ISetupInstanceVtbl
+{
+    // IUnknown methods
+    long          (__stdcall *QueryInterface) (ISetupInstance *This, const GUID *, void **);
+    unsigned long (__stdcall *AddRef)         (ISetupInstance *This);
+    unsigned long (__stdcall *Release)        (ISetupInstance *This);
+
+    // ISetupInstance methods
+    long (__stdcall *GetInstanceId)          (ISetupInstance *This, wchar_t **pbstrInstanceId);
+    long (__stdcall *GetInstallDate)         (ISetupInstance *This, LPFILETIME pInstallDate);
+    long (__stdcall *GetInstallationName)    (ISetupInstance *This, wchar_t **pbstrInstallationName);
+    long (__stdcall *GetInstallationPath)    (ISetupInstance *This, wchar_t **pbstrInstallationPath);
+    long (__stdcall *GetInstallationVersion) (ISetupInstance *This, wchar_t **pbstrInstallationVersion);
+    long (__stdcall *GetDisplayName)         (ISetupInstance *This, unsigned long lcid, wchar_t **pbstrDisplayName);
+    long (__stdcall *GetDescription)         (ISetupInstance *This, unsigned long lcid, wchar_t **pbstrDescription);
+    long (__stdcall *ResolvePath)            (ISetupInstance *This, const wchar_t *pwszRelativePath, wchar_t **pbstrAbsolutePath);
+} ISetupInstanceVtbl;
+
+typedef struct IEnumSetupInstancesVtbl
+{
+    // IUnknown methods
+    long          (__stdcall *QueryInterface) (IEnumSetupInstances *This, const GUID *, void **);
+    unsigned long (__stdcall *AddRef)         (IEnumSetupInstances *This);
+    unsigned long (__stdcall *Release)        (IEnumSetupInstances *This);
+
+    // IEnumSetupInstances methods
+    long (__stdcall *Next)  (IEnumSetupInstances *This, unsigned long celt, ISetupInstance** rgelt, unsigned long* pceltFetched);
+    long (__stdcall *Skip)  (IEnumSetupInstances *This, unsigned long celt);
+    long (__stdcall *Reset) (IEnumSetupInstances *This);
+    long (__stdcall *Clone) (IEnumSetupInstances *This, IEnumSetupInstances** ppenum);
+} IEnumSetupInstancesVtbl;
+
+typedef struct ISetupConfigurationVtbl
+{
+    // IUnknown methods
+    long          (__stdcall *QueryInterface) (ISetupConfiguration *This, const GUID *, void **);
+    unsigned long (__stdcall *AddRef)         (ISetupConfiguration *This);
+    unsigned long (__stdcall *Release)        (ISetupConfiguration *This);
+
+    // ISetupConfiguration methods
+    long (__stdcall *EnumInstances)                (ISetupConfiguration *This, IEnumSetupInstances** ppEnumInstances);
+    long (__stdcall *GetInstanceForCurrentProcess) (ISetupConfiguration *This, ISetupInstance** ppInstance);
+    long (__stdcall *GetInstanceForPath)           (ISetupConfiguration *This, const wchar_t *wzPath, ISetupInstance** ppInstance);
+} ISetupConfigurationVtbl;
+
+
+struct ISetupInstance
+{
+    ISetupInstanceVtbl *lpVtbl;
+};
+struct IEnumSetupInstances
+{
+    IEnumSetupInstancesVtbl *lpVtbl;
+};
+struct ISetupConfiguration
+{
+    ISetupConfigurationVtbl *lpVtbl;
+};
+
+
+
+// The beginning of the actual code that does things.
 
 
 void free_resources(Find_Result *result) {
@@ -176,98 +340,22 @@ void free_resources(Find_Result *result) {
 }
 
 
-// COM objects for the ridiculous Microsoft craziness.
-
-#undef  INTERFACE
-#define INTERFACE ISetupInstance
-DECLARE_INTERFACE_ (ISetupInstance, IUnknown)
-{
-    BEGIN_INTERFACE
-
-    // IUnknown methods
-    STDMETHOD (QueryInterface)   (THIS_  REFIID, void **) PURE;
-    STDMETHOD_(ULONG, AddRef)    (THIS) PURE;
-    STDMETHOD_(ULONG, Release)   (THIS) PURE;
-
-    // ISetupInstance methods
-    STDMETHOD(GetInstanceId)(THIS_ BSTR* pbstrInstanceId) PURE;
-    STDMETHOD(GetInstallDate)(THIS_ LPFILETIME pInstallDate) PURE;
-    STDMETHOD(GetInstallationName)(THIS_ BSTR* pbstrInstallationName) PURE;
-    STDMETHOD(GetInstallationPath)(THIS_ BSTR* pbstrInstallationPath) PURE;
-    STDMETHOD(GetInstallationVersion)(THIS_ BSTR* pbstrInstallationVersion) PURE;
-    STDMETHOD(GetDisplayName)(THIS_ LCID lcid, BSTR* pbstrDisplayName) PURE;
-    STDMETHOD(GetDescription)(THIS_ LCID lcid, BSTR* pbstrDescription) PURE;
-    STDMETHOD(ResolvePath)(THIS_ LPCOLESTR pwszRelativePath, BSTR* pbstrAbsolutePath) PURE;
-
-    END_INTERFACE
-};
-
-#undef  INTERFACE
-#define INTERFACE IEnumSetupInstances
-DECLARE_INTERFACE_ (IEnumSetupInstances, IUnknown)
-{
-    BEGIN_INTERFACE
-
-    // IUnknown methods
-    STDMETHOD (QueryInterface)   (THIS_  REFIID, void **) PURE;
-    STDMETHOD_(ULONG, AddRef)    (THIS) PURE;
-    STDMETHOD_(ULONG, Release)   (THIS) PURE;
-
-    // IEnumSetupInstances methods
-    STDMETHOD(Next)(THIS_ ULONG celt, ISetupInstance** rgelt, ULONG* pceltFetched) PURE;
-    STDMETHOD(Skip)(THIS_ ULONG celt) PURE;
-    STDMETHOD(Reset)(THIS) PURE;
-    STDMETHOD(Clone)(THIS_ IEnumSetupInstances** ppenum) PURE;
-
-    END_INTERFACE
-};
-
-#undef  INTERFACE
-#define INTERFACE ISetupConfiguration
-DECLARE_INTERFACE_ (ISetupConfiguration, IUnknown)
-{
-    BEGIN_INTERFACE
-
-    // IUnknown methods
-    STDMETHOD (QueryInterface)   (THIS_  REFIID, void **) PURE;
-    STDMETHOD_(ULONG, AddRef)    (THIS) PURE;
-    STDMETHOD_(ULONG, Release)   (THIS) PURE;
-
-    // ISetupConfiguration methods
-    STDMETHOD(EnumInstances)(THIS_ IEnumSetupInstances** ppEnumInstances) PURE;
-    STDMETHOD(GetInstanceForCurrentProcess)(THIS_ ISetupInstance** ppInstance) PURE;
-    STDMETHOD(GetInstanceForPath)(THIS_ LPCWSTR wzPath, ISetupInstance** ppInstance) PURE;
-
-    END_INTERFACE
-};
-
-#ifdef __cplusplus
-#define CALL_STDMETHOD(object, method, ...) object->method(__VA_ARGS__)
-#define CALL_STDMETHOD_(object, method) object->method()
-#else
-#define CALL_STDMETHOD(object, method, ...) object->lpVtbl->method(object, __VA_ARGS__)
-#define CALL_STDMETHOD_(object, method) object->lpVtbl->method(object)
-#endif
-
-
-// The beginning of the actual code that does things.
-
 typedef struct {
     int32_t best_version[4];  // For Windows 8 versions, only two of these numbers are used.
     wchar_t *best_name;
 } Version_Data;
 
-bool os_file_exists(wchar_t *name) {
+static bool os_file_exists(const wchar_t *name) {
     // @Robustness: What flags do we really want to check here?
 
-    DWORD attrib = GetFileAttributesW(name);
+    unsigned long attrib = GetFileAttributesW(name);
     if (attrib == INVALID_FILE_ATTRIBUTES) return false;
     if (attrib & FILE_ATTRIBUTE_DIRECTORY) return false;
 
     return true;
 }
 
-wchar_t *concat(wchar_t *a, wchar_t *b, wchar_t *c, wchar_t *d) {
+static wchar_t *concat(const wchar_t *a, const wchar_t *b, const wchar_t *c, const wchar_t *d) {
     // Concatenate up to 4 wide strings together. Allocated with malloc.
     // If you don't like that, use a programming language that actually
     // helps you with using custom allocators. Or just edit the code.
@@ -293,29 +381,29 @@ wchar_t *concat(wchar_t *a, wchar_t *b, wchar_t *c, wchar_t *d) {
     return result;
 }
 
-wchar_t *concat2(wchar_t *a, wchar_t *b) {
+static wchar_t *concat2(const wchar_t *a, const wchar_t *b) {
     return concat(a, b, NULL, NULL);
 }
 
-wchar_t *concat3(wchar_t *a, wchar_t *b, wchar_t *c) {
+static wchar_t *concat3(const wchar_t *a, const wchar_t *b, const wchar_t *c) {
     return concat(a, b, c, NULL);
 }
 
-wchar_t *concat4(wchar_t *a, wchar_t *b, wchar_t *c, wchar_t *d) {
+static wchar_t *concat4(const wchar_t *a, const wchar_t *b, const wchar_t *c, const wchar_t *d) {
     return concat(a, b, c, d);
 }
 
-typedef void (*Visit_Proc_W)(wchar_t *short_name, wchar_t *full_name, Version_Data *data);
-bool visit_files_w(wchar_t *dir_name, Version_Data *data, Visit_Proc_W proc) {
+typedef void (*Visit_Proc_W)(const wchar_t *short_name, const wchar_t *full_name, Version_Data *data);
+static bool visit_files_w(const wchar_t *dir_name, Version_Data *data, Visit_Proc_W proc) {
 
     // Visit everything in one folder (non-recursively). If it's a directory
     // that doesn't start with ".", call the visit proc on it. The visit proc
     // will see if the filename conforms to the expected versioning pattern.
 
-    WIN32_FIND_DATAW find_data;
+    win32_find_dataw_s find_data;
 
     wchar_t *wildcard_name = concat2(dir_name, L"\\*");
-    HANDLE handle = FindFirstFileW(wildcard_name, &find_data);
+    void *handle = FindFirstFileW(wildcard_name, (WIN32_FIND_DATAW *)&find_data);
     free(wildcard_name);
 
     if (handle == INVALID_HANDLE_VALUE) return false;
@@ -327,7 +415,7 @@ bool visit_files_w(wchar_t *dir_name, Version_Data *data, Visit_Proc_W proc) {
             free(full_name);
         }
 
-        BOOL success = FindNextFileW(handle, &find_data);
+        int success = FindNextFileW(handle, (WIN32_FIND_DATAW *)&find_data);
         if (!success) break;
     }
 
@@ -337,21 +425,21 @@ bool visit_files_w(wchar_t *dir_name, Version_Data *data, Visit_Proc_W proc) {
 }
 
 
-wchar_t *find_windows_kit_root_with_key(HKEY key, wchar_t *version) {
+static wchar_t *find_windows_kit_root_with_key(HKEY key, const wchar_t *version) {
     // Given a key to an already opened registry entry,
     // get the value stored under the 'version' subkey.
     // If that's not the right terminology, hey, I never do registry stuff.
 
-    DWORD required_length;
-    auto rc = RegQueryValueExW(key, version, NULL, NULL, NULL, &required_length);
-    if (rc != 0)  return NULL;
+    unsigned long required_length;
+    long rc = RegQueryValueExW(key, version, NULL, NULL, NULL, &required_length);
+    if (rc != 0) return NULL;
 
-    DWORD length = required_length + 2;  // The +2 is for the maybe optional zero later on. Probably we are over-allocating.
+    unsigned long length = required_length + 2;  // The +2 is for the maybe optional zero later on. Probably we are over-allocating.
     wchar_t *value = (wchar_t *)malloc(length);
     if (!value) return NULL;
 
-    rc = RegQueryValueExW(key, version, NULL, NULL, (LPBYTE)value, &required_length);  // We know that version is zero-terminated...
-    if (rc != 0)  return NULL;
+    rc = RegQueryValueExW(key, version, NULL, NULL, (unsigned char *)value, &required_length);  // We know that version is zero-terminated...
+    if (rc != 0) return NULL;
 
     // The documentation says that if the string for some reason was not stored
     // with zero-termination, we need to manually terminate it. Sigh!!
@@ -361,11 +449,11 @@ wchar_t *find_windows_kit_root_with_key(HKEY key, wchar_t *version) {
     return value;
 }
 
-void win10_best(wchar_t *short_name, wchar_t *full_name, Version_Data *data) {
+static void win10_best(const wchar_t *short_name, const wchar_t *full_name, Version_Data *data) {
     // Find the Windows 10 subdirectory with the highest version number.
 
     int i0, i1, i2, i3;
-    auto success = swscanf_s(short_name, L"%d.%d.%d.%d", &i0, &i1, &i2, &i3);
+    int success = swscanf_s(short_name, L"%d.%d.%d.%d", &i0, &i1, &i2, &i3);
     if (success < 4) return;
 
     if (i0 < data->best_version[0]) return;
@@ -392,11 +480,11 @@ void win10_best(wchar_t *short_name, wchar_t *full_name, Version_Data *data) {
     }
 }
 
-void win8_best(wchar_t *short_name, wchar_t *full_name, Version_Data *data) {
+static void win8_best(const wchar_t *short_name, const wchar_t *full_name, Version_Data *data) {
     // Find the Windows 8 subdirectory with the highest version number.
 
     int i0, i1;
-    auto success = swscanf_s(short_name, L"winv%d.%d", &i0, &i1);
+    int success = swscanf_s(short_name, L"winv%d.%d", &i0, &i1);
     if (success < 2) return;
 
     if (i0 < data->best_version[0]) return;
@@ -415,7 +503,7 @@ void win8_best(wchar_t *short_name, wchar_t *full_name, Version_Data *data) {
     }
 }
 
-void find_windows_kit_root(Find_Result *result) {
+static void find_windows_kit_root(Find_Result *result) {
     // Information about the Windows 10 and Windows 8 development kits
     // is stored in the same place in the registry. We open a key
     // to that place, first checking preferntially for a Windows 10 kit,
@@ -423,9 +511,9 @@ void find_windows_kit_root(Find_Result *result) {
 
     HKEY main_key;
 
-    LSTATUS rc = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots",
-                               0, KEY_QUERY_VALUE | KEY_WOW64_32KEY | KEY_ENUMERATE_SUB_KEYS, &main_key);
-    if (rc != S_OK) return;
+    long rc = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots",
+							0, KEY_QUERY_VALUE | KEY_WOW64_32KEY | KEY_ENUMERATE_SUB_KEYS, &main_key);
+    if (rc != 0) return;
 
     // Look for a Windows 10 entry.
     wchar_t *windows10_root = find_windows_kit_root_with_key(main_key, L"KitsRoot10");
@@ -469,42 +557,42 @@ void find_windows_kit_root(Find_Result *result) {
     RegCloseKey(main_key);
 }
 
-bool find_visual_studio_2017_by_fighting_through_microsoft_craziness(Find_Result *result) {
-    HRESULT rc = CoInitialize(NULL);
+static bool find_visual_studio_2017_by_fighting_through_microsoft_craziness(Find_Result *result) {
+    long rc = CoInitialize(NULL);
     // "Subsequent valid calls return false." So ignore false.
     // if rc != S_OK  return false;
 
-    GUID my_uid                   = {0x42843719, 0xDB4C, 0x46C2, {0x8E, 0x7C, 0x64, 0xF1, 0x81, 0x6E, 0xFD, 0x5B}};
-    GUID CLSID_SetupConfiguration = {0x177F0C4A, 0x1CD3, 0x4DE7, {0xA3, 0x2C, 0x71, 0xDB, 0xBB, 0x9F, 0xA3, 0x6D}};
+    guid_s my_uid                   = {0x42843719, 0xDB4C, 0x46C2, {0x8E, 0x7C, 0x64, 0xF1, 0x81, 0x6E, 0xFD, 0x5B}};
+    guid_s CLSID_SetupConfiguration = {0x177F0C4A, 0x1CD3, 0x4DE7, {0xA3, 0x2C, 0x71, 0xDB, 0xBB, 0x9F, 0xA3, 0x6D}};
 
     ISetupConfiguration *config = NULL;
 
     // NOTE(Kalinovcic): This is so stupid... These functions take references, so the code is different for C and C++......
 #ifdef __cplusplus
-    HRESULT hr = CoCreateInstance(CLSID_SetupConfiguration, NULL, CLSCTX_INPROC_SERVER, my_uid, (void **)&config);
+    long hr = CoCreateInstance((REFIID)(CLSID_SetupConfiguration), NULL, 0x1/*CLSCTX_INPROC_SERVER*/, (REFIID)my_uid, (void **)&config);
 #else
-    HRESULT hr = CoCreateInstance(&CLSID_SetupConfiguration, NULL, CLSCTX_INPROC_SERVER, &my_uid, (void **)&config);
+    long hr = CoCreateInstance((REFIID)&CLSID_SetupConfiguration, NULL, 0x1/*CLSCTX_INPROC_SERVER*/, (REFIID)&my_uid, (void **)&config);
 #endif
 
     if (hr != 0)  return false;
 
     IEnumSetupInstances *instances = NULL;
-    hr = CALL_STDMETHOD(config, EnumInstances, &instances);
-    CALL_STDMETHOD_(config, Release);
+    hr = config->lpVtbl->EnumInstances(config, &instances);
+    config->lpVtbl->Release(config);
     if (hr != 0)     return false;
     if (!instances)  return false;
 
     bool found_visual_studio_2017 = false;
     while (1) {
-        ULONG found = 0;
+        unsigned long found = 0;
         ISetupInstance *instance = NULL;
-        HRESULT hr = CALL_STDMETHOD(instances, Next, 1, &instance, &found);
-        if (hr != S_OK) break;
+        long hr = instances->lpVtbl->Next(instances, 1, &instance, &found);
+        if (hr != 0) break;
 
-        BSTR bstr_inst_path;
-        hr = CALL_STDMETHOD(instance, GetInstallationPath, &bstr_inst_path);
-        CALL_STDMETHOD_(instance, Release);
-        if (hr != S_OK)  continue;
+        wchar_t *bstr_inst_path;
+        hr = instance->lpVtbl->GetInstallationPath(instance, &bstr_inst_path);
+        instance->lpVtbl->Release(instance);
+        if (hr != 0)  continue;
 
         wchar_t *tools_filename = concat2(bstr_inst_path, L"\\VC\\Auxiliary\\Build\\Microsoft.VCToolsVersion.default.txt");
         SysFreeString(bstr_inst_path);
@@ -515,9 +603,9 @@ bool find_visual_studio_2017_by_fighting_through_microsoft_craziness(Find_Result
         if (open_result != 0) continue;
         if (!f) continue;
 
-        LARGE_INTEGER tools_file_size;
-        HANDLE file_handle = (HANDLE)_get_osfhandle(_fileno(f));
-        BOOL success = GetFileSizeEx(file_handle, &tools_file_size);
+        large_integer_s tools_file_size;
+        void *file_handle = (void *)_get_osfhandle(_fileno(f));
+        int success = GetFileSizeEx(file_handle, (LARGE_INTEGER *)&tools_file_size);
         if (!success) {
             fclose(f);
             continue;
@@ -526,7 +614,7 @@ bool find_visual_studio_2017_by_fighting_through_microsoft_craziness(Find_Result
         size_t version_length = (size_t)(tools_file_size.QuadPart + 1);  // Warning: This multiplication by 2 presumes there is no variable-length encoding in the wchars (wacky characters in the file could betray this expectation).
         wchar_t *version = (wchar_t *)malloc(version_length * 2);
 
-        wchar_t *read_result = fgetws(version, version_length, f);
+        wchar_t *read_result = fgetws(version, (int)version_length, f);
         fclose(f);
         if (!read_result) continue;
 
@@ -558,11 +646,11 @@ bool find_visual_studio_2017_by_fighting_through_microsoft_craziness(Find_Result
         */
     }
 
-    CALL_STDMETHOD_(instances, Release);
+    instances->lpVtbl->Release(instances);
     return found_visual_studio_2017;
 }
 
-void find_visual_studio_by_fighting_through_microsoft_craziness(Find_Result *result) {
+static void find_visual_studio_by_fighting_through_microsoft_craziness(Find_Result *result) {
     // The name of this procedure is kind of cryptic. Its purpose is
     // to fight through Microsoft craziness. The things that the fine
     // Visual Studio team want you to do, JUST TO FIND A SINGLE FOLDER
@@ -585,20 +673,20 @@ void find_visual_studio_by_fighting_through_microsoft_craziness(Find_Result *res
     // If we get here, we didn't find Visual Studio 2017. Try earlier versions.
 
     HKEY vs7_key;
-    HRESULT rc = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\VisualStudio\\SxS\\VS7", 0, KEY_QUERY_VALUE | KEY_WOW64_32KEY, &vs7_key);
-    if (rc != S_OK)  return;
+    long rc = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\VisualStudio\\SxS\\VS7", 0, KEY_QUERY_VALUE | KEY_WOW64_32KEY, &vs7_key);
+    if (rc != 0)  return;
 
     // Hardcoded search for 4 prior Visual Studio versions. Is there something better to do here?
-    wchar_t *versions[] = { L"14.0", L"12.0", L"11.0", L"10.0" };
+    const wchar_t *versions[] = { L"14.0", L"12.0", L"11.0", L"10.0" };
     const int NUM_VERSIONS = sizeof(versions) / sizeof(versions[0]);
 
     for (int i = 0; i < NUM_VERSIONS; i++) {
-        wchar_t *v = versions[i];
+        const wchar_t *v = versions[i];
 
-        DWORD dw_type;
-        DWORD cb_data;
+        unsigned long dw_type;
+        unsigned long cb_data;
 
-        LSTATUS rc = RegQueryValueExW(vs7_key, v, NULL, &dw_type, NULL, &cb_data);
+        long rc = RegQueryValueExW(vs7_key, v, NULL, &dw_type, NULL, &cb_data);
         if ((rc == ERROR_FILE_NOT_FOUND) || (dw_type != REG_SZ)) {
             continue;
         }
@@ -606,7 +694,7 @@ void find_visual_studio_by_fighting_through_microsoft_craziness(Find_Result *res
         wchar_t *buffer = (wchar_t *)malloc(cb_data);
         if (!buffer)  return;
 
-        rc = RegQueryValueExW(vs7_key, v, NULL, NULL, (LPBYTE)buffer, &cb_data);
+        rc = RegQueryValueExW(vs7_key, v, NULL, NULL, (unsigned char *)buffer, &cb_data);
         if (rc != 0)  continue;
 
         // @Robustness: Do the zero-termination thing suggested in the RegQueryValue docs?
@@ -637,7 +725,7 @@ void find_visual_studio_by_fighting_through_microsoft_craziness(Find_Result *res
 }
 
 
-static char *wide_to_string(wchar_t *wstr) {
+static char *wide_to_string(const wchar_t *wstr) {
     if (!wstr) {
         return NULL;
     }
@@ -685,7 +773,3 @@ Find_Result find_visual_studio_and_windows_sdk() {
 
 #endif  // MICROSOFT_CRAZINESS_IMPLEMENTATION_GUARD
 #endif  // MICROSOFT_CRAZINESS_IMPLEMENTATION
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
