@@ -162,11 +162,11 @@ ParseType(Parser *parser,
 	{
 		Type type = {};
 		type.kind = TypeKind_Pointer;
-		type.pointee() = push_struct<Type>(arena);
+		type.pointee = push_struct<Type>(arena);
 
 		AdvanceToken(parser, lexer); // eat the '*'
 
-		*type.pointee() = ParseType(parser, lexer, arena);
+		*type.pointee = ParseType(parser, lexer, arena);
 
 		return type;
 	}
@@ -179,11 +179,11 @@ ParseType(Parser *parser,
 		{
 			Type type = {};
 			type.kind = TypeKind_Slice;
-			type.array().elementType = push_struct<Type>(arena);
+			type.array.elementType = push_struct<Type>(arena);
 
 			ExpectToken(parser, lexer, TokenKind_CloseBracket);
 
-			*type.array().elementType = ParseType(parser, lexer, arena);
+			*type.array.elementType = ParseType(parser, lexer, arena);
 
 			return type;
 		}
@@ -194,23 +194,23 @@ ParseType(Parser *parser,
 
 			Type type = {};
 			type.kind = TypeKind_DynamicArray;
-			type.array().elementType = push_struct<Type>(arena);
+			type.array.elementType = push_struct<Type>(arena);
 
 			ExpectToken(parser, lexer, TokenKind_CloseBracket);
 
-			*type.array().elementType = ParseType(parser, lexer, arena);
+			*type.array.elementType = ParseType(parser, lexer, arena);
 
 			return type;
 		}
 
 		Type type = {};
 		type.kind = TypeKind_Array;
-		type.array().elementType = push_struct<Type>(arena);
-		type.array().lengthExpr = ParseExpression(parser, lexer, 0, arena);
+		type.array.elementType = push_struct<Type>(arena);
+		type.array.lengthExpr = ParseExpression(parser, lexer, 0, arena);
 
 		ExpectToken(parser, lexer, TokenKind_CloseBracket);
 
-		*type.array().elementType = ParseType(parser, lexer, arena);
+		*type.array.elementType = ParseType(parser, lexer, arena);
 
 		return type;
 	}
@@ -243,14 +243,14 @@ ParseType(Parser *parser,
 
 		Type type = {};
 		type.kind = TypeKind_Proc;
-		type.procInfo() = push_struct<ProcInfo>(arena);
-		type.procInfo()->returnType.kind = TypeKind_Void;
-		type.procInfo()->params = copy_into_slice(params, arena);
+		type.procInfo = push_struct<ProcInfo>(arena);
+		type.procInfo->returnType.kind = TypeKind_Void;
+		type.procInfo->params = copy_into_slice(params, arena);
 
 		if (parser->current.kind == TokenKind_Arrow)
 		{
 			ExpectToken(parser, lexer, TokenKind_Arrow);
-			type.procInfo()->returnType = ParseType(parser, lexer, arena);
+			type.procInfo->returnType = ParseType(parser, lexer, arena);
 		}
 
 		while (parser->current.kind == TokenKind_Hash)
@@ -260,17 +260,17 @@ ParseType(Parser *parser,
 			if (parser->current.str == "foreign")
 			{
 				ExpectToken(parser, lexer, TokenKind_Identifier);
-				type.procInfo()->isForeign = true;
+				type.procInfo->isForeign = true;
 			}
 			else if (parser->current.str == "variadic")
 			{
 				ExpectToken(parser, lexer, TokenKind_Identifier);
-				type.procInfo()->isVariadic = true;
+				type.procInfo->isVariadic = true;
 			}
 			else if (parser->current.str == "coroutine")
 			{
 				ExpectToken(parser, lexer, TokenKind_Identifier);
-				type.procInfo()->isCoroutine = true;
+				type.procInfo->isCoroutine = true;
 			}
 			else
 			{

@@ -223,13 +223,13 @@ GenerateLValueAddress(Node *baseNode,
 			{
 				GenerateExpression(node->arrayExpr, context);
 
-				size = SizeOfType(*node->arrayExpr->inferredType.pointee());
+				size = SizeOfType(*node->arrayExpr->inferredType.pointee);
 			}
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Array)
 			{
 				GenerateLValueAddress(node->arrayExpr, context);
 
-				size = SizeOfType(*node->arrayExpr->inferredType.array().elementType);
+				size = SizeOfType(*node->arrayExpr->inferredType.array.elementType);
 			}
 			else if (node->arrayExpr->inferredType.kind == TypeKind_Slice
 					 || node->arrayExpr->inferredType.kind == TypeKind_DynamicArray)
@@ -242,7 +242,7 @@ GenerateLValueAddress(Node *baseNode,
 				Emit(context, "    mov rax, qword [rax]");
 				Emit(context, "    push rax");
 
-				size = SizeOfType(*node->arrayExpr->inferredType.array().elementType);
+				size = SizeOfType(*node->arrayExpr->inferredType.array.elementType);
 			}
 			else
 			{
@@ -745,7 +745,7 @@ GenerateExpression(Node *baseNode,
 		{
 			ProcRefNode *node = As<ProcRefNode>(baseNode);
 
-			string symbolName = GetSymbolNameForFunction(node->linkName, node->inferredType.procInfo()->isForeign);
+			string symbolName = GetSymbolNameForFunction(node->linkName, node->inferredType.procInfo->isForeign);
 
 			Emit(context, "    lea rax, [%s]\t; load function address", symbolName);
 			Emit(context, "    push rax");

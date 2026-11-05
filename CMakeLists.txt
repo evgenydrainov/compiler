@@ -92,6 +92,10 @@ set(LINK_FLAGS
 target_link_options(compiler PRIVATE ${LINK_FLAGS})
 target_link_options(run_tests PRIVATE ${LINK_FLAGS})
 
+target_compile_definitions(compiler PRIVATE
+    TYPE_USE_DECLSPEC_PROPERTY=1
+)
+
 set_property(TARGET compiler PROPERTY
     MSVC_RUNTIME_LIBRARY
     "$<$<CONFIG:Debug>:MultiThreadedDebugDLL>$<$<NOT:$<CONFIG:Debug>>:MultiThreaded>"

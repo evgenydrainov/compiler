@@ -4,6 +4,16 @@
 #include <stdio.h> // for sprintf_s
 #include <string.h> // for strlen
 
+#ifndef TYPE_USE_DECLSPEC_PROPERTY
+#  define TYPE_USE_DECLSPEC_PROPERTY 0
+#endif
+
+#if TYPE_USE_DECLSPEC_PROPERTY
+#  define TYPE_STRUCT_UNION_NAME data
+#else
+#  define TYPE_STRUCT_UNION_NAME
+#endif
+
 #define TYPE_KIND_LIST(X) \
 	X(TypeKind_Unknown,       0,    "unknown type"     ) \
 	X(TypeKind_InferMe,       1,    "not inferred yet" ) \
@@ -67,39 +77,75 @@ struct Type
 
 		// TypeKind_Array, TypeKind_Slice, TypeKind_DynamicArray
 		ArrayTypeInfo array;
-	} data;
+	} TYPE_STRUCT_UNION_NAME;
 
-	Type *&pointee()
+#if TYPE_USE_DECLSPEC_PROPERTY
+	Type *get_pointee()
 	{
 		Assert(kind == TypeKind_Pointer);
 		return data.pointee;
 	}
 
-	StructInfo *&structInfo()
+	void set_pointee(Type *pointee)
+	{
+		Assert(kind == TypeKind_Pointer);
+		data.pointee = pointee;
+	}
+
+	StructInfo *get_structInfo()
 	{
 		Assert(kind == TypeKind_Struct);
 		return data.structInfo;
 	}
 
-	EnumInfo *&enumInfo()
+	void set_structInfo(StructInfo *structInfo)
+	{
+		Assert(kind == TypeKind_Struct);
+		data.structInfo = structInfo;
+	}
+
+	EnumInfo *get_enumInfo()
 	{
 		Assert(kind == TypeKind_Enum);
 		return data.enumInfo;
 	}
 
-	ProcInfo *&procInfo()
+	void set_enumInfo(EnumInfo *enumInfo)
+	{
+		Assert(kind == TypeKind_Enum);
+		data.enumInfo = enumInfo;
+	}
+
+	ProcInfo *get_procInfo()
 	{
 		Assert(kind == TypeKind_Proc);
 		return data.procInfo;
 	}
 
-	ArrayTypeInfo &array()
+	void set_procInfo(ProcInfo *procInfo)
 	{
-		Assert(kind == TypeKind_Array
-			   || kind == TypeKind_Slice
-			   || kind == TypeKind_DynamicArray);
+		Assert(kind == TypeKind_Proc);
+		data.procInfo = procInfo;
+	}
+
+	ArrayTypeInfo &get_array()
+	{
+		Assert(kind == TypeKind_Array || kind == TypeKind_Slice || kind == TypeKind_DynamicArray);
 		return data.array;
 	}
+
+	void set_array(ArrayTypeInfo array)
+	{
+		Assert(kind == TypeKind_Array || kind == TypeKind_Slice || kind == TypeKind_DynamicArray);
+		data.array = array;
+	}
+
+	__declspec(property(get=get_pointee,    put=set_pointee))    Type *pointee;
+	__declspec(property(get=get_structInfo, put=set_structInfo)) StructInfo *structInfo;
+	__declspec(property(get=get_enumInfo,   put=set_enumInfo))   EnumInfo *enumInfo;
+	__declspec(property(get=get_procInfo,   put=set_procInfo))   ProcInfo *procInfo;
+	__declspec(property(get=get_array,      put=set_array))      ArrayTypeInfo array;
+#endif
 };
 
 struct StructField
@@ -190,7 +236,7 @@ TypesEqual(Type a, Type b)
 	if (a.kind == TypeKind_Pointer
 		&& b.kind == TypeKind_Pointer)
 	{
-		return TypesEqual(*a.pointee(), *b.pointee());
+		return TypesEqual(*a.pointee, *b.pointee);
 	}
 
 	if (a.kind == TypeKind_Struct
@@ -208,27 +254,27 @@ TypesEqual(Type a, Type b)
 	if (a.kind == TypeKind_Array
 		&& b.kind == TypeKind_Array)
 	{
-		return (a.array().length != 0
-				&& a.array().length == b.array().length
-				&& TypesEqual(*a.array().elementType, *b.array().elementType));
+		return (a.array.length != 0
+				&& a.array.length == b.array.length
+				&& TypesEqual(*a.array.elementType, *b.array.elementType));
 	}
 
 	if (a.kind == TypeKind_Slice
 		&& b.kind == TypeKind_Slice)
 	{
-		return TypesEqual(*a.array().elementType, *b.array().elementType);
+		return TypesEqual(*a.array.elementType, *b.array.elementType);
 	}
 
 	if (a.kind == TypeKind_DynamicArray
 		&& b.kind == TypeKind_DynamicArray)
 	{
-		return TypesEqual(*a.array().elementType, *b.array().elementType);
+		return TypesEqual(*a.array.elementType, *b.array.elementType);
 	}
 
 	if (a.kind == TypeKind_Proc
 		&& b.kind == TypeKind_Proc)
 	{
-		return AreEqual(a.procInfo(), b.procInfo());
+		return AreEqual(a.procInfo, b.procInfo);
 	}
 
 	return a.kind == b.kind;
@@ -266,24 +312,24 @@ SizeOfType(Type type)
 
 		case TypeKind_Enum:
 		{
-			Assert(type.enumInfo(), "type was not resolved");
+			Assert(type.enumInfo, "type was not resolved");
 
-			result = SizeOfType(type.enumInfo()->underlyingType);
+			result = SizeOfType(type.enumInfo->underlyingType);
 		} break;
 
 		case TypeKind_Struct:
 		{
-			Assert(type.structInfo(), "type was not resolved");
+			Assert(type.structInfo, "type was not resolved");
 
-			result = type.structInfo()->size;
+			result = type.structInfo->size;
 		} break;
 
 		case TypeKind_Array:
 		{
-			Assert(type.array().length != 0, "type was not resolved");
+			Assert(type.array.length != 0, "type was not resolved");
 
-			int elementSize = SizeOfType(*type.array().elementType);
-			result = type.array().length * elementSize;
+			int elementSize = SizeOfType(*type.array.elementType);
+			result = type.array.length * elementSize;
 		} break;
 
 		case TypeKind_Unknown:
@@ -380,16 +426,16 @@ AlignmentOfType(Type type)
 	{
 		case TypeKind_Struct:
 		{
-			Assert(type.structInfo(), "type was not resolved");
+			Assert(type.structInfo, "type was not resolved");
 
-			result = type.structInfo()->alignment;
+			result = type.structInfo->alignment;
 		} break;
 
 		case TypeKind_Array:
 		{
-			Assert(type.array().length != 0, "type was not resolved");
+			Assert(type.array.length != 0, "type was not resolved");
 
-			result = AlignmentOfType(*type.array().elementType);
+			result = AlignmentOfType(*type.array.elementType);
 		} break;
 
 		case TypeKind_Slice:        {result = 8;} break;
@@ -437,35 +483,35 @@ WriteType(Type type, string_builder *builder)
 		case TypeKind_Pointer:
 		{
 			builder_write(builder, "*");
-			WriteType(*type.pointee(), builder);
+			WriteType(*type.pointee, builder);
 		} break;
 
 		case TypeKind_Struct:
 		{
-			builder_write(builder, type.structInfo()->name);
+			builder_write(builder, type.structInfo->name);
 		} break;
 
 		case TypeKind_Enum:
 		{
-			builder_write(builder, type.enumInfo()->name);
+			builder_write(builder, type.enumInfo->name);
 		} break;
 
 		case TypeKind_Array:
 		{
-			builder_print(builder, "[%d]", type.array().length);
-			WriteType(*type.array().elementType, builder);
+			builder_print(builder, "[%d]", type.array.length);
+			WriteType(*type.array.elementType, builder);
 		} break;
 
 		case TypeKind_Slice:
 		{
 			builder_write(builder, "[]");
-			WriteType(*type.array().elementType, builder);
+			WriteType(*type.array.elementType, builder);
 		} break;
 
 		case TypeKind_DynamicArray:
 		{
 			builder_write(builder, "[..]");
-			WriteType(*type.array().elementType, builder);
+			WriteType(*type.array.elementType, builder);
 		} break;
 
 		case TypeKind_Proc:
@@ -475,7 +521,7 @@ WriteType(Type type, string_builder *builder)
 			bool needComma = false;
 			int index = 0;
 
-			for (const Type &it : type.procInfo()->params)
+			for (const Type &it : type.procInfo->params)
 			{
 				if (needComma)
 				{
@@ -491,17 +537,17 @@ WriteType(Type type, string_builder *builder)
 
 			builder_write(builder, ")");
 
-			if (type.procInfo()->isForeign)
+			if (type.procInfo->isForeign)
 			{
 				builder_write(builder, " #foreign");
 			}
 
-			if (type.procInfo()->isVariadic)
+			if (type.procInfo->isVariadic)
 			{
 				builder_write(builder, " #variadic");
 			}
 
-			if (type.procInfo()->isCoroutine)
+			if (type.procInfo->isCoroutine)
 			{
 				builder_write(builder, " #coroutine");
 			}
