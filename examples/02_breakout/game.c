@@ -12,6 +12,9 @@ Game :: struct
 	state: GameState;
 	title: Title;
 	world: World;
+
+	// only kept while the game is running
+	high_score: int;
 };
 
 game_update :: proc(game: *Game, delta: f32)
@@ -33,7 +36,7 @@ game_draw :: proc(game: *Game)
 {
 	switch game.state
 	{
-		case .title: title_draw(&game.title);
+		case .title: title_draw(&game.title, game);
 		case .world: world_draw(&game.world);
 	}
 }
