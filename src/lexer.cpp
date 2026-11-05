@@ -968,7 +968,7 @@ GetToken(Lexer *lexer)
 
 		string filePath = string_slice(filePathToken.str, 1, -1);
 		string searchDir = strip_filename(lexer->fileName);
-		string fullFilePath = string_concat(searchDir, filePath, temp_allocator());
+		string fullFilePath = string_concat(searchDir, filePath, heap_allocator());
 
 		return IncludeFile(lexer, location, fullFilePath);
 	}
@@ -993,7 +993,7 @@ GetToken(Lexer *lexer)
 		Token filePathToken = ParseString(lexer, {});
 
 		string filePath = string_slice(filePathToken.str, 1, -1);
-		string fullFilePath = string_concat(lexer->context->modulesDir, filePath, temp_allocator());
+		string fullFilePath = string_concat(lexer->context->modulesDir, filePath, heap_allocator());
 
 		return IncludeFile(lexer, location, fullFilePath);
 	}
