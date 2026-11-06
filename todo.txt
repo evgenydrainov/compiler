@@ -4,7 +4,7 @@ some kind of typeof() operator and compile-time type comparison
 
 #embed file
 
-floating-point constants (and typed constants)
+constants of custom types (FOO :: Foo{1, 2, 3})
 
 pointer arithmetic maybe
 

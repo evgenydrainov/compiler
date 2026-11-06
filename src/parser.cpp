@@ -1421,21 +1421,17 @@ ParseStatement(Parser *parser,
 internal Node *
 ParseFunctionDefinition(Parser *parser,
 						Lexer *lexer,
-						Arena *arena)
+						Arena *arena,
+						string functionName)
 {
 	// function definition
+
 	// main :: proc(foo: int) -> i64 { statements; }
 
 	small_array<ParamNode *, 32> params = {};
 
 	ProcDeclNode *node = MakeNode<ProcDeclNode>(parser->current.location, arena);
-	node->name = parser->current.str;
-
-	// eat the function name
-	AdvanceToken(parser, lexer);
-
-	ExpectToken(parser, lexer, TokenKind_Colon);
-	ExpectToken(parser, lexer, TokenKind_Colon);
+	node->name = functionName;
 
 	ExpectToken(parser, lexer, TokenKind_Proc);
 
@@ -1526,18 +1522,13 @@ ParseFunctionDefinition(Parser *parser,
 internal Node *
 ParseMacroDefinition(Parser *parser,
 					 Lexer *lexer,
-					 Arena *arena)
+					 Arena *arena,
+					 string macroName)
 {
 	// foo :: macro(a, b, c) { statements; }
 
 	MacroDeclNode *node = MakeNode<MacroDeclNode>(parser->current.location, arena);
-	node->name = parser->current.str;
-
-	// eat the macro name
-	AdvanceToken(parser, lexer);
-
-	ExpectToken(parser, lexer, TokenKind_Colon);
-	ExpectToken(parser, lexer, TokenKind_Colon);
+	node->name = macroName;
 
 	ExpectToken(parser, lexer, TokenKind_Macro);
 
@@ -1599,15 +1590,11 @@ ParseMacroDefinition(Parser *parser,
 internal Node *
 ParseStructDefinition(Parser *parser,
 					  Lexer *lexer,
-					  Arena *arena)
+					  Arena *arena,
+					  string structName)
 {
 	StructDeclNode *node = MakeNode<StructDeclNode>(parser->current.location, arena);
-	node->name = parser->current.str;
-
-	ExpectToken(parser, lexer, TokenKind_Identifier);
-
-	ExpectToken(parser, lexer, TokenKind_Colon);
-	ExpectToken(parser, lexer, TokenKind_Colon);
+	node->name = structName;
 
 	ExpectToken(parser, lexer, TokenKind_Struct);
 
@@ -1697,15 +1684,11 @@ ParseStructDefinition(Parser *parser,
 internal Node *
 ParseEnumDefinition(Parser *parser,
 					Lexer *lexer,
-					Arena *arena)
+					Arena *arena,
+					string enumName)
 {
 	EnumDeclNode *node = MakeNode<EnumDeclNode>(parser->current.location, arena);
-	node->name = parser->current.str;
-
-	AdvanceToken(parser, lexer); // eat the enum name
-
-	ExpectToken(parser, lexer, TokenKind_Colon);
-	ExpectToken(parser, lexer, TokenKind_Colon);
+	node->name = enumName;
 
 	ExpectToken(parser, lexer, TokenKind_Enum);
 
@@ -1752,15 +1735,13 @@ ParseEnumDefinition(Parser *parser,
 internal Node *
 ParseConstantDefinition(Parser *parser,
 						Lexer *lexer,
-						Arena *arena)
+						Arena *arena,
+						string constantName,
+						Type type)
 {
 	ConstantDeclNode *node = MakeNode<ConstantDeclNode>(parser->current.location, arena);
-	node->name = parser->current.str;
-
-	AdvanceToken(parser, lexer); // eat the constant name
-
-	ExpectToken(parser, lexer, TokenKind_Colon);
-	ExpectToken(parser, lexer, TokenKind_Colon);
+	node->name = constantName;
+	node->type = type;
 
 	node->expr = ParseExpression(parser, lexer, 0, arena);
 
@@ -1776,43 +1757,68 @@ ParseTopLevelStatement(Parser *parser,
 {
 	if (parser->current.kind == TokenKind_Identifier)
 	{
-		Token peekToken0 = PeekToken(lexer, 1);
-		Token peekToken1 = PeekToken(lexer, 2);
-		Token peekToken2 = PeekToken(lexer, 3);
+		string name = parser->current.str;
+		ExpectToken(parser, lexer, TokenKind_Identifier);
 
-		if (peekToken0.kind == TokenKind_Colon)
+		ExpectToken(parser, lexer, TokenKind_Colon);
+
+		Type type = { TypeKind_InferMe };
+
+		if (parser->current.kind != TokenKind_Colon
+			&& parser->current.kind != TokenKind_Equal)
 		{
-			if (peekToken1.kind == TokenKind_Colon)
+			type = ParseType(parser, lexer, arena);
+		}
+
+		if (parser->current.kind == TokenKind_Colon)
+		{
+			// name : <Type> : something;
+
+			ExpectToken(parser, lexer, TokenKind_Colon);
+
+			if (parser->current.kind == TokenKind_Proc)
 			{
-				if (peekToken2.kind == TokenKind_Proc)
-				{
-					return ParseFunctionDefinition(parser, lexer, arena);
-				}
-
-				if (peekToken2.kind == TokenKind_Struct)
-				{
-					return ParseStructDefinition(parser, lexer, arena);
-				}
-
-				if (peekToken2.kind == TokenKind_Enum)
-				{
-					return ParseEnumDefinition(parser, lexer, arena);
-				}
-
-				if (peekToken2.kind == TokenKind_Macro)
-				{
-					return ParseMacroDefinition(parser, lexer, arena);
-				}
-
-				// compile-time constant
-				// FOO :: 123;
-				return ParseConstantDefinition(parser, lexer, arena);
+				return ParseFunctionDefinition(parser, lexer, arena, name);
 			}
 
-			// global variable declaration
-			// foo: int;
-			return ParseVariableDeclaration(parser, lexer, arena);
+			if (parser->current.kind == TokenKind_Struct)
+			{
+				return ParseStructDefinition(parser, lexer, arena, name);
+			}
+
+			if (parser->current.kind == TokenKind_Enum)
+			{
+				return ParseEnumDefinition(parser, lexer, arena, name);
+			}
+
+			if (parser->current.kind == TokenKind_Macro)
+			{
+				return ParseMacroDefinition(parser, lexer, arena, name);
+			}
+
+			return ParseConstantDefinition(parser, lexer, arena, name, type);
 		}
+		
+		if (parser->current.kind == TokenKind_Equal)
+		{
+			// name : <Type> = something;
+
+			ExpectToken(parser, lexer, TokenKind_Equal);
+
+			ErrorAtCurrent(parser, "global variable with initializer is not implemented");
+
+			return nullptr;
+		}
+
+		// global variable declaration
+		// name : Type;
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+		VarDeclNode *node = MakeNode<VarDeclNode>(parser->current.location, arena);
+		node->name = name;
+		node->type = type;
+
+		return node;
 	}
 
 	if (parser->current.kind == TokenKind_Semicolon)

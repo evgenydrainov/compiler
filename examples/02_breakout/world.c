@@ -110,6 +110,7 @@ world_init :: proc(world: *World)
 
 BALL_LAUNCH_SPEED :: 4;
 BALL_MAX_SPEED    :: 6;
+BALL_SPEEDUP      :: 1.05;
 
 BRICK_COLUMNS  :: 6;
 BRICK_MAX_ROWS :: 6;
@@ -211,14 +212,11 @@ ball_bounce_off_brick :: proc(ball: *Entity, brick: *Entity)
 	}
 
 	// speed up a little with every brick
-	// TODO: make this a constant once float constants are supported
-	speedup: f32 = 1.05;
-
 	speed := sqrtf(ball.hspeed*ball.hspeed + ball.vspeed*ball.vspeed);
-	if speed * speedup <= BALL_MAX_SPEED
+	if speed * BALL_SPEEDUP <= BALL_MAX_SPEED
 	{
-		ball.hspeed *= speedup;
-		ball.vspeed *= speedup;
+		ball.hspeed *= BALL_SPEEDUP;
+		ball.vspeed *= BALL_SPEEDUP;
 	}
 }
 

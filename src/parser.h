@@ -396,6 +396,7 @@ struct ConstantDeclNode : public Node
 	static constexpr NodeKind KIND = NodeKind_ConstantDecl;
 
 	string name;
+	Type type;
 	Node *expr;
 };
 

@@ -135,108 +135,344 @@ IsLValue(Node *_node)
 	return result;
 }
 
-internal i64
+internal ConstantValue
 EvaluateConstantExpression(Node *baseNode,
 						   SemanticContext *context)
 {
-	if (baseNode->kind == NodeKind_Int64Literal)
+	ConstantValue result = {};
+
+	switch (baseNode->kind)
 	{
-		Int64LiteralNode *node = As<Int64LiteralNode>(baseNode);
-
-		return node->value;
-	}
-	else if (baseNode->kind == NodeKind_Binary)
-	{
-		BinaryNode *node = As<BinaryNode>(baseNode);
-
-		i64 value1 = EvaluateConstantExpression(node->lhs, context);
-		i64 value2 = EvaluateConstantExpression(node->rhs, context);
-
-		if (node->op == BinaryOp_Divide
-			|| node->op == BinaryOp_Modulo)
+		case NodeKind_Int64Literal:
 		{
-			if (value2 == 0)
+			Int64LiteralNode *node = As<Int64LiteralNode>(baseNode);
+		
+			result.kind = ConstantKind_Int64;
+			result.int64Value = node->value;
+		} break;
+
+		case NodeKind_Float32Literal:
+		{
+			Float32LiteralNode *node = As<Float32LiteralNode>(baseNode);
+
+			result.kind = ConstantKind_Float32;
+			result.float32Value = node->value;
+		} break;
+
+		case NodeKind_Float64Literal:
+		{
+			Float64LiteralNode *node = As<Float64LiteralNode>(baseNode);
+
+			result.kind = ConstantKind_Float64;
+			result.float64Value = node->value;
+		} break;
+
+		case NodeKind_BoolLiteral:
+		{
+			BoolLiteralNode *node = As<BoolLiteralNode>(baseNode);
+
+			result.kind = ConstantKind_Bool;
+			result.boolValue = node->value;
+		} break;
+
+		case NodeKind_Binary:
+		{
+			BinaryNode *node = As<BinaryNode>(baseNode);
+
+			ConstantValue value1 = EvaluateConstantExpression(node->lhs, context);
+			ConstantValue value2 = EvaluateConstantExpression(node->rhs, context);
+
+			if (value1.kind != value2.kind)
 			{
-				Error(context, baseNode, "division by zero in constant expression");
-				return 0;
+				Error(context, baseNode,
+					  "operator '%s': invalid operands '%s' and '%s'",
+					  GetBinaryOpSymbol(node->op),
+					  GetConstantKindName(value1.kind),
+					  GetConstantKindName(value2.kind));
+				return result;
 			}
-		}
 
-		i64 result = 0;
+			if (node->op == BinaryOp_Divide
+				|| node->op == BinaryOp_Modulo)
+			{
+				if (AsInt64(value2) == 0)
+				{
+					Error(context, baseNode, "division by zero in constant expression");
+					return result;
+				}
+			}
 
-		switch (node->op)
+			result.kind = value1.kind;
+
+			switch (value1.kind)
+			{
+				case ConstantKind_Int64:
+				{
+					switch (node->op)
+					{
+						case BinaryOp_Add:          {result.int64Value = value1.int64Value +  value2.int64Value;} break;
+						case BinaryOp_Subtract:     {result.int64Value = value1.int64Value -  value2.int64Value;} break;
+						case BinaryOp_Multiply:     {result.int64Value = value1.int64Value *  value2.int64Value;} break;
+						case BinaryOp_Divide:       {result.int64Value = value1.int64Value /  value2.int64Value;} break;
+						case BinaryOp_Modulo:       {result.int64Value = value1.int64Value %  value2.int64Value;} break;
+						case BinaryOp_Less:         {result.int64Value = value1.int64Value <  value2.int64Value;} break;
+						case BinaryOp_Greater:      {result.int64Value = value1.int64Value >  value2.int64Value;} break;
+						case BinaryOp_EqualEqual:   {result.int64Value = value1.int64Value == value2.int64Value;} break;
+						case BinaryOp_LessEqual:    {result.int64Value = value1.int64Value <= value2.int64Value;} break;
+						case BinaryOp_GreaterEqual: {result.int64Value = value1.int64Value >= value2.int64Value;} break;
+						case BinaryOp_NotEqual:     {result.int64Value = value1.int64Value != value2.int64Value;} break;
+						case BinaryOp_BitAnd:       {result.int64Value = value1.int64Value &  value2.int64Value;} break;
+						case BinaryOp_BitOr:        {result.int64Value = value1.int64Value |  value2.int64Value;} break;
+						case BinaryOp_BitXor:       {result.int64Value = value1.int64Value ^  value2.int64Value;} break;
+						case BinaryOp_ShiftLeft:    {result.int64Value = value1.int64Value << value2.int64Value;} break;
+						case BinaryOp_ShiftRight:   {result.int64Value = value1.int64Value >> value2.int64Value;} break;
+
+						default:
+						{
+							Error(context, baseNode,
+								  "operator '%s' does not work on type '%s'",
+								  GetBinaryOpSymbol(node->op),
+								  GetConstantKindName(value1.kind));
+						} break;
+					}
+				} break;
+
+				case ConstantKind_Float32:
+				{
+					switch (node->op)
+					{
+						case BinaryOp_Add:          {result.float32Value = value1.float32Value +  value2.float32Value;} break;
+						case BinaryOp_Subtract:     {result.float32Value = value1.float32Value -  value2.float32Value;} break;
+						case BinaryOp_Multiply:     {result.float32Value = value1.float32Value *  value2.float32Value;} break;
+						case BinaryOp_Divide:       {result.float32Value = value1.float32Value /  value2.float32Value;} break;
+						case BinaryOp_Less:         {result.float32Value = value1.float32Value <  value2.float32Value;} break;
+						case BinaryOp_Greater:      {result.float32Value = value1.float32Value >  value2.float32Value;} break;
+						case BinaryOp_EqualEqual:   {result.float32Value = value1.float32Value == value2.float32Value;} break;
+						case BinaryOp_LessEqual:    {result.float32Value = value1.float32Value <= value2.float32Value;} break;
+						case BinaryOp_GreaterEqual: {result.float32Value = value1.float32Value >= value2.float32Value;} break;
+						case BinaryOp_NotEqual:     {result.float32Value = value1.float32Value != value2.float32Value;} break;
+
+						default:
+						{
+							Error(context, baseNode,
+								  "operator '%s' does not work on type '%s'",
+								  GetBinaryOpSymbol(node->op),
+								  GetConstantKindName(value1.kind));
+						} break;
+					}
+				} break;
+
+				case ConstantKind_Float64:
+				{
+					switch (node->op)
+					{
+						case BinaryOp_Add:          {result.float64Value = value1.float64Value +  value2.float64Value;} break;
+						case BinaryOp_Subtract:     {result.float64Value = value1.float64Value -  value2.float64Value;} break;
+						case BinaryOp_Multiply:     {result.float64Value = value1.float64Value *  value2.float64Value;} break;
+						case BinaryOp_Divide:       {result.float64Value = value1.float64Value /  value2.float64Value;} break;
+						case BinaryOp_Less:         {result.float64Value = value1.float64Value <  value2.float64Value;} break;
+						case BinaryOp_Greater:      {result.float64Value = value1.float64Value >  value2.float64Value;} break;
+						case BinaryOp_EqualEqual:   {result.float64Value = value1.float64Value == value2.float64Value;} break;
+						case BinaryOp_LessEqual:    {result.float64Value = value1.float64Value <= value2.float64Value;} break;
+						case BinaryOp_GreaterEqual: {result.float64Value = value1.float64Value >= value2.float64Value;} break;
+						case BinaryOp_NotEqual:     {result.float64Value = value1.float64Value != value2.float64Value;} break;
+
+						default:
+						{
+							Error(context, baseNode,
+								  "operator '%s' does not work on type '%s'",
+								  GetBinaryOpSymbol(node->op),
+								  GetConstantKindName(value1.kind));
+						} break;
+					}
+				} break;
+
+				case ConstantKind_Bool:
+				{
+					switch (node->op)
+					{
+						case BinaryOp_EqualEqual:   {result.float64Value = value1.float64Value == value2.float64Value;} break;
+						case BinaryOp_NotEqual:     {result.float64Value = value1.float64Value != value2.float64Value;} break;
+						case BinaryOp_LogicalAnd:   {result.float64Value = value1.float64Value && value2.float64Value;} break;
+						case BinaryOp_LogicalOr:    {result.float64Value = value1.float64Value || value2.float64Value;} break;
+
+						default:
+						{
+							Error(context, baseNode,
+								  "operator '%s' does not work on type '%s'",
+								  GetBinaryOpSymbol(node->op),
+								  GetConstantKindName(value1.kind));
+						} break;
+					}
+				} break;
+			}
+		} break;
+
+		case NodeKind_Unary:
 		{
-			case BinaryOp_Add:          {result = value1 + value2;} break;
-			case BinaryOp_Subtract:     {result = value1 - value2;} break;
-			case BinaryOp_Multiply:     {result = value1 * value2;} break;
-			case BinaryOp_Divide:       {result = value1 / value2;} break;
-			case BinaryOp_Modulo:       {result = value1 % value2;} break;
-			case BinaryOp_Less:         {result = value1 < value2;} break;
-			case BinaryOp_Greater:      {result = value1 > value2;} break;
-			case BinaryOp_EqualEqual:   {result = value1 == value2;} break;
-			case BinaryOp_LessEqual:    {result = value1 <= value2;} break;
-			case BinaryOp_GreaterEqual: {result = value1 >= value2;} break;
-			case BinaryOp_NotEqual:     {result = value1 != value2;} break;
-			case BinaryOp_LogicalAnd:   {result = value1 && value2;} break;
-			case BinaryOp_LogicalOr:    {result = value1 || value2;} break;
-			case BinaryOp_BitAnd:       {result = value1 & value2;} break;
-			case BinaryOp_BitOr:        {result = value1 | value2;} break;
-			case BinaryOp_BitXor:       {result = value1 ^ value2;} break;
-			case BinaryOp_ShiftLeft:    {result = value1 << value2;} break;
-			case BinaryOp_ShiftRight:   {result = value1 >> value2;} break;
-		}
+			UnaryNode *node = As<UnaryNode>(baseNode);
 
-		return result;
+			ConstantValue value = EvaluateConstantExpression(node->expr, context);
+
+			result.kind = value.kind;
+
+			switch (value.kind)
+			{
+				case ConstantKind_Int64:
+				{
+					switch (node->op)
+					{
+						case UnaryOp_Negate:     {result.int64Value = -value.int64Value;} break;
+						case UnaryOp_BitNegate:  {result.int64Value = ~value.int64Value;} break;
+
+						default:
+						{
+							Error(context, baseNode,
+								  "operator '%s' does not work on type '%s'",
+								  GetUnaryOpSymbol(node->op),
+								  GetConstantKindName(value.kind));
+						} break;
+					}
+				} break;
+
+				case ConstantKind_Float32:
+				{
+					switch (node->op)
+					{
+						case UnaryOp_Negate:     {result.float32Value = -value.float32Value;} break;
+
+						default:
+						{
+							Error(context, baseNode,
+								  "operator '%s' does not work on type '%s'",
+								  GetUnaryOpSymbol(node->op),
+								  GetConstantKindName(value.kind));
+						} break;
+					}
+				} break;
+
+				case ConstantKind_Float64:
+				{
+					switch (node->op)
+					{
+						case UnaryOp_Negate:     {result.float64Value = -value.float64Value;} break;
+
+						default:
+						{
+							Error(context, baseNode,
+								  "operator '%s' does not work on type '%s'",
+								  GetUnaryOpSymbol(node->op),
+								  GetConstantKindName(value.kind));
+						} break;
+					}
+				} break;
+
+				case ConstantKind_Bool:
+				{
+					switch (node->op)
+					{
+						case UnaryOp_LogicalNot:     {result.boolValue = !value.boolValue;} break;
+
+						default:
+						{
+							Error(context, baseNode,
+								  "operator '%s' does not work on type '%s'",
+								  GetUnaryOpSymbol(node->op),
+								  GetConstantKindName(value.kind));
+						} break;
+					}
+				} break;
+			}
+		} break;
+
+		case NodeKind_Var:
+		{
+			VarNode *node = As<VarNode>(baseNode);
+
+			Constant *constant = LookupConstant(context->constTable, node->name);
+			if (constant)
+			{
+				result = constant->value;
+			}
+			else
+			{
+				Error(context, node, "'%s' is not a constant", node->name);
+				Note(context, node, "only constants declared with '::' can be used in a constant expression");
+			}
+		} break;
+
+		case NodeKind_Cast:
+		{
+			CastNode *node = As<CastNode>(baseNode);
+
+			ConstantValue value = EvaluateConstantExpression(node->what, context);
+
+			switch (node->targetType.kind)
+			{
+				case TypeKind_Int64:
+				{
+					result.kind = ConstantKind_Int64;
+					result.int64Value = AsInt64(value);
+				} break;
+
+				case TypeKind_Float32:
+				{
+					result.kind = ConstantKind_Float32;
+					result.float32Value = AsFloat32(value);
+				} break;
+
+				case TypeKind_Float64:
+				{
+					result.kind = ConstantKind_Float64;
+					result.float64Value = AsFloat64(value);
+				} break;
+
+				case TypeKind_Bool:
+				{
+					result.kind = ConstantKind_Bool;
+					result.boolValue = AsBool(value);
+				} break;
+
+				default:
+				{
+					Error(context, baseNode,
+						  "cannot cast to '%s' at compile-time",
+						  TypeToString(node->targetType));
+				} break;
+			}
+		} break;
+
+		default:
+		{
+			Error(context, baseNode, "expression is not a compile-time constant");
+			Note(context, baseNode, "a constant expression can only use integer literals, constants and operators");
+		} break;
 	}
-	else if (baseNode->kind == NodeKind_Var)
+
+	return result;
+}
+
+internal i64
+EvaluateConstantExpressionInt(Node *baseNode,
+							  SemanticContext *context)
+{
+	ConstantValue value = EvaluateConstantExpression(baseNode, context);
+
+	if (value.kind == ConstantKind_Int64)
 	{
-		VarNode *node = As<VarNode>(baseNode);
-
-		i64 result = 0;
-
-		Constant *constant = LookupConstant(context->constTable, node->name);
-		if (constant)
-		{
-			result = constant->value;
-		}
-		else
-		{
-			Error(context, node, "'%s' is not a constant", node->name);
-			Note(context, node, "only constants declared with '::' can be used in a constant expression");
-		}
-
-		return result;
-	}
-	else if (baseNode->kind == NodeKind_Unary)
-	{
-		UnaryNode *node = As<UnaryNode>(baseNode);
-
-		i64 value = EvaluateConstantExpression(node->expr, context);
-
-		i64 result = 0;
-
-		switch (node->op)
-		{
-			case UnaryOp_Negate:     {result = -value;} break;
-			case UnaryOp_LogicalNot: {result = !value;} break;
-			case UnaryOp_BitNegate:  {result = ~value;} break;
-		}
-
-		return result;
+		return value.int64Value;
 	}
 	else
 	{
-		Error(context, baseNode, "expression is not a compile-time constant");
-		Note(context, baseNode, "a constant expression can only use integer literals, constants and operators");
+		Error(context, baseNode, "constant must be an integer");
+		return 0;
 	}
-
-	return 0;
 }
 
 internal bool
 TryEvaluateConstantExpression(Node *baseNode,
 							  SemanticContext *context,
-							  i64 *outResult)
+							  ConstantValue *outResult)
 {
 	bool saveSuppressErrors = context->suppressErrors;
 	bool saveHadError = context->hadError;
@@ -244,7 +480,7 @@ TryEvaluateConstantExpression(Node *baseNode,
 	context->suppressErrors = true;
 	context->hadError = false;
 
-	i64 result = EvaluateConstantExpression(baseNode, context);
+	ConstantValue result = EvaluateConstantExpression(baseNode, context);
 
 	bool success = !context->hadError;
 
@@ -254,6 +490,27 @@ TryEvaluateConstantExpression(Node *baseNode,
 	if (success)
 	{
 		*outResult = result;
+		return true;
+	}
+	else
+	{
+		*outResult = {};
+		return false;
+	}
+}
+
+internal bool
+TryEvaluateConstantExpressionInt(Node *baseNode,
+								 SemanticContext *context,
+								 i64 *outResult)
+{
+	ConstantValue value;
+	bool success = TryEvaluateConstantExpression(baseNode, context, &value);
+
+	if (success
+		&& value.kind == ConstantKind_Int64)
+	{
+		*outResult = value.int64Value;
 		return true;
 	}
 	else
@@ -310,7 +567,7 @@ ResolveType(Type *type,
 
 		if (type->array.length == 0)
 		{
-			i64 arrayLength = EvaluateConstantExpression(type->array.lengthExpr, context);
+			i64 arrayLength = EvaluateConstantExpressionInt(type->array.lengthExpr, context);
 			if (arrayLength > 0)
 			{
 				type->array.length = (int)arrayLength;
@@ -410,7 +667,7 @@ CanImplicitlyCast(Type destType,
 	if (IsSignedInteger(destType))
 	{
 		i64 value;
-		if (TryEvaluateConstantExpression(source, context, &value))
+		if (TryEvaluateConstantExpressionInt(source, context, &value))
 		{
 			struct Range
 			{
@@ -455,7 +712,7 @@ CanImplicitlyCast(Type destType,
 	if (IsUnsignedInteger(destType))
 	{
 		i64 value;
-		if (TryEvaluateConstantExpression(source, context, &value))
+		if (TryEvaluateConstantExpressionInt(source, context, &value))
 		{
 			struct Range
 			{
@@ -500,7 +757,7 @@ CanImplicitlyCast(Type destType,
 	if (destType.kind == TypeKind_Float32)
 	{
 		i64 value;
-		if (TryEvaluateConstantExpression(source, context, &value))
+		if (TryEvaluateConstantExpressionInt(source, context, &value))
 		{
 			// TODO: check that value fits in float32
 
@@ -515,7 +772,7 @@ CanImplicitlyCast(Type destType,
 	if (destType.kind == TypeKind_Float64)
 	{
 		i64 value;
-		if (TryEvaluateConstantExpression(source, context, &value))
+		if (TryEvaluateConstantExpressionInt(source, context, &value))
 		{
 			// TODO: check that value fits in float64
 
@@ -1346,9 +1603,36 @@ AnalyzeExpression(Node *baseNode,
 			Constant *constant = LookupConstant(context->constTable, node->name);
 			if (constant)
 			{
-				Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
-				newNode->inferredType.kind = TypeKind_Int64;
-				newNode->value = constant->value;
+				switch (constant->value.kind)
+				{
+					case ConstantKind_Int64:
+					{
+						Int64LiteralNode *newNode = ReinterpretNode<Int64LiteralNode>(node);
+						newNode->inferredType.kind = TypeKind_Int64;
+						newNode->value = constant->value.int64Value;
+					} break;
+
+					case ConstantKind_Float32:
+					{
+						Float32LiteralNode *newNode = ReinterpretNode<Float32LiteralNode>(node);
+						newNode->inferredType.kind = TypeKind_Float32;
+						newNode->value = constant->value.float32Value;
+					} break;
+
+					case ConstantKind_Float64:
+					{
+						Float64LiteralNode *newNode = ReinterpretNode<Float64LiteralNode>(node);
+						newNode->inferredType.kind = TypeKind_Float64;
+						newNode->value = constant->value.float64Value;
+					} break;
+
+					case ConstantKind_Bool:
+					{
+						BoolLiteralNode *newNode = ReinterpretNode<BoolLiteralNode>(node);
+						newNode->inferredType.kind = TypeKind_Bool;
+						newNode->value = constant->value.boolValue;
+					} break;
+				}
 
 				break;
 			}
@@ -1859,7 +2143,7 @@ AnalyzeExpression(Node *baseNode,
 				int arrayLength = node->arrayExpr->inferredType.array.length;
 
 				i64 index;
-				if (TryEvaluateConstantExpression(node->indexExpr, context, &index))
+				if (TryEvaluateConstantExpressionInt(node->indexExpr, context, &index))
 				{
 					if (!(index >= 0 && index < arrayLength))
 					{
@@ -2243,7 +2527,7 @@ AnalyzeStatement(Node *baseNode,
 					AnalyzeStatement(caseNode->body, context);
 
 					i64 result;
-					if (TryEvaluateConstantExpression(caseNode->label, context, &result))
+					if (TryEvaluateConstantExpressionInt(caseNode->label, context, &result))
 					{
 						caseNode->labelValue = result;
 					}
@@ -2350,7 +2634,7 @@ AnalyzeStatement(Node *baseNode,
 
 			AnalyzeExpression(node->what, context);
 
-			i64 value = EvaluateConstantExpression(node->what, context);
+			i64 value = EvaluateConstantExpressionInt(node->what, context);
 
 			if (value != 0)
 			{
@@ -2687,7 +2971,7 @@ EarlyAnalyze(Node *baseNode,
 
 						if (enumerator->value)
 						{
-							enumeratorValue = EvaluateConstantExpression(enumerator->value, context);
+							enumeratorValue = EvaluateConstantExpressionInt(enumerator->value, context);
 						}
 
 						info.value = enumeratorValue++;
@@ -2720,6 +3004,20 @@ EarlyAnalyze(Node *baseNode,
 				Constant *constant = DeclareConstant(context->constTable, node->name);
 
 				constant->value = EvaluateConstantExpression(node->expr, context);
+
+				Type valueType = {};
+				valueType.kind = ConstantKindToTypeKind(constant->value.kind);
+
+				if (node->type.kind != TypeKind_InferMe)
+				{
+					if (node->type.kind != valueType.kind)
+					{
+						Error(context, node,
+							  "cannot assign a value of type '%s' to a constant of type '%s'",
+							  TypeToString(valueType),
+							  TypeToString(node->type));
+					}
+				}
 			}
 			else
 			{
