@@ -30,4 +30,5 @@ mainCRTStartup :: proc() -> int #foreign
 	window_close();
 
 	ExitProcess(0);
+	return 0;
 }

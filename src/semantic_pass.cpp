@@ -2371,6 +2371,81 @@ AnalyzeStatement(Node *baseNode,
 	}
 }
 
+internal bool
+AlwaysReturns(Node *_node, SemanticContext *context)
+{
+	switch (_node->kind)
+	{
+		case NodeKind_Return: return true;
+		case NodeKind_Asm:    return true;
+
+		case NodeKind_Block:
+		{
+			BlockNode *node = As<BlockNode>(_node);
+
+			for (Node *statement : node->statements)
+			{
+				if (AlwaysReturns(statement, context))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		} break;
+
+		case NodeKind_If:
+		{
+			IfNode *node = As<IfNode>(_node);
+
+			if (node->elseBlock)
+			{
+				if (AlwaysReturns(node->thenBlock, context)
+					&& AlwaysReturns(node->elseBlock, context))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		} break;
+
+		case NodeKind_Switch:
+		{
+			SwitchNode *node = As<SwitchNode>(_node);
+
+			// must have a default case
+			if (!node->defaultBody)
+			{
+				return false;
+			}
+
+			for (CaseNode *_case : node->cases)
+			{
+				if (!AlwaysReturns(_case->body, context))
+				{
+					return false;
+				}
+			}
+
+			if (!AlwaysReturns(node->defaultBody, context))
+			{
+				return false;
+			}
+
+			return true;
+		} break;
+
+		case NodeKind_Proxy:
+		{
+			ProxyNode *node = As<ProxyNode>(_node);
+			return AlwaysReturns(node->proxy, context);
+		} break;
+
+		default: return false;
+	}
+}
+
 internal void
 AnalyzeTopLevelStatement(Node *baseNode,
 						 SemanticContext *context)
@@ -2424,6 +2499,14 @@ AnalyzeTopLevelStatement(Node *baseNode,
 			if (node->body)
 			{
 				AnalyzeBlock(node->body, context);
+
+				if (node->returnType.kind != TypeKind_Void)
+				{
+					if (!AlwaysReturns(node->body, context))
+					{
+						Error(context, node, "not all control paths in '%s' return a value", node->name);
+					}
+				}
 			}
 			else
 			{
