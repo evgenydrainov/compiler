@@ -195,7 +195,7 @@ EvaluateConstantExpression(Node *baseNode,
 			if (node->op == BinaryOp_Divide
 				|| node->op == BinaryOp_Modulo)
 			{
-				if (AsInt64(value2) == 0)
+				if (AsFloat64(value2) == 0)
 				{
 					Error(context, baseNode, "division by zero in constant expression");
 					return result;
