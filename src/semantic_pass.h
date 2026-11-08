@@ -29,7 +29,7 @@ struct SemanticContext
 	dynamic_array<GenerateCStringLiteral> cstringLiterals;
 	dynamic_array<GenerateStringLiteral> stringLiterals;
 
-	Arena *arenaForAst;
+	Arena *arena;
 
 	int macroInstantiationUniqueId;
 };

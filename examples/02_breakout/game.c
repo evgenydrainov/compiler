@@ -34,6 +34,9 @@ game_update :: proc(game: *Game, delta: f32)
 
 game_draw :: proc(game: *Game)
 {
+	// draw game background
+	DrawRectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, GetColor(0x151515ff));
+
 	switch game.state
 	{
 		case .title: title_draw(&game.title, game);

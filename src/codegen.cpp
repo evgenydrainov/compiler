@@ -184,7 +184,8 @@ GenerateLValueAddress(Node *baseNode,
 
 			if (node->expr->inferredType.kind == TypeKind_Struct
 				|| node->expr->inferredType.kind == TypeKind_Slice
-				|| node->expr->inferredType.kind == TypeKind_DynamicArray)
+				|| node->expr->inferredType.kind == TypeKind_DynamicArray
+				|| node->expr->inferredType.kind == TypeKind_Array)
 			{
 				GenerateLValueAddress(node->expr, context);
 			}
@@ -373,7 +374,7 @@ GenerateBinaryExpression(Node *baseNode,
 
 				Emit(context, "    movq rax, xmm0");
 			}
-			else
+			else if (IsInteger(node->inferredType))
 			{
 				if (node->op == BinaryOp_Add)
 				{
@@ -460,6 +461,10 @@ GenerateBinaryExpression(Node *baseNode,
 				{
 					Assert(false);
 				}
+			}
+			else
+			{
+				Assert(false);
 			}
 
 			Emit(context, "    push rax");

@@ -6,14 +6,9 @@ BallState :: enum
 
 Entity :: struct
 {
-	x: f32;
-	y: f32;
-
-	hspeed: f32;
-	vspeed: f32;
-
-	width: f32;
-	height: f32;
+	pos: vec2;
+	vel: vec2;
+	size: vec2;
 
 	ball_state: BallState;
 
@@ -94,13 +89,14 @@ world_init :: proc(world: *World)
 	paddle := &world.paddle;
 	ball := &world.ball;
 
-	paddle.x = GAME_WIDTH/2;
-	paddle.y = GAME_HEIGHT/10*9;
-	paddle.width = 40;
-	paddle.height = 10;
+	paddle.pos.x = GAME_WIDTH/2;
+	paddle.pos.y = GAME_HEIGHT/10*9;
 
-	ball.width = 10;
-	ball.height = 10;
+	paddle.size.x = 40;
+	paddle.size.y = 10;
+
+	ball.size.x = 10;
+	ball.size.y = 10;
 
 	world.lives = 3;
 	world.level = 1;
@@ -129,10 +125,10 @@ world_spawn_bricks :: proc(world: *World)
 	for i in 0..<BRICK_COLUMNS*rows
 	{
 		brick: Entity;
-		brick.width = 40;
-		brick.height = 10;
-		brick.x = 35 + (brick.width  + 10) * cast(f32)(i%BRICK_COLUMNS);
-		brick.y = 20 + (brick.height + 10) * cast(f32)(i/BRICK_COLUMNS);
+		brick.size.x = 40;
+		brick.size.y = 10;
+		brick.pos.x = 35 + (brick.size.x + 10) * cast(f32)(i%BRICK_COLUMNS);
+		brick.pos.y = 20 + (brick.size.y + 10) * cast(f32)(i/BRICK_COLUMNS);
 		brick.color = brick_row_color(i/BRICK_COLUMNS);
 
 		// higher rows are worth more
@@ -168,55 +164,54 @@ is_pause_pressed :: proc() -> bool
 // the further from the paddle's center the ball hits, the steeper the angle
 ball_bounce_off_paddle :: proc(ball: *Entity, paddle: *Entity)
 {
-	speed := sqrtf(ball.hspeed*ball.hspeed + ball.vspeed*ball.vspeed);
+	speed := vec2_length(ball.vel);
 
-	offset := (ball.x - paddle.x) / (paddle.width*0.5);
+	offset := (ball.pos.x - paddle.pos.x) / (paddle.size.x*0.5);
 	offset = fmaxf(offset, -1);
 	offset = fminf(offset,  1);
 
 	// keep at least some vertical speed so the ball never goes flat
-	ball.hspeed = speed * offset * 0.8;
-	ball.vspeed = -sqrtf(speed*speed - ball.hspeed*ball.hspeed);
+	ball.vel.x = speed * offset * 0.8;
+	ball.vel.y = -sqrtf(speed*speed - ball.vel.x*ball.vel.x);
 }
 
 // bounce along the axis with the smallest penetration
 ball_bounce_off_brick :: proc(ball: *Entity, brick: *Entity)
 {
-	dx := ball.x - brick.x;
-	dy := ball.y - brick.y;
+	dx := ball.pos.x - brick.pos.x;
+	dy := ball.pos.y - brick.pos.y;
 
-	overlap_x := (ball.width  + brick.width) *0.5 - fabsf(dx);
-	overlap_y := (ball.height + brick.height)*0.5 - fabsf(dy);
+	overlap_x := (ball.size.x + brick.size.x)*0.5 - fabsf(dx);
+	overlap_y := (ball.size.y + brick.size.y)*0.5 - fabsf(dy);
 
 	if overlap_x < overlap_y
 	{
 		if dx < 0
 		{
-			ball.hspeed = -fabsf(ball.hspeed);
+			ball.vel.x = -fabsf(ball.vel.x);
 		}
 		else
 		{
-			ball.hspeed =  fabsf(ball.hspeed);
+			ball.vel.x =  fabsf(ball.vel.x);
 		}
 	}
 	else
 	{
 		if dy < 0
 		{
-			ball.vspeed = -fabsf(ball.vspeed);
+			ball.vel.y = -fabsf(ball.vel.y);
 		}
 		else
 		{
-			ball.vspeed =  fabsf(ball.vspeed);
+			ball.vel.y =  fabsf(ball.vel.y);
 		}
 	}
 
 	// speed up a little with every brick
-	speed := sqrtf(ball.hspeed*ball.hspeed + ball.vspeed*ball.vspeed);
+	speed := vec2_length(ball.vel);
 	if speed * BALL_SPEEDUP <= BALL_MAX_SPEED
 	{
-		ball.hspeed *= BALL_SPEEDUP;
-		ball.vspeed *= BALL_SPEEDUP;
+		ball.vel *= BALL_SPEEDUP;
 	}
 }
 
@@ -274,38 +269,37 @@ world_update_playing :: proc(world: *World, delta: f32)
 	switch ball.ball_state
 	{
 	case .stick_to_paddle:
-		ball.x = paddle.x;
-		ball.y = paddle.y - (paddle.height + ball.height)*0.5;
+		ball.pos.x = paddle.pos.x;
+		ball.pos.y = paddle.pos.y - (paddle.size.y + ball.size.y)*0.5;
 
 		// wait for the bricks to appear
 		if world.level_banner_timer == 0 && IsKeyPressed(KEY_SPACE)
 		{
 			// launch straight up, aim with the paddle
-			ball.hspeed = 0;
-			ball.vspeed = -BALL_LAUNCH_SPEED;
+			ball.vel.x = 0;
+			ball.vel.y = -BALL_LAUNCH_SPEED;
 			ball.ball_state = .move;
 		}
 
 	case .move:
-		ball.x += ball.hspeed * delta;
-		ball.y += ball.vspeed * delta;
+		ball.pos += ball.vel * delta;
 
-		if ball.x + ball.width*0.5 >= GAME_WIDTH
+		if ball.pos.x + ball.size.x*0.5 >= GAME_WIDTH
 		{
-			ball.hspeed = -fabsf(ball.hspeed);
+			ball.vel.x = -fabsf(ball.vel.x);
 		}
-		if ball.x - ball.width*0.5 < 0
+		if ball.pos.x - ball.size.x*0.5 < 0
 		{
-			ball.hspeed = fabsf(ball.hspeed);
+			ball.vel.x = fabsf(ball.vel.x);
 		}
 
-		if ball.y - ball.height*0.5 < 0
+		if ball.pos.y - ball.size.y*0.5 < 0
 		{
-			ball.vspeed = fabsf(ball.vspeed);
+			ball.vel.y = fabsf(ball.vel.y);
 		}
 
 		// let it fall all the way off the screen
-		if ball.y - ball.height*0.5 >= GAME_HEIGHT
+		if ball.pos.y - ball.size.y*0.5 >= GAME_HEIGHT
 		{
 			world.lives -= 1;
 			world.state = .ball_lost;
@@ -314,7 +308,7 @@ world_update_playing :: proc(world: *World, delta: f32)
 		}
 
 		// only when moving down, so it can't get stuck inside the paddle
-		if ball.vspeed > 0 && entities_collide(ball, paddle)
+		if ball.vel.y > 0 && entities_collide(ball, paddle)
 		{
 			ball_bounce_off_paddle(ball, paddle);
 		}
@@ -396,17 +390,22 @@ PADDLE_SPEED :: 5;
 
 paddle_update :: proc(paddle: *Entity, delta: f32)
 {
+	paddle.vel.x = 0;
+	paddle.vel.y = 0;
+
 	if IsKeyDown(KEY_RIGHT)
 	{
-		paddle.x += PADDLE_SPEED*delta;
+		paddle.vel.x += PADDLE_SPEED;
 	}
 	if IsKeyDown(KEY_LEFT)
 	{
-		paddle.x -= PADDLE_SPEED*delta;
+		paddle.vel.x -= PADDLE_SPEED;
 	}
+	
+	paddle.pos += paddle.vel*delta;
 
-	paddle.x = fmaxf(paddle.x, paddle.width*0.5);
-	paddle.x = fminf(paddle.x, GAME_WIDTH - paddle.width*0.5);
+	paddle.pos.x = fmaxf(paddle.pos.x, paddle.size.x*0.5);
+	paddle.pos.x = fminf(paddle.pos.x, GAME_WIDTH - paddle.size.x*0.5);
 }
 
 entity_draw :: proc(entity: *Entity, color: u32)
@@ -416,13 +415,12 @@ entity_draw :: proc(entity: *Entity, color: u32)
 
 entity_draw_scaled :: proc(entity: *Entity, color: u32, scale: f32)
 {
-	width  := entity.width  * scale;
-	height := entity.height * scale;
+	size := entity.size*scale;
 
-	DrawRectangle(cast(i32)(entity.x - width*0.5),
-				  cast(i32)(entity.y - height*0.5),
-				  cast(i32)width,
-				  cast(i32)height,
+	DrawRectangle(cast(i32)(entity.pos.x - size.x*0.5),
+				  cast(i32)(entity.pos.y - size.y*0.5),
+				  cast(i32)size.x,
+				  cast(i32)size.y,
 				  GetColor(color));
 }
 
@@ -512,23 +510,17 @@ world_draw :: proc(world: *World)
 	world_draw_ui(world);
 }
 
-entities_collide :: proc(entity1: *Entity, entity2: *Entity) -> bool
+entities_collide :: proc(e1: *Entity, e2: *Entity) -> bool
 {
-	return rect_vs_rect(entity1.x - entity1.width*0.5,
-						entity1.y - entity1.height*0.5,
-						entity1.width,
-						entity1.height,
-						entity2.x - entity2.width*0.5,
-						entity2.y - entity2.height*0.5,
-						entity2.width,
-						entity2.height);
+	return rect_vs_rect(e1.pos - e1.size*0.5, e1.size,
+						e2.pos - e2.size*0.5, e2.size);
 }
 
-rect_vs_rect :: proc(x1: f32, y1: f32, width1: f32, height1: f32,
-					 x2: f32, y2: f32, width2: f32, height2: f32) -> bool
+rect_vs_rect :: proc(pos1: vec2, size1: vec2,
+					 pos2: vec2, size2: vec2) -> bool
 {
-	return (x1 < x2+width2
-			&& x1+width1 > x2
-			&& y1 < y2+height2
-			&& y1+height1 > y2);
+	return (pos1.x < pos2.x+size2.x
+			&& pos1.x+size1.x > pos2.x
+			&& pos1.y < pos2.y+size2.y
+			&& pos1.y+size1.y > pos2.y);
 }

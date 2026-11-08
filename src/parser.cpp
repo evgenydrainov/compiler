@@ -370,10 +370,48 @@ ParseType(Parser *parser,
 
 		case 'v':
 		{
+			local_persist Type f32Type = { TypeKind_Float32 };
+
 			if (parser->current.str == "void")
 			{
 				AdvanceToken(parser, lexer);
 				return { TypeKind_Void };
+			}
+
+			if (parser->current.str == "vec2")
+			{
+				AdvanceToken(parser, lexer);
+
+				Type type = {};
+				type.kind = TypeKind_Array;
+				type.array.length = 2;
+				type.array.elementType = &f32Type;
+
+				return type;
+			}
+
+			if (parser->current.str == "vec3")
+			{
+				AdvanceToken(parser, lexer);
+				
+				Type type = {};
+				type.kind = TypeKind_Array;
+				type.array.length = 3;
+				type.array.elementType = &f32Type;
+
+				return type;
+			}
+
+			if (parser->current.str == "vec4")
+			{
+				AdvanceToken(parser, lexer);
+				
+				Type type = {};
+				type.kind = TypeKind_Array;
+				type.array.length = 4;
+				type.array.elementType = &f32Type;
+
+				return type;
 			}
 		} break;
 

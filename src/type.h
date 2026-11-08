@@ -565,3 +565,35 @@ TypeToString(Type type)
 
 	return builder_to_string(builder);
 }
+
+inline bool
+IsVector2(Type type)
+{
+	return (type.kind == TypeKind_Array
+			&& type.array.length == 2
+			&& type.array.elementType->kind == TypeKind_Float32);
+}
+
+inline bool
+IsVector3(Type type)
+{
+	return (type.kind == TypeKind_Array
+			&& type.array.length == 3
+			&& type.array.elementType->kind == TypeKind_Float32);
+}
+
+inline bool
+IsVector4(Type type)
+{
+	return (type.kind == TypeKind_Array
+			&& type.array.length == 4
+			&& type.array.elementType->kind == TypeKind_Float32);
+}
+
+inline bool
+IsVectorType(Type type)
+{
+	return (IsVector2(type)
+			|| IsVector3(type)
+			|| IsVector4(type));
+}

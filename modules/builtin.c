@@ -1,3 +1,7 @@
+#include "builtin_vec2.c"
+#include "builtin_vec3.c"
+#include "builtin_vec4.c"
+
 string :: struct
 {
 	data: *u8;

@@ -198,7 +198,7 @@ Compile(CompileOptions *options)
 	}
 
 	SemanticContext semanticContext = {};
-	semanticContext.arenaForAst = &arena;
+	semanticContext.arena = &arena;
 	SemanticPass(program, &semanticContext, &arena);
 
 	reset_temporary_storage();

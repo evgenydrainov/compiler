@@ -880,6 +880,74 @@ IsPoisoned(Type type)
 	return (type.kind == TypeKind_Unknown);
 }
 
+internal string
+GetBinaryOpNameForOperator(BinaryOp op)
+{
+	switch (op)
+	{
+		case BinaryOp_Add:      return "add";
+		case BinaryOp_Subtract: return "sub";
+		case BinaryOp_Multiply: return "mul";
+		case BinaryOp_Divide:   return "div";
+
+		default: {} break;
+	}
+
+	Assert(false);
+	return "unknown";
+}
+
+internal string
+GetTypeNameForOperator(Type type)
+{
+	if (type.kind == TypeKind_Float32)
+	{
+		return "f32";
+	}
+	if (IsVector2(type))
+	{
+		return "vec2";
+	}
+	if (IsVector3(type))
+	{
+		return "vec3";
+	}
+	if (IsVector4(type))
+	{
+		return "vec4";
+	}
+
+	Assert(false);
+	return "unknown";
+}
+
+internal bool
+IsOverloadedOperator(Type lhsType, Type rhsType, BinaryOp op)
+{
+	// vector +-*/ vector
+	if (IsVectorType(lhsType) && TypesEqual(lhsType, rhsType)
+		&& (op == BinaryOp_Add || op == BinaryOp_Subtract || op == BinaryOp_Multiply || op == BinaryOp_Divide))
+	{
+		return true;
+	}
+
+	// vector */ scalar
+	if (IsVectorType(lhsType) && rhsType.kind == TypeKind_Float32
+		&& (op == BinaryOp_Multiply || op == BinaryOp_Divide))
+	{
+		return true;
+	}
+
+	// scalar */ vector
+	if (lhsType.kind == TypeKind_Float32 && IsVectorType(rhsType)
+		&& (op == BinaryOp_Multiply || op == BinaryOp_Divide))
+	{
+		return true;
+	}
+
+	return false;
+}
+
 internal void
 AnalyzeBinaryExpression(Node *baseNode,
 						SemanticContext *context)
@@ -908,6 +976,30 @@ AnalyzeBinaryExpression(Node *baseNode,
 
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
+
+			if (IsOverloadedOperator(node->lhs->inferredType, node->rhs->inferredType, node->op))
+			{
+				string lhsName = GetTypeNameForOperator(node->lhs->inferredType);
+				string rhsName = GetTypeNameForOperator(node->rhs->inferredType);
+
+				string operatorName = GetBinaryOpNameForOperator(node->op);
+
+				string funcName = string_format(arena_allocator(context->arena), "__%s_%s_%s",
+												operatorName, lhsName, rhsName);
+
+				CallNode *newNode = MakeNode<CallNode>(node->location, context->arena);
+				newNode->callee = MakeVarNode(node->location, funcName, context->arena);
+				newNode->arguments = push_slice<Node *>(context->arena, 2);
+				newNode->arguments[0] = node->lhs;
+				newNode->arguments[1] = node->rhs;
+
+				ProxyNode *proxyNode = ReinterpretNode<ProxyNode>(node);
+				proxyNode->proxy = newNode;
+
+				AnalyzeExpression(proxyNode, context);
+
+				break;
+			}
 
 			// try to cast rhs into lhs
 			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
@@ -1663,7 +1755,7 @@ AnalyzeExpression(Node *baseNode,
 				if (macro->decl->isExpressionMacro)
 				{
 					InstantiateContext instContext = {};
-					instContext.arena = context->arenaForAst;
+					instContext.arena = context->arena;
 					instContext.decl = macro->decl;
 					instContext.uniqueId = ++context->macroInstantiationUniqueId;
 
@@ -1716,7 +1808,7 @@ AnalyzeExpression(Node *baseNode,
 				Macro *macro = As<MacroRefNode>(node->callee)->macro;
 
 				InstantiateContext instContext = {};
-				instContext.arena = context->arenaForAst;
+				instContext.arena = context->arena;
 				instContext.decl = macro->decl;
 				instContext.uniqueId = ++context->macroInstantiationUniqueId;
 				instContext.arguments = node->arguments;
@@ -1727,9 +1819,9 @@ AnalyzeExpression(Node *baseNode,
 				{
 					for (int i = 0; i < node->arguments.count; i++)
 					{
-						string name = string_format(arena_allocator(context->arenaForAst), "$arg_%d_%d", i, instContext.uniqueId);
+						string name = string_format(arena_allocator(context->arena), "$arg_%d_%d", i, instContext.uniqueId);
 
-						VarDeclNode *varDecl = MakeNode<VarDeclNode>(node->location, context->arenaForAst);
+						VarDeclNode *varDecl = MakeNode<VarDeclNode>(node->location, context->arena);
 						varDecl->name = name;
 						varDecl->expr = node->arguments[i];
 						varDecl->type.kind = TypeKind_InferMe;
@@ -2025,6 +2117,30 @@ AnalyzeExpression(Node *baseNode,
 						newNode->inferredType.kind = TypeKind_Int64;
 						newNode->value = arrayLength;
 					}
+					else if (node->fieldName == "x"
+							 && type->array.length >= 1)
+					{
+						node->inferredType = *type->array.elementType;
+						node->fieldOffset = 0;
+					}
+					else if (node->fieldName == "y"
+							 && type->array.length >= 2)
+					{
+						node->inferredType = *type->array.elementType;
+						node->fieldOffset = 1*SizeOfType(*type->array.elementType);
+					}
+					else if (node->fieldName == "z"
+							 && type->array.length >= 3)
+					{
+						node->inferredType = *type->array.elementType;
+						node->fieldOffset = 2*SizeOfType(*type->array.elementType);
+					}
+					else if (node->fieldName == "w"
+							 && type->array.length >= 4)
+					{
+						node->inferredType = *type->array.elementType;
+						node->fieldOffset = 3*SizeOfType(*type->array.elementType);
+					}
 					else
 					{
 						Error(context, node, "an array has no field '%s'", node->fieldName);
@@ -2228,6 +2344,11 @@ AnalyzeExpression(Node *baseNode,
 			AnalyzeExpression(node->proxy, context, expectedType);
 
 			node->inferredType = node->proxy->inferredType;
+		} break;
+
+		case NodeKind_ProcRef:
+		{
+			// do nothing
 		} break;
 	}
 }
@@ -2551,18 +2672,13 @@ AnalyzeStatement(Node *baseNode,
 		{
 			RangeBasedForNode *node = As<RangeBasedForNode>(baseNode);
 
-			Macro *macro;
-			if (node->inclusiveUpperBound)
-			{
-				macro = LookupMacro(context->macroTable, "__range_based_for_expansion_inclusive");
-			}
-			else
-			{
-				macro = LookupMacro(context->macroTable, "__range_based_for_expansion_exclusive");
-			}
+			Macro *macro = LookupMacro(context->macroTable,
+									   (node->inclusiveUpperBound
+										? string("__range_based_for_expansion_inclusive")
+										: string("__range_based_for_expansion_exclusive")));
 			Assert(macro);
 
-			Node *itExpr = MakeVarNode(node->location, node->iteratorName, context->arenaForAst);
+			Node *itExpr = MakeVarNode(node->location, node->iteratorName, context->arena);
 
 			Node *arguments[4] =
 			{
@@ -2573,7 +2689,7 @@ AnalyzeStatement(Node *baseNode,
 			};
 
 			InstantiateContext instContext = {};
-			instContext.arena = context->arenaForAst;
+			instContext.arena = context->arena;
 			instContext.decl = macro->decl;
 			instContext.uniqueId = ++context->macroInstantiationUniqueId;
 			instContext.arguments = arguments;
@@ -2601,9 +2717,9 @@ AnalyzeStatement(Node *baseNode,
 			}
 			Assert(macro);
 
-			Node *itExpr = MakeVarNode(node->location, node->iteratorName, context->arenaForAst);
+			Node *itExpr = MakeVarNode(node->location, node->iteratorName, context->arena);
 
-			Node *indexExpr = MakeVarNode(node->location, node->indexName, context->arenaForAst);
+			Node *indexExpr = MakeVarNode(node->location, node->indexName, context->arena);
 
 			Node *arguments[4] =
 			{
@@ -2614,7 +2730,7 @@ AnalyzeStatement(Node *baseNode,
 			};
 
 			InstantiateContext instContext = {};
-			instContext.arena = context->arenaForAst;
+			instContext.arena = context->arena;
 			instContext.decl = macro->decl;
 			instContext.uniqueId = ++context->macroInstantiationUniqueId;
 			instContext.arguments = arguments;
