@@ -24,7 +24,7 @@
 internal string
 FindNasm(CompileOptions *options)
 {
-	string nasmPath = string_format(temp_allocator(), "%svendor\\nasm\\nasm.exe", options->exeFileDir);
+	string nasmPath = string_format(temp_allocator(), "%svendor\\nasm\\nasm.exe", options->compilerInstallDir);
 
 	char *cstr = to_cstring(nasmPath, temp_allocator());
 
@@ -55,7 +55,7 @@ FindNasm(CompileOptions *options)
 internal string
 FindLLDLink(CompileOptions *options)
 {
-	string lldPath = string_format(temp_allocator(), "%svendor\\LLVM\\lld-link.exe", options->exeFileDir);
+	string lldPath = string_format(temp_allocator(), "%svendor\\LLVM\\lld-link.exe", options->compilerInstallDir);
 
 	char *cstr = to_cstring(lldPath, temp_allocator());
 
@@ -137,17 +137,17 @@ Compile(CompileOptions *options)
 {
 	PROFILE_FUNCTION();
 
-	options->exeFileDir = get_executable_dir(heap_allocator());
+	options->compilerInstallDir = get_executable_dir(heap_allocator());
 
 	LexerContext lexerContext = {};
-	lexerContext.compilerExeFileDir = options->exeFileDir;
-	lexerContext.modulesDir = string_concat(options->exeFileDir, "modules/", heap_allocator());
+	lexerContext.compilerInstallDir = options->compilerInstallDir;
+	lexerContext.modulesDir = string_concat(options->compilerInstallDir, "modules/", heap_allocator());
 
 	Lexer lexer = {};
 	lexer.context = &lexerContext;
 
 	{
-		string builtinFilePath = string_concat(options->exeFileDir, "modules/builtin.c", heap_allocator());
+		string builtinFilePath = string_concat(options->compilerInstallDir, "modules/builtin/builtin.c", heap_allocator());
 
 		string builtinFileSrc = read_entire_file(builtinFilePath, heap_allocator());
 		if (!builtinFileSrc)

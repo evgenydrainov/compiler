@@ -1,37 +1,15 @@
-#include "builtin_vec2.c"
-#include "builtin_vec3.c"
-#include "builtin_vec4.c"
+#include "coroutine.c"
+#include "libc.c"
+#include "math.c"
+#include "vec2.c"
+#include "vec3.c"
+#include "vec4.c"
 
 string :: struct
 {
 	data: *u8;
 	count: int;
 };
-
-fminf  :: proc(a: f32, b: f32) -> f32 #foreign;
-fmaxf  :: proc(a: f32, b: f32) -> f32 #foreign;
-sqrtf  :: proc(x: f32)         -> f32 #foreign;
-
-printf :: proc(format: *u8) #foreign #variadic;
-
-rand :: proc() -> i32 #foreign;
-
-malloc  :: proc(size: int)             -> *void #foreign;
-calloc  :: proc(count: int, size: int) -> *void #foreign;
-realloc :: proc(ptr: *void, size: int) -> *void #foreign;
-free    :: proc(ptr: *void)                     #foreign;
-
-fabsf :: proc(a: f32) -> f32
-{
-	if a >= 0
-	{
-		return a;
-	}
-	else
-	{
-		return -a;
-	}
-}
 
 Raw_Dynamic_Array :: struct
 {
@@ -144,36 +122,4 @@ __foreach_expansion_by_value :: macro(array, it, index, body) #no_bind
 		it := __array[index];
 		body;
 	}
-}
-
-Coroutine :: struct
-{
-	// has to be at offset 0
-	state: int;
-
-	// has to be at offset 8
-	frame: *void;
-
-	func: proc(co: *Coroutine) #coroutine;
-	
-	userdata: *void;
-};
-
-coroutine_init :: proc(co: *Coroutine,
-					   func: proc(co: *Coroutine) #coroutine)
-{
-	co.func = func;
-	co.state = 0;
-}
-
-coroutine_resume :: proc(co: *Coroutine, frame: *void, userdata: *void)
-{
-	co.frame = frame;
-	co.userdata = userdata;
-	co.func(co);
-}
-
-coroutine_is_finished :: proc(co: *Coroutine) -> bool
-{
-	return co.state == -1;
 }

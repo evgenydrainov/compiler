@@ -212,7 +212,7 @@ constexpr usize MAX_INCLUDE_DEPTH = 32;
 
 struct LexerContext
 {
-	string compilerExeFileDir;
+	string compilerInstallDir;
 	string modulesDir;
 };
 

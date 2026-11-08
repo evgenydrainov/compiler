@@ -116,11 +116,7 @@ world_spawn_bricks :: proc(world: *World)
 {
 	world.bricks.count = 0;
 
-	rows := world.level + 1;
-	if rows > BRICK_MAX_ROWS
-	{
-		rows = BRICK_MAX_ROWS;
-	}
+	rows := min_i64(world.level + 1, BRICK_MAX_ROWS);
 
 	for i in 0..<BRICK_COLUMNS*rows
 	{
@@ -166,9 +162,7 @@ ball_bounce_off_paddle :: proc(ball: *Entity, paddle: *Entity)
 {
 	speed := vec2_length(ball.vel);
 
-	offset := (ball.pos.x - paddle.pos.x) / (paddle.size.x*0.5);
-	offset = fmaxf(offset, -1);
-	offset = fminf(offset,  1);
+	offset := clamp_f32((ball.pos.x - paddle.pos.x) / (paddle.size.x*0.5), -1, 1);
 
 	// keep at least some vertical speed so the ball never goes flat
 	ball.vel.x = speed * offset * 0.8;
@@ -186,30 +180,16 @@ ball_bounce_off_brick :: proc(ball: *Entity, brick: *Entity)
 
 	if overlap_x < overlap_y
 	{
-		if dx < 0
-		{
-			ball.vel.x = -fabsf(ball.vel.x);
-		}
-		else
-		{
-			ball.vel.x =  fabsf(ball.vel.x);
-		}
+		ball.vel.x = fabsf(ball.vel.x) * sign_f32(dx);
 	}
 	else
 	{
-		if dy < 0
-		{
-			ball.vel.y = -fabsf(ball.vel.y);
-		}
-		else
-		{
-			ball.vel.y =  fabsf(ball.vel.y);
-		}
+		ball.vel.y = fabsf(ball.vel.y) * sign_f32(dy);
 	}
 
 	// speed up a little with every brick
 	speed := vec2_length(ball.vel);
-	if speed * BALL_SPEEDUP <= BALL_MAX_SPEED
+	if speed*BALL_SPEEDUP <= BALL_MAX_SPEED
 	{
 		ball.vel *= BALL_SPEEDUP;
 	}
@@ -459,9 +439,7 @@ world_draw_ui :: proc(world: *World)
 
 		draw_dim_overlay(fminf(t / GAME_OVER_OVERLAY_FADE_END, 1));
 
-		text_alpha := (t - GAME_OVER_TEXT_FADE_START) / (GAME_OVER_TEXT_FADE_END - GAME_OVER_TEXT_FADE_START);
-		text_alpha = fmaxf(text_alpha, 0);
-		text_alpha = fminf(text_alpha, 1);
+		text_alpha := clamp_f32((t - GAME_OVER_TEXT_FADE_START) / (GAME_OVER_TEXT_FADE_END - GAME_OVER_TEXT_FADE_START), 0, 1);
 
 		white  := color_fade(0xffffffff, text_alpha);
 		yellow := color_fade(0xe0d040ff, text_alpha);

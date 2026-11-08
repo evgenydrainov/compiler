@@ -13,7 +13,7 @@ struct CompileOptions
 	string inputFilePath;
 	string outputFilePathNoExt;
 
-	string exeFileDir;
+	string compilerInstallDir;
 
 	dynamic_array<string> libraries;
 	dynamic_array<string> systemLibraries;

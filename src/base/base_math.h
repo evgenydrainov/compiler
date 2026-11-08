@@ -7,7 +7,7 @@ template <typename T>
 inline T
 max(T a, T b)
 {
-	T result = (a >= b) ? a : b;
+	T result = (a < b) ? b : a;
 	return result;
 }
 
