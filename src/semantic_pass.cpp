@@ -445,7 +445,6 @@ EvaluateConstantExpression(Node *baseNode,
 		default:
 		{
 			Error(context, baseNode, "expression is not a compile-time constant");
-			Note(context, baseNode, "a constant expression can only use integer literals, constants and operators");
 		} break;
 	}
 
