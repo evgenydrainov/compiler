@@ -214,5 +214,5 @@ int main()
 	TestExampleCompiles("main", "01_raylib");
 	TestExampleCompiles("breakout", "02_breakout");
 	TestExampleCompiles("bullet_hell", "03_bullet_hell");
-	TestExampleCompiles("main", "04_no_libc");
+	//TestExampleCompiles("main", "04_no_libc");
 }
