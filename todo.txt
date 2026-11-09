@@ -1,7 +1,5 @@
 foo : T = ---; explicit uninitialize syntax
 
-enable/disable debug info command-line option
-
 lexer synchronization
 
 some kind of typeof() operator and compile-time type comparison

@@ -252,7 +252,12 @@ Compile(CompileOptions *options)
 		commandLine.allocator = temp_allocator();
 
 		array_add(&commandLine, nasmPath);
-		array_add(&commandLine, "-g");
+
+		if (options->generateDebugInfo)
+		{
+			array_add(&commandLine, "-g");
+		}
+
 		array_add(&commandLine, "-f");
 		array_add(&commandLine, "win64");
 		array_add(&commandLine, "-o");
@@ -275,7 +280,12 @@ Compile(CompileOptions *options)
 		commandLine.allocator = temp_allocator();
 
 		array_add(&commandLine, lldExePath);
-		array_add(&commandLine, "/DEBUG");
+
+		if (options->generateDebugInfo)
+		{
+			array_add(&commandLine, "/DEBUG");
+		}
+
 		array_add(&commandLine, "/OPT:REF");
 		array_add(&commandLine, "/OPT:ICF");
 		array_add(&commandLine, "/SUBSYSTEM:CONSOLE");
@@ -308,7 +318,12 @@ Compile(CompileOptions *options)
 
 		array_add(&commandLine, linkExePath);
 		array_add(&commandLine, "/NOLOGO");
-		array_add(&commandLine, "/DEBUG");
+
+		if (options->generateDebugInfo)
+		{
+			array_add(&commandLine, "/DEBUG");
+		}
+
 		array_add(&commandLine, "/INCREMENTAL:NO");
 		array_add(&commandLine, "/OPT:REF");
 		array_add(&commandLine, "/OPT:ICF");

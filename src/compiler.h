@@ -21,6 +21,7 @@ struct CompileOptions
 	bool useVendorLld;
 	bool printCode;
 	bool verboseMode;
+	bool generateDebugInfo;
 
 	VCRuntimeType vcruntimeType;
 };

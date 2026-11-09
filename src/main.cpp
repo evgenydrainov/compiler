@@ -65,6 +65,11 @@ int main(int argc, char *argv[])
 			{
 				options.vcruntimeType = VCRuntimeType_Dynamic;
 			}
+			else if (strcmp(argv[i], "-debug") == 0
+					 || strcmp(argv[i], "--debug") == 0)
+			{
+				options.generateDebugInfo = true;
+			}
 			else
 			{
 				fprintf(stderr, "unknown option '%s'\n", argv[i]);
