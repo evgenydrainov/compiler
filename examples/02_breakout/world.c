@@ -12,7 +12,7 @@ Entity :: struct
 
 	ball_state: BallState;
 
-	color: u32;
+	color: vec4;
 	points: int;
 
 	// bricks pop in one by one at the start of a level
@@ -89,14 +89,10 @@ world_init :: proc(world: *World)
 	paddle := &world.paddle;
 	ball := &world.ball;
 
-	paddle.pos.x = GAME_WIDTH/2;
-	paddle.pos.y = GAME_HEIGHT/10*9;
+	paddle.pos = vec2(GAME_WIDTH/2, GAME_HEIGHT/10*9);
+	paddle.size = vec2(40, 10);
 
-	paddle.size.x = 40;
-	paddle.size.y = 10;
-
-	ball.size.x = 10;
-	ball.size.y = 10;
+	ball.size = vec2(10, 10);
 
 	world.lives = 3;
 	world.level = 1;
@@ -105,7 +101,7 @@ world_init :: proc(world: *World)
 }
 
 BALL_LAUNCH_SPEED :: 4;
-BALL_MAX_SPEED    :: 6;
+BALL_MAX_SPEED    :: 5.5;
 BALL_SPEEDUP      :: 1.05;
 
 BRICK_COLUMNS  :: 6;
@@ -121,10 +117,9 @@ world_spawn_bricks :: proc(world: *World)
 	for i in 0..<BRICK_COLUMNS*rows
 	{
 		brick: Entity;
-		brick.size.x = 40;
-		brick.size.y = 10;
-		brick.pos.x = 35 + (brick.size.x + 10) * cast(f32)(i%BRICK_COLUMNS);
-		brick.pos.y = 20 + (brick.size.y + 10) * cast(f32)(i/BRICK_COLUMNS);
+		brick.size = vec2(40, 10);
+		brick.pos = vec2(35 + (brick.size.x + 10) * cast(f32)(i%BRICK_COLUMNS),
+						 20 + (brick.size.y + 10) * cast(f32)(i/BRICK_COLUMNS));
 		brick.color = brick_row_color(i/BRICK_COLUMNS);
 
 		// higher rows are worth more
@@ -139,16 +134,16 @@ world_spawn_bricks :: proc(world: *World)
 	world.level_time = 0;
 }
 
-brick_row_color :: proc(row: int) -> u32
+brick_row_color :: proc(row: int) -> vec4
 {
 	switch row
 	{
-		case 0:  return 0xe04040ff; // red
-		case 1:  return 0xe08a30ff; // orange
-		case 2:  return 0xe0d040ff; // yellow
-		case 3:  return 0x50c050ff; // green
-		case 4:  return 0x4080e0ff; // blue
-		default: return 0xa050d0ff; // purple
+		case 0:  return color_from_u32(0xe04040ff); // red
+		case 1:  return color_from_u32(0xe08a30ff); // orange
+		case 2:  return color_from_u32(0xe0d040ff); // yellow
+		case 3:  return color_from_u32(0x50c050ff); // green
+		case 4:  return color_from_u32(0x4080e0ff); // blue
+		default: return color_from_u32(0xa050d0ff); // purple
 	}
 }
 
@@ -165,26 +160,24 @@ ball_bounce_off_paddle :: proc(ball: *Entity, paddle: *Entity)
 	offset := clamp_f32((ball.pos.x - paddle.pos.x) / (paddle.size.x*0.5), -1, 1);
 
 	// keep at least some vertical speed so the ball never goes flat
-	ball.vel.x = speed * offset * 0.8;
-	ball.vel.y = -sqrtf(speed*speed - ball.vel.x*ball.vel.x);
+	ball.vel = vec2(speed * offset * 0.8,
+					-sqrtf(speed*speed - ball.vel.x*ball.vel.x));
 }
 
 // bounce along the axis with the smallest penetration
 ball_bounce_off_brick :: proc(ball: *Entity, brick: *Entity)
 {
-	dx := ball.pos.x - brick.pos.x;
-	dy := ball.pos.y - brick.pos.y;
+	diff := ball.pos - brick.pos;
 
-	overlap_x := (ball.size.x + brick.size.x)*0.5 - fabsf(dx);
-	overlap_y := (ball.size.y + brick.size.y)*0.5 - fabsf(dy);
+	overlap := (ball.size + brick.size)*0.5 - vec2_abs(diff);
 
-	if overlap_x < overlap_y
+	if overlap.x < overlap.y
 	{
-		ball.vel.x = fabsf(ball.vel.x) * sign_f32(dx);
+		ball.vel.x = fabsf(ball.vel.x) * sign_f32(diff.x);
 	}
 	else
 	{
-		ball.vel.y = fabsf(ball.vel.y) * sign_f32(dy);
+		ball.vel.y = fabsf(ball.vel.y) * sign_f32(diff.y);
 	}
 
 	// speed up a little with every brick
@@ -249,20 +242,18 @@ world_update_playing :: proc(world: *World, delta: f32)
 	switch ball.ball_state
 	{
 	case .stick_to_paddle:
-		ball.pos.x = paddle.pos.x;
-		ball.pos.y = paddle.pos.y - (paddle.size.y + ball.size.y)*0.5;
+		ball.pos = paddle.pos - vec2(0, (paddle.size.y + ball.size.y)*0.5);
 
 		// wait for the bricks to appear
 		if world.level_banner_timer == 0 && IsKeyPressed(KEY_SPACE)
 		{
 			// launch straight up, aim with the paddle
-			ball.vel.x = 0;
-			ball.vel.y = -BALL_LAUNCH_SPEED;
+			ball.vel = vec2(0, -BALL_LAUNCH_SPEED);
 			ball.ball_state = .move;
 		}
 
 	case .move:
-		ball.pos += ball.vel * delta;
+		ball.pos += ball.vel*delta;
 
 		if ball.pos.x + ball.size.x*0.5 >= GAME_WIDTH
 		{
@@ -370,8 +361,7 @@ PADDLE_SPEED :: 5;
 
 paddle_update :: proc(paddle: *Entity, delta: f32)
 {
-	paddle.vel.x = 0;
-	paddle.vel.y = 0;
+	paddle.vel = vec2(0, 0);
 
 	if IsKeyDown(KEY_RIGHT)
 	{
@@ -384,32 +374,35 @@ paddle_update :: proc(paddle: *Entity, delta: f32)
 	
 	paddle.pos += paddle.vel*delta;
 
-	paddle.pos.x = fmaxf(paddle.pos.x, paddle.size.x*0.5);
-	paddle.pos.x = fminf(paddle.pos.x, GAME_WIDTH - paddle.size.x*0.5);
+	paddle.pos.x = clamp_f32(paddle.pos.x, paddle.size.x*0.5, GAME_WIDTH - paddle.size.x*0.5);
 }
 
-entity_draw :: proc(entity: *Entity, color: u32)
-{
-	entity_draw_scaled(entity, color, 1);
-}
-
-entity_draw_scaled :: proc(entity: *Entity, color: u32, scale: f32)
+entity_draw2 :: proc(entity: *Entity, color: vec4, scale: f32)
 {
 	size := entity.size*scale;
-
 	DrawRectangle(cast(i32)(entity.pos.x - size.x*0.5),
 				  cast(i32)(entity.pos.y - size.y*0.5),
 				  cast(i32)size.x,
 				  cast(i32)size.y,
-				  GetColor(color));
+				  color_to_raylib(color));
+}
+
+entity_draw :: proc(entity: *Entity, color: vec4)
+{
+	entity_draw2(entity, color, 1);
+}
+
+entity_draw3 :: proc(entity: *Entity)
+{
+	entity_draw2(entity, vec4(1, 1, 1, 1), 1);
 }
 
 world_draw_ui :: proc(world: *World)
 {
 	// small margin from the top edge; the top row of bricks starts at y=15
-	draw_text_centered(TextFormat("LEVEL: %lld"c, world.level), 60,  3, 10, 0xffffffff);
-	draw_text_centered(TextFormat("SCORE: %lld"c, world.score), 160, 3, 10, 0xffffffff);
-	draw_text_centered(TextFormat("LIVES: %lld"c, world.lives), 260, 3, 10, 0xffffffff);
+	draw_text_centered2(TextFormat("LEVEL: %lld"c, world.level), 60,  3, 10);
+	draw_text_centered2(TextFormat("SCORE: %lld"c, world.score), 160, 3, 10);
+	draw_text_centered2(TextFormat("LIVES: %lld"c, world.lives), 260, 3, 10);
 
 	x := GAME_WIDTH/2;
 	y := GAME_HEIGHT/2;
@@ -419,20 +412,20 @@ world_draw_ui :: proc(world: *World)
 	case .playing:
 		if world.level_banner_timer > 0
 		{
-			draw_text_centered(TextFormat("LEVEL %lld"c, world.level), x, y, 20, 0xffffffff);
+			draw_text_centered2(TextFormat("LEVEL %lld"c, world.level), x, y, 20);
 		}
 		else if world.ball.ball_state == .stick_to_paddle
 		{
-			draw_text_centered("PRESS SPACE TO LAUNCH"c, x, y + 20, 10, 0xffffffff);
+			draw_text_centered2("PRESS SPACE TO LAUNCH"c, x, y + 20, 10);
 		}
 
 	case .level_clear:
-		draw_text_centered(TextFormat("LEVEL %lld CLEAR!"c, world.level), x, y, 20, 0xe0d040ff);
+		draw_text_centered(TextFormat("LEVEL %lld CLEAR!"c, world.level), x, y, 20, color_from_u32(0xe0d040ff));
 
 	case .paused:
 		draw_dim_overlay(1);
-		draw_text_centered("PAUSED"c, x, y - 10, 20, 0xffffffff);
-		draw_text_centered("PRESS P TO RESUME"c, x, y + 20, 10, 0xffffffff);
+		draw_text_centered2("PAUSED"c, x, y - 10, 20);
+		draw_text_centered2("PRESS P TO RESUME"c, x, y + 20, 10);
 
 	case .game_over:
 		t := world.game_over_time;
@@ -441,8 +434,8 @@ world_draw_ui :: proc(world: *World)
 
 		text_alpha := clamp_f32((t - GAME_OVER_TEXT_FADE_START) / (GAME_OVER_TEXT_FADE_END - GAME_OVER_TEXT_FADE_START), 0, 1);
 
-		white  := color_fade(0xffffffff, text_alpha);
-		yellow := color_fade(0xe0d040ff, text_alpha);
+		white  := vec4(1, 1, 1, text_alpha);
+		yellow := color_fade(color_from_u32(0xe0d040ff), text_alpha);
 
 		draw_text_centered("GAME OVER"c, x, y - 40, 20, white);
 		draw_text_centered(TextFormat("YOU REACHED LEVEL %lld"c, world.level), x, y - 10, 10, white);
@@ -461,12 +454,14 @@ world_draw_ui :: proc(world: *World)
 
 draw_dim_overlay :: proc(amount: f32)
 {
-	DrawRectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, GetColor(color_fade(0x000000b0, amount)));
+	DrawRectangle(0, 0,
+				  GAME_WIDTH, GAME_HEIGHT,
+				  color_to_raylib(vec4(0, 0, 0, 0.70*amount)));
 }
 
 world_draw :: proc(world: *World)
 {
-	entity_draw(&world.paddle, 0xffffffff);
+	entity_draw3(&world.paddle);
 
 	for *brick in world.bricks
 	{
@@ -474,7 +469,7 @@ world_draw :: proc(world: *World)
 		t := (world.level_time - brick.appear_time) / BRICK_APPEAR_DURATION;
 		if t > 0
 		{
-			entity_draw_scaled(brick, brick.color, fminf(t, 1));
+			entity_draw2(brick, brick.color, fminf(t, 1));
 		}
 	}
 
@@ -482,7 +477,7 @@ world_draw :: proc(world: *World)
 	// level clear: the ball is gone until the next level starts
 	if world.state != .game_over && world.state != .level_clear
 	{
-		entity_draw(&world.ball, 0xffffffff);
+		entity_draw3(&world.ball);
 	}
 
 	world_draw_ui(world);

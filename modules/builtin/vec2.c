@@ -1,7 +1,25 @@
+vec2 :: proc(x: f32, y: f32) -> vec2
+{
+	result: vec2;
+	result.x = x;
+	result.y = y;
+	return result;
+}
+
 vec2_length :: proc(v: vec2) -> f32
 {
 	return sqrtf(v.x*v.x + v.y*v.y);
 }
+
+vec2_abs :: proc(v: vec2) -> vec2
+{
+	result: vec2;
+	result.x = fabsf(v.x);
+	result.y = fabsf(v.y);
+	return result;
+}
+
+
 
 __add_vec2_vec2 :: proc(a: vec2, b: vec2) -> vec2
 {

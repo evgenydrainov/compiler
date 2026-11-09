@@ -252,7 +252,9 @@ DrawTexture    :: proc(texture: Texture, posX: i32, posY: i32, tint: i64)       
 DrawTextureRec :: proc(texture: Texture, source: Rectangle, position: Vector2, tint: i64) #foreign; // Draw a part of a texture defined by a rectangle
 
 // Color/pixel related functions
-GetColor :: proc(hexValue: u32) -> Color #foreign; // Get Color structure from hexadecimal value
+ColorNormalize      :: proc(color: Color)        -> Vector4 #foreign; // Get Color normalized as float [0..1]
+ColorFromNormalized :: proc(normalized: Vector4) -> Color   #foreign; // Get Color from normalized values [0..1]
+GetColor            :: proc(hexValue: u32)       -> Color   #foreign; // Get Color structure from hexadecimal value
 
 // Text drawing functions
 DrawFPS  :: proc(posX: i32, posY: i32)                                         #foreign; // Draw current FPS

@@ -1,7 +1,27 @@
+vec3 :: proc(x: f32, y: f32, z: f32) -> vec3
+{
+	result: vec3;
+	result.x = x;
+	result.y = y;
+	result.z = z;
+	return result;
+}
+
 vec3_length :: proc(v: vec3) -> f32
 {
 	return sqrtf(v.x*v.x + v.y*v.y + v.z*v.z);
 }
+
+vec3_abs :: proc(v: vec3) -> vec3
+{
+	result: vec3;
+	result.x = fabsf(v.x);
+	result.y = fabsf(v.y);
+	result.z = fabsf(v.z);
+	return result;
+}
+
+
 
 __add_vec3_vec3 :: proc(a: vec3, b: vec3) -> vec3
 {
