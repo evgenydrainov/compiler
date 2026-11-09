@@ -2117,25 +2117,25 @@ AnalyzeExpression(Node *baseNode,
 						newNode->inferredType.kind = TypeKind_Int64;
 						newNode->value = arrayLength;
 					}
-					else if (node->fieldName == "x"
+					else if ((node->fieldName == "x" || node->fieldName == "r")
 							 && type->array.length >= 1)
 					{
 						node->inferredType = *type->array.elementType;
 						node->fieldOffset = 0;
 					}
-					else if (node->fieldName == "y"
+					else if ((node->fieldName == "y" || node->fieldName == "g")
 							 && type->array.length >= 2)
 					{
 						node->inferredType = *type->array.elementType;
 						node->fieldOffset = 1*SizeOfType(*type->array.elementType);
 					}
-					else if (node->fieldName == "z"
+					else if ((node->fieldName == "z" || node->fieldName == "b")
 							 && type->array.length >= 3)
 					{
 						node->inferredType = *type->array.elementType;
 						node->fieldOffset = 2*SizeOfType(*type->array.elementType);
 					}
-					else if (node->fieldName == "w"
+					else if ((node->fieldName == "w" || node->fieldName == "a")
 							 && type->array.length >= 4)
 					{
 						node->inferredType = *type->array.elementType;
