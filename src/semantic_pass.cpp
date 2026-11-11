@@ -1117,10 +1117,17 @@ InstantiateMacro(Node *baseNode,
 
 	switch (baseNode->kind)
 	{
-		default:
+		case NodeKind_ProcDecl:
+		case NodeKind_Param:
+		case NodeKind_StructDecl:
+		case NodeKind_StructFieldDecl:
+		case NodeKind_Asm:
+		case NodeKind_EnumDecl:
+		case NodeKind_EnumeratorDecl:
+		case NodeKind_ConstantDecl:
+		case NodeKind_MacroDecl:
 		{
 			Assert(false);
-
 			return nullptr;
 		} break;
 
@@ -1533,7 +1540,49 @@ InstantiateMacro(Node *baseNode,
 
 			return result;
 		} break;
+
+		case NodeKind_ProcRef:
+		{
+			ProcRefNode *node = As<ProcRefNode>(baseNode);
+
+			ProcRefNode *result = MakeNode<ProcRefNode>(node->location, arena);
+			result->linkName = node->linkName;
+			result->function = node->function;
+
+			return result;
+		} break;
+
+		case NodeKind_MacroRef:
+		{
+			MacroRefNode *node = As<MacroRefNode>(baseNode);
+
+			MacroRefNode *result = MakeNode<MacroRefNode>(node->location, arena);
+			result->macro = node->macro;
+
+			return result;
+		} break;
+
+		case NodeKind_Proxy:
+		{
+			ProxyNode *node = As<ProxyNode>(baseNode);
+
+			return InstantiateMacro(node->proxy, context);
+		} break;
+
+		case NodeKind_StaticAssert:
+		{
+			StaticAssertNode *node = As<StaticAssertNode>(baseNode);
+
+			StaticAssertNode *result = MakeNode<StaticAssertNode>(node->location, arena);
+			result->what = InstantiateMacro(node->what, context);
+			result->message = node->message;
+
+			return result;
+		} break;
 	}
+
+	Assert(false);
+	return nullptr;
 }
 
 void
