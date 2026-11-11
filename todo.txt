@@ -1,5 +1,3 @@
-foo : T = ---; explicit uninitialize syntax
-
 lexer synchronization
 
 some kind of typeof() operator and compile-time type comparison
