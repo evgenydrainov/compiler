@@ -877,6 +877,11 @@ GetToken(Lexer *lexer)
 			{
 				return AdvanceAndMakeToken(lexer, TokenKind_MinusEqual, location, 2);
 			}
+			if (lexer->current[1] == '-'
+				&& lexer->current[2] == '-')
+			{
+				return AdvanceAndMakeToken(lexer, TokenKind_TripleDash, location, 3);
+			}
 		} break;
 
 		case '&':

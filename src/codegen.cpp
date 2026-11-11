@@ -1204,6 +1204,31 @@ GetRegisterForTypeSize(Type type)
 	return "error";
 }
 
+internal char *
+GetTagForTypeSize(Type type)
+{
+	int size = SizeOfType(type);
+	if (size == 8)
+	{
+		return "qword";
+	}
+	else if (size == 4)
+	{
+		return "dword";
+	}
+	else if (size == 2)
+	{
+		return "word";
+	}
+	else if (size == 1)
+	{
+		return "byte";
+	}
+
+	Assert(false);
+	return "error";
+}
+
 internal void
 GenerateStatement(Node *baseNode,
 				  CodegenContext *context)
@@ -1237,20 +1262,18 @@ GenerateStatement(Node *baseNode,
 
 				GenerateStatement(&assignNode, context);
 			}
-			else
+			else if (!node->isUninitialized)
 			{
-				// initialize to zero by default
+				// initialize to zero
 
 				if (IsRegisterSized(varNode.inferredType))
 				{
 					GenerateLValueAddress(&varNode, context);
-
 					Emit(context, "    pop rcx");
-					Emit(context, "    mov rax, 0");
 
-					char *reg = GetRegisterForTypeSize(varNode.inferredType);
+					char *tag = GetTagForTypeSize(varNode.inferredType);
 
-					Emit(context, "    mov [rcx], %s", reg);
+					Emit(context, "    mov %s [rcx], 0\t; zero-initialize", tag);
 					Emit(context, "");
 				}
 				else
@@ -1259,10 +1282,9 @@ GenerateStatement(Node *baseNode,
 
 					GenerateLValueAddress(&varNode, context);
 
+					Emit(context, "    ; zero-initialize");
 					Emit(context, "    pop rdi");
-
 					EmitCopyBytes(context, "rdi", nullptr, SizeOfType(varNode.inferredType));
-
 					Emit(context, "");
 				}
 			}

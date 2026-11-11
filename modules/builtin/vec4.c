@@ -1,6 +1,6 @@
 vec4 :: proc(x: f32, y: f32, z: f32, w: f32) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = x;
 	result.y = y;
 	result.z = z;
@@ -15,7 +15,7 @@ vec4_length :: proc(v: vec4) -> f32
 
 vec4_abs :: proc(v: vec4) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = fabsf(v.x);
 	result.y = fabsf(v.y);
 	result.z = fabsf(v.z);
@@ -27,7 +27,7 @@ vec4_abs :: proc(v: vec4) -> vec4
 
 __add_vec4_vec4 :: proc(a: vec4, b: vec4) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = a.x + b.x;
 	result.y = a.y + b.y;
 	result.z = a.z + b.z;
@@ -37,7 +37,7 @@ __add_vec4_vec4 :: proc(a: vec4, b: vec4) -> vec4
 
 __sub_vec4_vec4 :: proc(a: vec4, b: vec4) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = a.x - b.x;
 	result.y = a.y - b.y;
 	result.z = a.z - b.z;
@@ -47,7 +47,7 @@ __sub_vec4_vec4 :: proc(a: vec4, b: vec4) -> vec4
 
 __mul_vec4_vec4 :: proc(a: vec4, b: vec4) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = a.x * b.x;
 	result.y = a.y * b.y;
 	result.z = a.z * b.z;
@@ -57,7 +57,7 @@ __mul_vec4_vec4 :: proc(a: vec4, b: vec4) -> vec4
 
 __div_vec4_vec4 :: proc(a: vec4, b: vec4) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = a.x / b.x;
 	result.y = a.y / b.y;
 	result.z = a.z / b.z;
@@ -67,7 +67,7 @@ __div_vec4_vec4 :: proc(a: vec4, b: vec4) -> vec4
 
 __mul_vec4_f32 :: proc(a: vec4, b: f32) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = a.x * b;
 	result.y = a.y * b;
 	result.z = a.z * b;
@@ -77,7 +77,7 @@ __mul_vec4_f32 :: proc(a: vec4, b: f32) -> vec4
 
 __div_vec4_f32 :: proc(a: vec4, b: f32) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = a.x / b;
 	result.y = a.y / b;
 	result.z = a.z / b;
@@ -87,7 +87,7 @@ __div_vec4_f32 :: proc(a: vec4, b: f32) -> vec4
 
 __mul_f32_vec4 :: proc(a: f32, b: vec4) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = a * b.x;
 	result.y = a * b.y;
 	result.z = a * b.z;
@@ -97,7 +97,7 @@ __mul_f32_vec4 :: proc(a: f32, b: vec4) -> vec4
 
 __div_f32_vec4 :: proc(a: f32, b: vec4) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.x = a / b.x;
 	result.y = a / b.y;
 	result.z = a / b.z;

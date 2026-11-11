@@ -1,6 +1,6 @@
 vec3 :: proc(x: f32, y: f32, z: f32) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = x;
 	result.y = y;
 	result.z = z;
@@ -14,7 +14,7 @@ vec3_length :: proc(v: vec3) -> f32
 
 vec3_abs :: proc(v: vec3) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = fabsf(v.x);
 	result.y = fabsf(v.y);
 	result.z = fabsf(v.z);
@@ -25,7 +25,7 @@ vec3_abs :: proc(v: vec3) -> vec3
 
 __add_vec3_vec3 :: proc(a: vec3, b: vec3) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = a.x + b.x;
 	result.y = a.y + b.y;
 	result.z = a.z + b.z;
@@ -34,7 +34,7 @@ __add_vec3_vec3 :: proc(a: vec3, b: vec3) -> vec3
 
 __sub_vec3_vec3 :: proc(a: vec3, b: vec3) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = a.x - b.x;
 	result.y = a.y - b.y;
 	result.z = a.z - b.z;
@@ -43,7 +43,7 @@ __sub_vec3_vec3 :: proc(a: vec3, b: vec3) -> vec3
 
 __mul_vec3_vec3 :: proc(a: vec3, b: vec3) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = a.x * b.x;
 	result.y = a.y * b.y;
 	result.z = a.z * b.z;
@@ -52,7 +52,7 @@ __mul_vec3_vec3 :: proc(a: vec3, b: vec3) -> vec3
 
 __div_vec3_vec3 :: proc(a: vec3, b: vec3) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = a.x / b.x;
 	result.y = a.y / b.y;
 	result.z = a.z / b.z;
@@ -61,7 +61,7 @@ __div_vec3_vec3 :: proc(a: vec3, b: vec3) -> vec3
 
 __mul_vec3_f32 :: proc(a: vec3, b: f32) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = a.x * b;
 	result.y = a.y * b;
 	result.z = a.z * b;
@@ -70,7 +70,7 @@ __mul_vec3_f32 :: proc(a: vec3, b: f32) -> vec3
 
 __div_vec3_f32 :: proc(a: vec3, b: f32) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = a.x / b;
 	result.y = a.y / b;
 	result.z = a.z / b;
@@ -79,7 +79,7 @@ __div_vec3_f32 :: proc(a: vec3, b: f32) -> vec3
 
 __mul_f32_vec3 :: proc(a: f32, b: vec3) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = a * b.x;
 	result.y = a * b.y;
 	result.z = a * b.z;
@@ -88,7 +88,7 @@ __mul_f32_vec3 :: proc(a: f32, b: vec3) -> vec3
 
 __div_f32_vec3 :: proc(a: f32, b: vec3) -> vec3
 {
-	result: vec3;
+	result: vec3 = ---;
 	result.x = a / b.x;
 	result.y = a / b.y;
 	result.z = a / b.z;

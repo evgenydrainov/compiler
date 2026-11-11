@@ -163,6 +163,7 @@ struct VarDeclNode : public Node
 	int stackOffset;
 	Node *expr;
 	Type type;
+	bool isUninitialized;
 };
 
 struct VarNode : public Node

@@ -1182,8 +1182,7 @@ ParseVariableDeclaration(Parser *parser,
 	VarDeclNode *node = MakeNode<VarDeclNode>(parser->current.location, arena);
 	node->name = parser->current.str;
 
-	// eat the variable name
-	AdvanceToken(parser, lexer);
+	ExpectToken(parser, lexer, TokenKind_Identifier);
 
 	ExpectToken(parser, lexer, TokenKind_Colon);
 
@@ -1196,22 +1195,32 @@ ParseVariableDeclaration(Parser *parser,
 
 	if (parser->current.kind == TokenKind_Equal)
 	{
-		// name : type = expr;
-		// name : = expr;
+		// name : <Type> = expr;
 
-		// eat the '='
-		AdvanceToken(parser, lexer);
+		ExpectToken(parser, lexer, TokenKind_Equal);
 
-		node->expr = ParseExpression(parser, lexer, 0, arena);
+		if (parser->current.kind == TokenKind_TripleDash)
+		{
+			if (node->type.kind == TypeKind_InferMe)
+			{
+				ErrorAtCurrent(parser, "must provide variable type");
+			}
+
+			ExpectToken(parser, lexer, TokenKind_TripleDash);
+			node->isUninitialized = true;
+		}
+		else
+		{
+			node->expr = ParseExpression(parser, lexer, 0, arena);
+		}
 
 		ExpectToken(parser, lexer, TokenKind_Semicolon);
 	}
 	else if (parser->current.kind == TokenKind_Semicolon)
 	{
-		// name : type;
+		// name : Type;
 
-		// eat the semicolon
-		AdvanceToken(parser, lexer);
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
 	}
 	else
 	{
