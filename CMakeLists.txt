@@ -16,7 +16,6 @@ add_executable(
     src/base/base_bump_array.h
     src/base/base_defer.h
     src/base/base_dynamic_array.h
-    src/base/base_enum.h
     src/base/base_file.h
     src/base/base_format.h
     src/base/base_list.h
