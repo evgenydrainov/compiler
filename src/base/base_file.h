@@ -3,6 +3,7 @@
 #include "base_types.h"
 #include "base_string.h"
 #include "base_allocator.h"
+#include "base_format.h"
 #include <stdlib.h> // for malloc
 #include <stdio.h> // for fopen
 
@@ -101,4 +102,25 @@ get_executable_dir(Allocator allocator)
 	string exe_file_dir = strip_filename(exe_file_path);
 
 	return exe_file_dir;
+}
+
+template <typename... Args>
+inline void
+file_print(FILE *file, string format, Args... args)
+{
+	Allocator allocator = temp_allocator();
+
+	string_builder builder = {};
+	builder_init(&builder, allocator);
+
+	FormatContext context = {};
+	context.format = format;
+	context.builder = &builder;
+
+	string_format_impl(&context, args...);
+
+	string str = builder_to_string(*context.builder);
+	fwrite(str.data, 1, str.count, file);
+
+	array_free(&builder.buffer);
 }

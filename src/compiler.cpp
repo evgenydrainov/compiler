@@ -33,21 +33,6 @@ FindNasm(CompileOptions *options)
 		return nasmPath;
 	}
 
-#if 0
-	usize dummy;
-
-	char appdata[512];
-	getenv_s(&dummy, appdata, "LOCALAPPDATA");
-
-	char nasmPath[512];
-	sprintf_s(nasmPath, "%s\\bin\\NASM\\nasm.exe", appdata);
-
-	if (_access(nasmPath, 0) == 0)
-	{
-		return _strdup(nasmPath);
-	}
-#endif
-
 	fprintf(stderr, "could not find nasm.exe\n");
 	exit(1);
 }
@@ -87,12 +72,12 @@ CompilerRunProcess(CompileOptions *options, slice<string> commandLine)
 {
 	if (options->verboseMode)
 	{
-		printf("[VERBOSE] running command: ");
+		file_print(stdout, "[VERBOSE] running command: ");
 		for (string it : commandLine)
 		{
-			printf(STR_FMT " ", STR_ARG(it));
+			file_print(stdout, "%s ", it);
 		}
-		printf("\n");
+		file_print(stdout, "\n");
 	}
 
 	return run_process(commandLine);
@@ -152,7 +137,7 @@ Compile(CompileOptions *options)
 		string builtinFileSrc = read_entire_file(builtinFilePath, heap_allocator());
 		if (!builtinFileSrc)
 		{
-			fprintf(stderr, "cannot open file " STR_FMT_QUOTED " for reading\n", STR_ARG(builtinFilePath));
+			file_print(stderr, "cannot open file '%s' for reading\n", builtinFilePath);
 			return CompileResult_CannotReadFile;
 		}
 
@@ -166,7 +151,7 @@ Compile(CompileOptions *options)
 		string sourceCode = read_entire_file(options->inputFilePath, heap_allocator());
 		if (!sourceCode)
 		{
-			fprintf(stderr, "cannot open file " STR_FMT_QUOTED " for reading\n", STR_ARG(options->inputFilePath));
+			file_print(stderr, "cannot open file '%s' for reading\n", options->inputFilePath);
 			return CompileResult_CannotReadFile;
 		}
 

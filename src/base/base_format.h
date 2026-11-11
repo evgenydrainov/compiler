@@ -10,7 +10,13 @@ enum FormatSpec : u32
 {
 	FormatSpec_v,
 	FormatSpec_d,
+	FormatSpec_u,
 	FormatSpec_s,
+	FormatSpec_f,
+	FormatSpec_X,
+	FormatSpec_lld,
+	FormatSpec_llu,
+	FormatSpec_llX,
 };
 
 struct FormatContext
@@ -29,6 +35,62 @@ type_formatter(FormatContext *context, int value)
 }
 
 inline void
+type_formatter(FormatContext *context, u32 value)
+{
+	Assert(context->spec == FormatSpec_v
+		   || context->spec == FormatSpec_u
+		   || context->spec == FormatSpec_X);
+	if (context->spec == FormatSpec_v || context->spec == FormatSpec_u)
+	{
+		builder_write(context->builder, value);
+	}
+	else if (context->spec == FormatSpec_X)
+	{
+		builder_write_hex(context->builder, value);
+	}
+}
+
+inline void
+type_formatter(FormatContext *context, i64 value)
+{
+	Assert(context->spec == FormatSpec_v
+		   || context->spec == FormatSpec_lld);
+	builder_write(context->builder, value);
+}
+
+inline void
+type_formatter(FormatContext *context, u64 value)
+{
+	Assert(context->spec == FormatSpec_v
+		   || context->spec == FormatSpec_llu
+		   || context->spec == FormatSpec_llX);
+	if (context->spec == FormatSpec_v || context->spec == FormatSpec_llu)
+	{
+		builder_write(context->builder, value);
+	}
+	else if (context->spec == FormatSpec_llX)
+	{
+		builder_write_hex(context->builder, value);
+	}
+}
+
+inline void
+type_formatter(FormatContext *context, f32 value)
+{
+	Assert(context->spec == FormatSpec_v
+		   || context->spec == FormatSpec_f);
+	builder_write(context->builder, value);
+}
+
+inline void
+type_formatter(FormatContext *context, f64 value)
+{
+	Assert(context->spec == FormatSpec_v
+		   || context->spec == FormatSpec_f);
+	builder_write(context->builder, value);
+}
+
+inline void
 type_formatter(FormatContext *context, string value)
 {
 	Assert(context->spec == FormatSpec_v
@@ -41,8 +103,10 @@ type_formatter(FormatContext *context, const char *value)
 {
 	Assert(context->spec == FormatSpec_v
 		   || context->spec == FormatSpec_s);
-	string str = {(char *)value, strlen(value)};
-	builder_write(context->builder, str);
+	for (const char *it = value; *it; it++)
+	{
+		builder_write(context->builder, *it);
+	}
 }
 
 inline bool
@@ -50,39 +114,77 @@ write_until_placeholder(FormatContext *context)
 {
 	while (context->format)
 	{
-		char ch = context->format[0];
-
-		if (ch == '%')
+		if (context->format[0] != '%')
 		{
+			builder_write(context->builder, context->format[0]);
 			string_advance(&context->format);
-			ch = context->format[0];
+			continue;
+		}
 
-			if (ch == 'v')
-			{
-				context->spec = FormatSpec_v;
-			}
-			else if (ch == 'd')
-			{
-				context->spec = FormatSpec_d;
-			}
-			else if (ch == 's')
-			{
-				context->spec = FormatSpec_s;
-			}
-			else
-			{
-				Assert(false, "invalid print format specifier");
-			}
+		string_advance(&context->format);
 
+		if (!context->format)
+		{
+			Assert(false, "incomplete print format specifier");
+			return false;
+		}
+
+		if (context->format[0] == '%')
+		{
+			builder_write(context->builder, '%');
 			string_advance(&context->format);
+			continue;
+		}
+			
+		usize length = 1;
 
-			return true;
+		if (context->format[0] == 'v')
+		{
+			context->spec = FormatSpec_v;
+		}
+		else if (context->format[0] == 'd')
+		{
+			context->spec = FormatSpec_d;
+		}
+		else if (context->format[0] == 'u')
+		{
+			context->spec = FormatSpec_u;
+		}
+		else if (context->format[0] == 's')
+		{
+			context->spec = FormatSpec_s;
+		}
+		else if (context->format[0] == 'f')
+		{
+			context->spec = FormatSpec_f;
+		}
+		else if (context->format[0] == 'X')
+		{
+			context->spec = FormatSpec_X;
+		}
+		else if (starts_with(context->format, "lld"))
+		{
+			context->spec = FormatSpec_lld;
+			length = 3;
+		}
+		else if (starts_with(context->format, "llu"))
+		{
+			context->spec = FormatSpec_llu;
+			length = 3;
+		}
+		else if (starts_with(context->format, "llX"))
+		{
+			context->spec = FormatSpec_llX;
+			length = 3;
 		}
 		else
 		{
-			builder_write(context->builder, ch);
-			string_advance(&context->format);
+			Assert(false, "invalid print format specifier");
 		}
+
+		string_advance(&context->format, length);
+
+		return true;
 	}
 
 	return false;
@@ -113,6 +215,8 @@ string_format_impl(FormatContext *context,
 	string_format_impl(context, rest...);
 }
 
+// TODO: you can't mem_free(str.data, str.count) because the count is wrong and
+// you have to do array_free(&builder.buffer)
 template <typename... Args>
 inline string
 string_format(Allocator allocator,
@@ -131,15 +235,15 @@ string_format(Allocator allocator,
 	return builder_to_string(*context.builder);
 }
 
-template <typename... Args>
-inline void
-builder_print(string_builder *builder,
-			  string format,
-			  Args... args)
-{
-	FormatContext context = {};
-	context.format = format;
-	context.builder = builder;
-
-	string_format_impl(&context, args...);
-}
+//template <typename... Args>
+//inline void
+//builder_print(string_builder *builder,
+//			  string format,
+//			  Args... args)
+//{
+//	FormatContext context = {};
+//	context.format = format;
+//	context.builder = builder;
+//
+//	string_format_impl(&context, args...);
+//}

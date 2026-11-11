@@ -498,7 +498,9 @@ WriteType(Type type, string_builder *builder)
 
 		case TypeKind_Array:
 		{
-			builder_print(builder, "[%d]", type.array.length);
+			builder_write(builder, '[');
+			builder_write(builder, type.array.length);
+			builder_write(builder, ']');
 			WriteType(*type.array.elementType, builder);
 		} break;
 
@@ -528,7 +530,10 @@ WriteType(Type type, string_builder *builder)
 					builder_write(builder, ", ");
 				}
 
-				builder_print(builder, "a%d: ", index++);
+				builder_write(builder, 'a');
+				builder_write(builder, index++);
+				builder_write(builder, ':');
+				builder_write(builder, ' ');
 
 				WriteType(it, builder);
 

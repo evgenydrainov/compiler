@@ -4,57 +4,51 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+template <typename... Args>
 internal void
 Print(PrintContext *context,
-	  char *format, ...)
+	  string format,
+	  Args... args)
 {
 	if (context->fromNewLine)
 	{
 		for (int i = 0; i < context->indentation; i++)
 		{
-			printf("    ");
+			file_print(stdout, "    ");
 		}
 		context->fromNewLine = false;
 	}
 
-	va_list args;
-	va_start(args, format);
-
-	vprintf(format, args);
-
-	va_end(args);
+	file_print(stdout, format, args...);
 }
 
+template <typename... Args>
 internal void
 PrintLn(PrintContext *context,
-		char *format, ...)
+		string format,
+		Args... args)
 {
 	if (context->fromNewLine)
 	{
 		for (int i = 0; i < context->indentation; i++)
 		{
-			printf("    ");
+			file_print(stdout, "    ");
 		}
 		context->fromNewLine = false;
 	}
 
-	va_list args;
-	va_start(args, format);
-
-	vprintf(format, args);
+	file_print(stdout, format, args...);
 
 	if (context->suppressNewLines)
 	{
-		printf(" ");
+		file_print(stdout, " ");
 		context->suppressNewLines--;
 	}
 	else
 	{
-		printf("\n");
+		file_print(stdout, "\n");
 		context->fromNewLine = true;
 	}
-
-	va_end(args);
 }
 
 internal void
@@ -105,14 +99,14 @@ PrintExpression(PrintContext *context,
 		{
 			CStringNode *node = As<CStringNode>(_node);
 
-			Print(context, "\"" STR_FMT "\"c", STR_ARG(node->value));
+			Print(context, "\"%s\"c", node->value);
 		} break;
 
 		case NodeKind_ProcRef:
 		{
 			ProcRefNode *node = As<ProcRefNode>(_node);
 
-			Print(context, STR_FMT, STR_ARG(node->linkName));
+			Print(context, "%s", node->linkName);
 		} break;
 
 		case NodeKind_NullLiteral:
@@ -148,7 +142,7 @@ PrintExpression(PrintContext *context,
 		{
 			VarNode *node = As<VarNode>(_node);
 
-			Print(context, STR_FMT, STR_ARG(node->name));
+			Print(context, "%s", node->name);
 		} break;
 
 		case NodeKind_FieldAccess:
@@ -157,7 +151,7 @@ PrintExpression(PrintContext *context,
 
 			PrintExpression(context, node->expr);
 
-			Print(context, "." STR_FMT, STR_ARG(node->fieldName));
+			Print(context, ".%s", node->fieldName);
 		} break;
 
 		case NodeKind_Subscript:
@@ -211,8 +205,8 @@ PrintExpression(PrintContext *context,
 		{
 			CastNode *node = As<CastNode>(_node);
 
-			Print(context, "cast(" STR_FMT ")",
-				  STR_ARG(TypeToString(node->targetType)));
+			Print(context, "cast(%s)",
+				  TypeToString(node->targetType));
 
 			PrintExpression(context, node->what);
 		} break;
@@ -359,9 +353,9 @@ PrintStatement(PrintContext *context,
 		{
 			VarDeclNode *node = As<VarDeclNode>(_node);
 
-			Print(context, STR_FMT ": " STR_FMT,
-				  STR_ARG(node->name),
-				  STR_ARG(TypeToString(node->type)));
+			Print(context, "%s: %s",
+				  node->name,
+				  TypeToString(node->type));
 
 			if (node->expr)
 			{
@@ -480,7 +474,7 @@ PrintTopLevelStatement(PrintContext *context,
 		{
 			ProcDeclNode *node = As<ProcDeclNode>(_node);
 
-			Print(context, STR_FMT " :: proc(", STR_ARG(node->name));
+			Print(context, "%s :: proc(", node->name);
 
 			bool needComma = false;
 
@@ -491,9 +485,9 @@ PrintTopLevelStatement(PrintContext *context,
 					Print(context, ", ");
 				}
 
-				Print(context, STR_FMT ": " STR_FMT,
-					  STR_ARG(param->name),
-					  STR_ARG(TypeToString(param->type)));
+				Print(context, "%s: %s",
+					  param->name,
+					  TypeToString(param->type));
 
 				needComma = true;
 			}
@@ -502,8 +496,8 @@ PrintTopLevelStatement(PrintContext *context,
 
 			if (node->returnType.kind != TypeKind_Void)
 			{
-				Print(context, " -> " STR_FMT,
-					  STR_ARG(TypeToString(node->returnType)));
+				Print(context, " -> %s",
+					  TypeToString(node->returnType));
 			}
 
 			if (node->body)

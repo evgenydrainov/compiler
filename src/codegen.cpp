@@ -1,5 +1,4 @@
 #include "codegen.h"
-#include "print.h"
 #include "profiler.h"
 #include <string.h> // for strlen
 #include <stdarg.h>
@@ -11,8 +10,8 @@ Emit(CodegenContext *context,
 	 string format,
 	 Args... args)
 {
-	PrintFormat(context->out, format, args...);
-	PrintFormat(context->out, "\n");
+	file_print(context->out, format, args...);
+	file_print(context->out, "\n");
 
 	format = trim_left(format);
 
@@ -1838,11 +1837,11 @@ GenerateTopLevelStatement(Node *baseNode,
 		{
 			AsmNode *node = As<AsmNode>(baseNode);
 
-			fprintf(out, "; inline assembly begin\n");
-			fprintf(out, STR_FMT, STR_ARG(node->code));
-			fprintf(out, "\n");
-			fprintf(out, "; inline assembly end\n");
-			fprintf(out, "\n");
+			file_print(out, "; inline assembly begin\n");
+			file_print(out, "%s", node->code);
+			file_print(out, "\n");
+			file_print(out, "; inline assembly end\n");
+			file_print(out, "\n");
 		} break;
 
 		default:
@@ -1902,8 +1901,8 @@ Generate_x86_64(Node *_program,
 
 	FILE *out = context->out;
 
-	fprintf(out, "default rel\n");
-	fprintf(out, "\n");
+	file_print(out, "default rel\n");
+	file_print(out, "\n");
 
 	BlockNode *program = As<BlockNode>(_program);
 
@@ -1917,44 +1916,44 @@ Generate_x86_64(Node *_program,
 
 			if (node->isForeign)
 			{
-				fprintf(out, "extern " STR_FMT "\n", STR_ARG(symbolName));
+				file_print(out, "extern %s\n", symbolName);
 			}
 			else
 			{
-				fprintf(out, "global " STR_FMT "\n", STR_ARG(symbolName));
+				file_print(out, "global %s\n", symbolName);
 			}
 		}
 	}
-	fprintf(out, "\n");
+	file_print(out, "\n");
 
-	fprintf(out, "extern printf\n");
-	fprintf(out, "\n");
+	file_print(out, "extern printf\n");
+	file_print(out, "\n");
 
-	fprintf(out, "section .data\n");
-	fprintf(out, "builtin_print_format: db \"%%d\", 10, 0\t\t; 10 is newline, 0 is null terminator\n");
+	file_print(out, "section .data\n");
+	file_print(out, "builtin_print_format: db \"%%d\", 10, 0\t\t; 10 is newline, 0 is null terminator\n");
 
 	for (auto &literal : context->cstringLiterals)
 	{
-		fprintf(out, "cstring_literal_%d: db ", literal.uniqueLabelId);
+		file_print(out, "cstring_literal_%d: db ", literal.uniqueLabelId);
 
 		WriteStringBytes(literal.value, out);
 	}
-	fprintf(out, "\n");
+	file_print(out, "\n");
 
 	for (auto &literal : context->stringLiterals)
 	{
-		fprintf(out, "string_literal_%d_bytes: db ", literal.uniqueLabelId);
+		file_print(out, "string_literal_%d_bytes: db ", literal.uniqueLabelId);
 
 		int stringLength = WriteStringBytes(literal.value, out);
 
-		fprintf(out, "string_literal_%d: dq string_literal_%d_bytes, %d\n",
+		file_print(out, "string_literal_%d: dq string_literal_%d_bytes, %d\n",
 				literal.uniqueLabelId,
 				literal.uniqueLabelId,
 				stringLength);
 	}
-	fprintf(out, "\n");
+	file_print(out, "\n");
 
-	fprintf(out, "section .bss\n");
+	file_print(out, "section .bss\n");
 	for (Node *it : program->statements)
 	{
 		if (it->kind == NodeKind_VarDecl)
@@ -1963,14 +1962,14 @@ Generate_x86_64(Node *_program,
 
 			int size = SizeOfType(node->type);
 
-			fprintf(out, "    " STR_FMT " resb %d\n",
-					STR_ARG(node->name),
-					size);
+			file_print(out, "    %s resb %d\n",
+					   node->name,
+					   size);
 		}
 	}
-	fprintf(out, "\n");
+	file_print(out, "\n");
 
-	fprintf(out, "section .text\n");
+	file_print(out, "section .text\n");
 	for (Node *it : program->statements)
 	{
 		GenerateTopLevelStatement(it, out, context);

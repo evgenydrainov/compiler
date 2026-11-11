@@ -51,15 +51,6 @@ push_size(Arena *arena,
 
 	memset(result, 0, size);
 
-#if 0
-	f32 percentage = arena->pos/(f32)arena->capacity;
-	printf("%f\n", percentage);
-	if (percentage > 0.90)
-	{
-		__debugbreak();
-	}
-#endif
-
 	return result;
 }
 

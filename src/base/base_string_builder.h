@@ -30,23 +30,16 @@ builder_write(string_builder *builder, string str)
 }
 
 inline void
-builder_write(string_builder *builder, int value)
+builder_write(string_builder *builder, u64 value)
 {
-#if 1
 	if (value == 0)
 	{
 		array_add(&builder->buffer, '0');
 		return;
 	}
 
-	if (value < 0)
-	{
-		array_add(&builder->buffer, '-');
-		value = -value;
-	}
-
-	int magnitude = 1;
-	for (int v = value/10; v > 0; v /= 10)
+	u64 magnitude = 1;
+	for (u64 v = value/10; v > 0; v /= 10)
 	{
 		magnitude *= 10;
 	}
@@ -57,18 +50,85 @@ builder_write(string_builder *builder, int value)
 		array_add(&builder->buffer, ch);
 		magnitude /= 10;
 	}
-#else
-	int length = snprintf(nullptr, 0, "%d", value) + 1;
+}
+
+inline void
+builder_write(string_builder *builder, i64 value)
+{
+	if (value < 0)
+	{
+		array_add(&builder->buffer, '-');
+		value = -value;
+	}
+
+	builder_write(builder, (u64)value);
+}
+
+inline void
+builder_write(string_builder *builder, u32 value)
+{
+	builder_write(builder, (u64)value);
+}
+
+inline void
+builder_write(string_builder *builder, i32 value)
+{
+	builder_write(builder, (i64)value);
+}
+
+inline void
+builder_write_hex(string_builder *builder, u64 value)
+{
+	if (value == 0)
+	{
+		array_add(&builder->buffer, '0');
+		return;
+	}
+
+	u64 magnitude = 1;
+	for (u64 v = value/16; v > 0; v /= 16)
+	{
+		magnitude *= 16;
+	}
+
+	local_persist char alphabet[16] =
+	{
+		'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'
+	};
+
+	while (magnitude > 0)
+	{
+		char ch = alphabet[(value / magnitude) % 16];
+		array_add(&builder->buffer, ch);
+		magnitude /= 16;
+	}
+}
+
+inline void
+builder_write_hex(string_builder *builder, u32 value)
+{
+	builder_write_hex(builder, (u64)value);
+}
+
+inline void
+builder_write(string_builder *builder, f64 value)
+{
+	int length = snprintf(nullptr, 0, "%f", value) + 1;
 
 	array_reserve(&builder->buffer, builder->buffer.count + length);
 
-	snprintf(builder->buffer.end(), length, "%d", value);
+	snprintf(builder->buffer.end(), length, "%f", value);
 
 	builder->buffer.count += length;
 
 	// pop the null terminator
 	builder->buffer.count--;
-#endif
+}
+
+inline void
+builder_write(string_builder *builder, f32 value)
+{
+	builder_write(builder, (f64)value);
 }
 
 inline string

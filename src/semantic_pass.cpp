@@ -5,7 +5,6 @@
 #include "type_table.h"
 #include "constants_table.h"
 #include "macro_table.h"
-#include "print.h"
 #include "profiler.h"
 
 #include <stdio.h>
@@ -21,10 +20,10 @@ Error(SemanticContext *context,
 {
 	if (!context->suppressErrors)
 	{
-		PrintFormat(stderr, "%s(%d, %d): error: ",
-					node->location.fileName, node->location.line, node->location.column);
-		PrintFormat(stderr, format, args...);
-		PrintFormat(stderr, "\n");
+		file_print(stderr, "%s(%d, %d): error: ",
+				   node->location.fileName, node->location.line, node->location.column);
+		file_print(stderr, format, args...);
+		file_print(stderr, "\n");
 	}
 
 	context->hadError = true;
@@ -39,10 +38,10 @@ Note(SemanticContext *context,
 {
 	if (!context->suppressErrors)
 	{
-		PrintFormat(stderr, "%s(%d, %d): note: ",
-					node->location.fileName, node->location.line, node->location.column);
-		PrintFormat(stderr, format, args...);
-		PrintFormat(stderr, "\n");
+		file_print(stderr, "%s(%d, %d): note: ",
+				   node->location.fileName, node->location.line, node->location.column);
+		file_print(stderr, format, args...);
+		file_print(stderr, "\n");
 	}
 }
 

@@ -52,41 +52,28 @@ LeftBindingPower(TokenKind type)
 	}
 }
 
+template <typename... Args>
 internal void
-ErrorAtTokenVA(Parser *parser,
-			   Token token,
-			   char *format,
-			   va_list args)
+ErrorAtToken(Parser *parser,
+			 Token token,
+			 string format,
+			 Args... args)
 {
-	fprintf(stderr, STR_FMT "(%d, %d): error: ",
-			STR_ARG(token.location.fileName), token.location.line, token.location.column);
-	vfprintf(stderr, format, args);
-	fprintf(stderr, "\n");
+	file_print(stderr, "%s(%d, %d): error: ",
+			   token.location.fileName, token.location.line, token.location.column);
+	file_print(stderr, format, args...);
+	file_print(stderr, "\n");
 
 	parser->hadError = true;
 }
 
-internal void
-ErrorAtToken(Parser *parser,
-			 Token token,
-			 char *format,
-			 ...)
-{
-	va_list args;
-	va_start(args, format);
-	ErrorAtTokenVA(parser, token, format, args);
-	va_end(args);
-}
-
+template <typename... Args>
 internal void
 ErrorAtCurrent(Parser *parser,
-			   char *format,
-			   ...)
+			   string format,
+			   Args... args)
 {
-	va_list args;
-	va_start(args, format);
-	ErrorAtTokenVA(parser, parser->current, format, args);
-	va_end(args);
+	ErrorAtToken(parser, parser->current, format, args...);
 }
 
 internal void
@@ -120,7 +107,7 @@ ExpectToken(Parser *parser,
 			if (parser->current.kind == TokenKind_Error)
 			{
 				string errorMessage = parser->current.str;
-				ErrorAtCurrent(parser, STR_FMT, STR_ARG(errorMessage));
+				ErrorAtCurrent(parser, "%s", errorMessage);
 			}
 			else
 			{
@@ -139,7 +126,7 @@ UnexpectedCurrentToken(Parser *parser)
 	if (parser->current.kind == TokenKind_Error)
 	{
 		string errorMessage = parser->current.str;
-		ErrorAtCurrent(parser, STR_FMT, STR_ARG(errorMessage));
+		ErrorAtCurrent(parser, "%s", errorMessage);
 	}
 	else
 	{

@@ -76,13 +76,21 @@ is_whitespace(char c)
 	return result;
 }
 
+inline void
+string_advance(string *str, usize count = 1)
+{
+	Assert(str->count >= count);
+
+	str->count -= count;
+	str->data += count;
+}
+
 inline string
 trim_left(string str)
 {
 	while (str && is_whitespace(str[0]))
 	{
-		str.data++;
-		str.count--;
+		string_advance(&str);
 	}
 
 	return str;
@@ -242,11 +250,4 @@ string_slice(string str, isize from, isize to)
 	return result;
 }
 
-inline void
-string_advance(string *str, usize count = 1)
-{
-	Assert(str->count >= count);
 
-	str->count -= count;
-	str->data += count;
-}
