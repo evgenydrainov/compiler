@@ -14,34 +14,34 @@
 #  define TYPE_STRUCT_UNION_NAME
 #endif
 
-#define TYPE_KIND_LIST(X) \
-	X(TypeKind_Unknown,       0,    "unknown type"     ) \
-	X(TypeKind_InferMe,       1,    "not inferred yet" ) \
-	X(TypeKind_Void,          2,    "void"             ) \
-	/* integer types */ \
-	X(TypeKind_Int8,          3,    "i8"               ) \
-	X(TypeKind_Int16,         4,    "i16"              ) \
-	X(TypeKind_Int32,         5,    "i32"              ) \
-	X(TypeKind_Int64,         6,    "i64"              ) \
-	/* unsigned integer types */ \
-	X(TypeKind_UInt8,         7,    "u8"               ) \
-	X(TypeKind_UInt16,        8,    "u16"              ) \
-	X(TypeKind_UInt32,        9,    "u32"              ) \
-	X(TypeKind_UInt64,       10,    "u64"              ) \
-	/* floating point types */ \
-	X(TypeKind_Float32,      11,    "f32"              ) \
-	X(TypeKind_Float64,      12,    "f64"              ) \
-	/* other */ \
-	X(TypeKind_Bool,         13,    "bool"             ) \
-	X(TypeKind_Pointer,      14,    "pointer"          ) \
-	X(TypeKind_Struct,       15,    "struct"           ) \
-	X(TypeKind_Enum,         16,    "enum"             ) \
-	X(TypeKind_Array,        17,    "array"            ) \
-	X(TypeKind_Slice,        18,    "slice"            ) \
-	X(TypeKind_DynamicArray, 19,    "dynamic array"    ) \
-	X(TypeKind_Proc,         20,    "proc"             )
+enum TypeKind : u32
+{
+	TypeKind_Unknown,
+	TypeKind_InferMe,
+	TypeKind_Void,
 
-DEFINE_ENUM_WITH_VALUES(TypeKind, u32, TYPE_KIND_LIST);
+	TypeKind_Int8,
+	TypeKind_Int16,
+	TypeKind_Int32,
+	TypeKind_Int64,
+
+	TypeKind_UInt8,
+	TypeKind_UInt16,
+	TypeKind_UInt32,
+	TypeKind_UInt64,
+
+	TypeKind_Float32,
+	TypeKind_Float64,
+
+	TypeKind_Bool,
+	TypeKind_Pointer,
+	TypeKind_Struct,
+	TypeKind_Enum,
+	TypeKind_Array,
+	TypeKind_Slice,
+	TypeKind_DynamicArray,
+	TypeKind_Proc,
+};
 
 struct StructInfo;
 struct EnumInfo;

@@ -6,7 +6,6 @@
 #include "base_bump_array.h"
 #include "base_defer.h"
 #include "base_dynamic_array.h"
-#include "base_enum.h"
 #include "base_file.h"
 #include "base_format.h"
 #include "base_list.h"
