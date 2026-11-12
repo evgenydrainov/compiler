@@ -1286,16 +1286,6 @@ InstantiateMacro(Node *baseNode,
 			return result;
 		} break;
 
-		case NodeKind_Print:
-		{
-			PrintNode *node = As<PrintNode>(baseNode);
-
-			PrintNode *result = MakeNode<PrintNode>(node->location, arena);
-			result->expr = InstantiateMacro(node->expr, context);
-
-			return result;
-		} break;
-
 		case NodeKind_Call:
 		{
 			CallNode *node = As<CallNode>(baseNode);
@@ -2587,13 +2577,6 @@ AnalyzeStatement(Node *baseNode,
 			context->currentLoop = saveCurrentLoop;
 
 			LeaveScope(context->symTable, scope);
-		} break;
-
-		case NodeKind_Print:
-		{
-			PrintNode *node = As<PrintNode>(baseNode);
-
-			AnalyzeExpression(node->expr, context);
 		} break;
 
 		case NodeKind_Block:

@@ -3,13 +3,13 @@
 // across yields, data is passed through userdata, early return finishes.
 foo :: proc(co: *Coroutine) #coroutine
 {
-	print 1;
+	printf("1\n"c);
 	yield;
 
-	print 2;
+	printf("2\n"c);
 	yield;
 
-	print 3;
+	printf("3\n"c);
 }
 
 Vec2 :: struct

@@ -62,30 +62,6 @@ GenerateBlock(Node *baseNode,
 }
 
 internal void
-PushShadowSpace(CodegenContext *context)
-{
-	int numBytes = 32;
-	if (context->stackDepth % 2 == 1)
-	{
-		numBytes += 8;
-	}
-
-	Emit(context, "    sub rsp, %d\t\t; push shadow space", numBytes);
-}
-
-internal void
-PopShadowSpace(CodegenContext *context)
-{
-	int numBytes = 32;
-	if (context->stackDepth % 2 == 1)
-	{
-		numBytes += 8;
-	}
-
-	Emit(context, "    add rsp, %d\t\t; pop shadow space", numBytes);
-}
-
-internal void
 EmitConvertRaxToIntegerType(Type type,
 							CodegenContext *context)
 {
@@ -1442,23 +1418,6 @@ GenerateStatement(Node *baseNode,
 			context->currentLoopDeferFloor = saveCurrentLoopDeferFloor;
 		} break;
 
-		case NodeKind_Print:
-		{
-			PrintNode *node = As<PrintNode>(baseNode);
-
-			GenerateExpression(node->expr, context);
-
-			Emit(context, "    pop rax\t\t\t; store expression result into rax");
-			Emit(context, "");
-
-			Emit(context, "    lea rcx, [rel builtin_print_format]\t\t; put 1st argument into rcx");
-			Emit(context, "    mov rdx, rax\t\t\t; put 2nd argument into rdx");
-			PushShadowSpace(context);
-			Emit(context, "    call printf");
-			PopShadowSpace(context);
-			Emit(context, "");
-		} break;
-
 		case NodeKind_Block:
 		{
 			BlockNode *node = As<BlockNode>(baseNode);
@@ -1945,13 +1904,8 @@ Generate_x86_64(Node *_program,
 	}
 	file_print(out, "\n");
 
-	file_print(out, "extern printf\n");
-	file_print(out, "\n");
-
 	file_print(out, "section .data\n");
-	file_print(out, "builtin_print_format: db \"%%d\", 10, 0\t\t; 10 is newline, 0 is null terminator\n");
-
-	for (auto &literal : context->cstringLiterals)
+		for (auto &literal : context->cstringLiterals)
 	{
 		file_print(out, "cstring_literal_%d: db ", literal.uniqueLabelId);
 

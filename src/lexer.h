@@ -60,7 +60,6 @@ enum TokenKind : u32
 	TokenKind_Else,
 	TokenKind_While,
 	TokenKind_Do,
-	TokenKind_Print,
 	TokenKind_Proc,
 	TokenKind_Return,
 	TokenKind_True,
@@ -146,7 +145,6 @@ GetTokenKindName(TokenKind kind)
 		case TokenKind_Else:           return "else";
 		case TokenKind_While:          return "while";
 		case TokenKind_Do:             return "do";
-		case TokenKind_Print:          return "print";
 		case TokenKind_Proc:           return "proc";
 		case TokenKind_Return:         return "return";
 		case TokenKind_True:           return "true";

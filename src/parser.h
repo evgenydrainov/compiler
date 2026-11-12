@@ -15,7 +15,6 @@
 	X(Block) \
 	X(If) \
 	X(While) \
-	X(Print) \
 	X(ProcDecl) \
 	X(Call) \
 	X(Return) \
@@ -218,13 +217,6 @@ struct WhileNode : public Node
 
 	Node *condition;
 	Node *body;
-};
-
-struct PrintNode : public Node
-{
-	static constexpr NodeKind KIND = NodeKind_Print;
-
-	Node *expr;
 };
 
 struct ParamNode : public Node

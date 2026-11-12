@@ -1141,25 +1141,6 @@ ParseSwitchStatement(Parser *parser,
 }
 
 internal Node *
-ParsePrintStatement(Parser *parser,
-					Lexer *lexer,
-					Arena *arena)
-{
-	// print expr;
-
-	PrintNode *node = MakeNode<PrintNode>(parser->current.location, arena);
-
-	// eat the 'print'
-	AdvanceToken(parser, lexer);
-
-	node->expr = ParseExpression(parser, lexer, 0, arena);	
-
-	ExpectToken(parser, lexer, TokenKind_Semicolon);
-
-	return node;
-}
-
-internal Node *
 ParseVariableDeclaration(Parser *parser,
 						 Lexer *lexer,
 						 Arena *arena)
@@ -1287,11 +1268,6 @@ ParseStatement(Parser *parser,
 	if (parser->current.kind == TokenKind_Switch)
 	{
 		return ParseSwitchStatement(parser, lexer, arena);
-	}
-
-	if (parser->current.kind == TokenKind_Print)
-	{
-		return ParsePrintStatement(parser, lexer, arena);
 	}
 
 	if (parser->current.kind == TokenKind_Yield)

@@ -207,11 +207,7 @@ IdentifierType(string str)
 
 		case 'p':
 		{
-			if (str == "print")
-			{
-				result = TokenKind_Print;
-			}
-			else if (str == "proc")
+			if (str == "proc")
 			{
 				result = TokenKind_Proc;
 			}

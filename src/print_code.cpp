@@ -429,17 +429,6 @@ PrintStatement(PrintContext *context,
 			PrintLn(context, "yield;");
 		} break;
 
-		case NodeKind_Print:
-		{
-			PrintNode *node = As<PrintNode>(_node);
-
-			Print(context, "print ");
-
-			PrintExpression(context, node->expr);
-
-			PrintLn(context, ";");
-		} break;
-
 		case NodeKind_Defer:
 		{
 			DeferNode *node = As<DeferNode>(_node);
