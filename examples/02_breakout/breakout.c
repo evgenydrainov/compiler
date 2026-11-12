@@ -28,7 +28,7 @@ setup_screen_camera :: proc(camera: *Camera2D)
 main :: proc() -> int
 {
 	SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
-	InitWindow(GAME_WIDTH*WINDOW_SCALE, GAME_HEIGHT*WINDOW_SCALE, "BREAKOUT"c);
+	InitWindow(GAME_WIDTH*WINDOW_SCALE, GAME_HEIGHT*WINDOW_SCALE, "BREAKOUT");
 	SetExitKey(KEY_NULL);
 
 	game: Game;

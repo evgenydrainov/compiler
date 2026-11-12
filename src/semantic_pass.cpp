@@ -1611,12 +1611,27 @@ AnalyzeExpression(Node *baseNode,
 
 		case NodeKind_String:
 		{
-			baseNode->inferredType.kind = TypeKind_Struct;
-			baseNode->inferredType.name = "string";
-
-			ResolveType(&baseNode->inferredType, context, baseNode);
-
 			StringNode *node = As<StringNode>(baseNode);
+
+			if (expectedType.kind == TypeKind_Pointer
+				&& expectedType.pointee->kind == TypeKind_UInt8)
+			{
+				string value = node->value;
+				int uniqueId = node->uniqueId;
+
+				CStringNode *newNode = ReinterpretNode<CStringNode>(node);
+				newNode->value = value;
+				newNode->uniqueId = uniqueId;
+
+				AnalyzeExpression(newNode, context);
+
+				break;
+			}
+
+			node->inferredType.kind = TypeKind_Struct;
+			node->inferredType.name = "string";
+
+			ResolveType(&node->inferredType, context, node);
 
 			GenerateStringLiteral literal = {};
 			literal.value = node->value;
@@ -1627,12 +1642,12 @@ AnalyzeExpression(Node *baseNode,
 
 		case NodeKind_CString:
 		{
-			baseNode->inferredType.kind = TypeKind_Pointer;
+			CStringNode *node = As<CStringNode>(baseNode);
+
+			node->inferredType.kind = TypeKind_Pointer;
 
 			local_persist Type uint8Type = { TypeKind_UInt8 };
-			baseNode->inferredType.pointee = &uint8Type;
-
-			CStringNode *node = As<CStringNode>(baseNode);
+			node->inferredType.pointee = &uint8Type;
 
 			GenerateCStringLiteral literal = {};
 			literal.value = node->value;
