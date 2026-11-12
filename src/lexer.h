@@ -66,7 +66,6 @@ enum TokenKind : u32
 	TokenKind_False,
 	TokenKind_Struct,
 	TokenKind_For,
-	TokenKind_Asm,
 	TokenKind_Enum,
 	TokenKind_Cast,
 	TokenKind_Yield,
@@ -151,7 +150,6 @@ GetTokenKindName(TokenKind kind)
 		case TokenKind_False:          return "false";
 		case TokenKind_Struct:         return "struct";
 		case TokenKind_For:            return "for";
-		case TokenKind_Asm:            return "asm";
 		case TokenKind_Enum:           return "enum";
 		case TokenKind_Cast:           return "cast";
 		case TokenKind_Yield:          return "yield";

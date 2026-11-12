@@ -438,12 +438,6 @@ PrintStatement(PrintContext *context,
 			PrintStatement(context, node->what);
 		} break;
 
-		case NodeKind_Asm:
-		{
-			// TODO
-			PrintLn(context, "asm {}");
-		} break;
-
 		default:
 		{
 			PrintExpression(context, _node);

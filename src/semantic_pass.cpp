@@ -1120,7 +1120,6 @@ InstantiateMacro(Node *baseNode,
 		case NodeKind_Param:
 		case NodeKind_StructDecl:
 		case NodeKind_StructFieldDecl:
-		case NodeKind_Asm:
 		case NodeKind_EnumDecl:
 		case NodeKind_EnumeratorDecl:
 		case NodeKind_ConstantDecl:
@@ -2633,11 +2632,6 @@ AnalyzeStatement(Node *baseNode,
 			}
 		} break;
 
-		case NodeKind_Asm:
-		{
-			// do nothing
-		} break;
-
 		case NodeKind_Yield:
 		{
 			YieldNode *node = As<YieldNode>(baseNode);
@@ -2824,7 +2818,6 @@ AlwaysReturns(Node *_node, SemanticContext *context)
 	switch (_node->kind)
 	{
 		case NodeKind_Return: return true;
-		case NodeKind_Asm:    return true;
 
 		case NodeKind_Block:
 		{
@@ -3208,11 +3201,6 @@ EarlyAnalyze(Node *baseNode,
 			{
 				Error(context, node, "redefinition of global variable '%s'", node->name);
 			}
-		} break;
-
-		case NodeKind_Asm:
-		{
-			// do nothing
 		} break;
 
 		case NodeKind_MacroDecl:

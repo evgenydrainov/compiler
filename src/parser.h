@@ -29,7 +29,6 @@
 	X(String) \
 	X(CString) \
 	X(Unary) \
-	X(Asm) \
 	X(EnumDecl) \
 	X(EnumeratorDecl) \
 	X(Cast) \
@@ -353,13 +352,6 @@ struct UnaryNode : public Node
 
 	UnaryOp op;
 	Node *expr;
-};
-
-struct AsmNode : public Node
-{
-	static constexpr NodeKind KIND = NodeKind_Asm;
-
-	string code;
 };
 
 struct EnumeratorDeclNode : public Node

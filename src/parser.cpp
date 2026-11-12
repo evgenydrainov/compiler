@@ -1199,36 +1199,6 @@ ParseVariableDeclaration(Parser *parser,
 }
 
 internal Node *
-ParseAsmBlock(Parser *parser,
-			  Lexer *lexer,
-			  Arena *arena)
-{
-	AsmNode *node = MakeNode<AsmNode>(parser->current.location, arena);
-
-	ExpectToken(parser, lexer, TokenKind_Asm);
-
-	Token openBraceToken = parser->current;
-	ExpectToken(parser, lexer, TokenKind_OpenBrace);
-
-	while (!parser->hadError
-		   && parser->current.kind != TokenKind_CloseBrace)
-	{
-		AdvanceToken(parser, lexer);
-	}
-
-	Token closeBraceToken = parser->current;
-	ExpectToken(parser, lexer, TokenKind_CloseBrace);
-
-	node->code.data = openBraceToken.str.data;
-	node->code.count = closeBraceToken.str.data - openBraceToken.str.data;
-
-	node->code.data++;
-	node->code.count--;
-
-	return node;
-}
-
-internal Node *
 ParseStatement(Parser *parser,
 			   Lexer *lexer,
 			   Arena *arena)
@@ -1314,11 +1284,6 @@ ParseStatement(Parser *parser,
 		{
 			return ParseVariableDeclaration(parser, lexer, arena);
 		}
-	}
-
-	if (parser->current.kind == TokenKind_Asm)
-	{
-		return ParseAsmBlock(parser, lexer, arena);
 	}
 
 	if (parser->current.kind == TokenKind_Hash)
@@ -1836,11 +1801,6 @@ ParseTopLevelStatement(Parser *parser,
 		// bare semicolon - empty statement
 		AdvanceToken(parser, lexer);
 		return nullptr;
-	}
-
-	if (parser->current.kind == TokenKind_Asm)
-	{
-		return ParseAsmBlock(parser, lexer, arena);
 	}
 
 	if (parser->current.kind == TokenKind_Hash)

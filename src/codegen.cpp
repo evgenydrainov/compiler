@@ -1475,17 +1475,6 @@ GenerateStatement(Node *baseNode,
 			Emit(context, "");
 		} break;
 
-		case NodeKind_Asm:
-		{
-			AsmNode *node = As<AsmNode>(baseNode);
-
-			Emit(context, "    ; inline assembly begin");
-			Emit(context, "%s", node->code);
-			Emit(context, "");
-			Emit(context, "    ; inline assembly end");
-			Emit(context, "");
-		} break;
-
 		case NodeKind_Yield:
 		{
 			YieldNode *node = As<YieldNode>(baseNode);
@@ -1804,17 +1793,6 @@ GenerateTopLevelStatement(Node *baseNode,
 		case NodeKind_MacroDecl:
 		{
 			// do nothing
-		} break;
-
-		case NodeKind_Asm:
-		{
-			AsmNode *node = As<AsmNode>(baseNode);
-
-			file_print(out, "; inline assembly begin\n");
-			file_print(out, "%s", node->code);
-			file_print(out, "\n");
-			file_print(out, "; inline assembly end\n");
-			file_print(out, "\n");
 		} break;
 
 		default:
