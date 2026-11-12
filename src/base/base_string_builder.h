@@ -30,6 +30,21 @@ builder_write(string_builder *builder, string str)
 }
 
 inline void
+builder_write(string_builder *builder, bool value)
+{
+	builder_write(builder, value ? string{"true"} : string{"false"});
+}
+
+inline void
+builder_write(string_builder *builder, const char *value)
+{
+	for (const char *it = value; *it; it++)
+	{
+		builder_write(builder, *it);
+	}
+}
+
+inline void
 builder_write(string_builder *builder, u64 value)
 {
 	if (value == 0)

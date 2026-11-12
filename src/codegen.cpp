@@ -1902,31 +1902,42 @@ Generate_x86_64(Node *_program,
 			}
 		}
 	}
+
 	file_print(out, "\n");
 
 	file_print(out, "section .data\n");
-		for (auto &literal : context->cstringLiterals)
+	file_print(out, "\n");
+
+	for (auto &literal : context->cstringLiterals)
 	{
+		file_print(out, "; \"%s\"\n", literal.value);
 		file_print(out, "cstring_literal_%d: db ", literal.uniqueLabelId);
 
 		WriteStringBytes(literal.value, out);
+
+		file_print(out, "\n");
 	}
+
 	file_print(out, "\n");
 
 	for (auto &literal : context->stringLiterals)
 	{
+		file_print(out, "; \"%s\"\n", literal.value);
 		file_print(out, "string_literal_%d_bytes: db ", literal.uniqueLabelId);
 
 		int stringLength = WriteStringBytes(literal.value, out);
 
 		file_print(out, "string_literal_%d: dq string_literal_%d_bytes, %d\n",
-				literal.uniqueLabelId,
-				literal.uniqueLabelId,
-				stringLength);
+				   literal.uniqueLabelId, literal.uniqueLabelId, stringLength);
+
+		file_print(out, "\n");
 	}
+
 	file_print(out, "\n");
 
 	file_print(out, "section .bss\n");
+	file_print(out, "\n");
+
 	for (Node *it : program->statements)
 	{
 		if (it->kind == NodeKind_VarDecl)
@@ -1936,13 +1947,15 @@ Generate_x86_64(Node *_program,
 			int size = SizeOfType(node->type);
 
 			file_print(out, "    %s resb %d\n",
-					   node->name,
-					   size);
+					   node->name, size);
 		}
 	}
+
 	file_print(out, "\n");
 
 	file_print(out, "section .text\n");
+	file_print(out, "\n");
+
 	for (Node *it : program->statements)
 	{
 		GenerateTopLevelStatement(it, out, context);

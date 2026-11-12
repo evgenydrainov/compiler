@@ -99,14 +99,18 @@ type_formatter(FormatContext *context, string value)
 }
 
 inline void
+type_formatter(FormatContext *context, bool value)
+{
+	Assert(context->spec == FormatSpec_v);
+	builder_write(context->builder, value);
+}
+
+inline void
 type_formatter(FormatContext *context, const char *value)
 {
 	Assert(context->spec == FormatSpec_v
 		   || context->spec == FormatSpec_s);
-	for (const char *it = value; *it; it++)
-	{
-		builder_write(context->builder, *it);
-	}
+	builder_write(context->builder, value);
 }
 
 inline bool
