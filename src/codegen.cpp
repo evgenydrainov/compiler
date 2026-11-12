@@ -1,8 +1,7 @@
 #include "codegen.h"
 #include "profiler.h"
-#include <string.h> // for strlen
-#include <stdarg.h>
-#include <stdio.h>
+#include "function_table.h"
+#include <stdio.h> // for fprintf
 
 template <typename... Args>
 internal void
@@ -1625,6 +1624,17 @@ GenerateStatement(Node *baseNode,
 	}
 }
 
+internal bool
+IsAlive(ProcDeclNode *node)
+{
+	if (node->name == "main")
+	{
+		return true;
+	}
+
+	return (node->function->numTimesReferenced != 0);
+}
+
 internal void
 GenerateTopLevelStatement(Node *baseNode,
 						  FILE *out,
@@ -1637,6 +1647,10 @@ GenerateTopLevelStatement(Node *baseNode,
 			ProcDeclNode *node = As<ProcDeclNode>(baseNode);
 
 			if (!node->body)
+			{
+				break;
+			}
+			if (!IsAlive(node))
 			{
 				break;
 			}
@@ -1660,13 +1674,13 @@ GenerateTopLevelStatement(Node *baseNode,
 				Emit(context, "    sub rsp, 16");
 				Emit(context, "    mov [rbp - 8], r12\t\t; save callee-saved r12");
 				Emit(context, "    mov r12, [rcx + 8]\t\t; coroutine.frame");
-				Emit(context, "    add r12, %d\t\t; locals are at [r12 - offset]", node->body->stackSize);
+				Emit(context, "    add r12, %d\t\t; locals are at [r12 - offset]", node->stackSize);
 			}
 			else
 			{
 				context->frameReg = "rbp";
 
-				Emit(context, "    sub rsp, %d", node->body->stackSize);
+				Emit(context, "    sub rsp, %d", node->stackSize);
 			}
 			Emit(context, "");
 
@@ -1911,6 +1925,11 @@ Generate_x86_64(Node *_program,
 		if (it->kind == NodeKind_ProcDecl)
 		{
 			ProcDeclNode *node = As<ProcDeclNode>(it);
+
+			if (!IsAlive(node))
+			{
+				continue;
+			}
 
 			string symbolName = GetSymbolNameForFunction(node->linkName, node->isForeign);
 

@@ -1788,6 +1788,8 @@ AnalyzeExpression(Node *baseNode,
 			Function *function = LookupFunction(context->funcTable, node->name);
 			if (function)
 			{
+				function->numTimesReferenced++;
+
 				ProcRefNode *newNode = ReinterpretNode<ProcRefNode>(node);
 				newNode->linkName = function->linkName;
 				newNode->function = function;
@@ -2964,12 +2966,13 @@ AnalyzeTopLevelStatement(Node *baseNode,
 
 			LeaveScope(context->symTable, scope);
 
+			Function *function = LookupFunction(context->funcTable, node->name);
+			node->function = function;
+
 			if (node->body)
 			{
 				int stackSize = (int)align_forward(context->symTable->maxStackSize, 16);
-				node->body->stackSize = stackSize;
-
-				Function *function = LookupFunction(context->funcTable, node->name);
+				node->stackSize = stackSize;
 				function->frameSize = stackSize;
 			}
 		} break;
@@ -2996,19 +2999,19 @@ EarlyAnalyze(Node *baseNode,
 
 			if (!LookupFunction(context->funcTable, node->name))
 			{
-				Function *func = DeclareFunction(context->funcTable, node->name);
-				func->linkName = node->linkName;
+				Function *function = DeclareFunction(context->funcTable, node->name);
+				function->linkName = node->linkName;
 
-				func->info = push_struct<ProcInfo>(arena);
-				func->info->returnType = node->returnType;
-				func->info->isVariadic = node->isVariadic;
-				func->info->isForeign = node->isForeign;
-				func->info->isCoroutine = node->isCoroutine;
-				func->info->params = push_slice<Type>(arena, node->params.count);
+				function->info = push_struct<ProcInfo>(arena);
+				function->info->returnType = node->returnType;
+				function->info->isVariadic = node->isVariadic;
+				function->info->isForeign = node->isForeign;
+				function->info->isCoroutine = node->isCoroutine;
+				function->info->params = push_slice<Type>(arena, node->params.count);
 
 				for (usize i = 0; i < node->params.count; i++)
 				{
-					func->info->params[i] = node->params[i]->type;
+					function->info->params[i] = node->params[i]->type;
 				}
 			}
 			else
@@ -3043,7 +3046,7 @@ EarlyAnalyze(Node *baseNode,
 				if (FindField(type->structInfo, field->name))
 				{
 					Error(context, field, "struct '%s' already has a field '%s'",
-							node->name, field->name);
+						  node->name, field->name);
 					continue;
 				}
 

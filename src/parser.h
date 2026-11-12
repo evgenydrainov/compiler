@@ -201,8 +201,6 @@ struct BlockNode : public Node
 	static constexpr NodeKind KIND = NodeKind_Block;
 
 	list<Node> statements;
-
-	int stackSize;
 };
 
 struct IfNode : public Node
@@ -238,6 +236,8 @@ struct ParamNode : public Node
 	Type type;
 };
 
+struct Function;
+
 struct ProcDeclNode : public Node
 {
 	static constexpr NodeKind KIND = NodeKind_ProcDecl;
@@ -250,6 +250,9 @@ struct ProcDeclNode : public Node
 
 	slice<ParamNode *> params;
 
+	Function *function;
+
+	int stackSize;
 	int yieldIndex;
 
 	bool isForeign;

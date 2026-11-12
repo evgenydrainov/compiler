@@ -11,6 +11,7 @@ struct Function
 	ProcInfo *info;
 
 	int frameSize;
+	int numTimesReferenced;
 };
 
 struct FunctionTable
