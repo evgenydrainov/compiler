@@ -1536,9 +1536,7 @@ GenerateStatement(Node *baseNode,
 				for (CaseNode *caseNode : node->cases)
 				{
 					Emit(context, "    cmp rax, %lld", caseNode->labelValue);
-					Emit(context, "    je .case_%d_%d", uniqueId, i);
-
-					i++;
+					Emit(context, "    je .case_%d_%d", uniqueId, i++);
 				}
 			}
 
@@ -1555,19 +1553,30 @@ GenerateStatement(Node *baseNode,
 				int i = 0;
 				for (CaseNode *caseNode : node->cases)
 				{
-					Emit(context, ".case_%d_%d:", uniqueId, i);
-					GenerateStatement(caseNode->body, context);
-					Emit(context, "    jmp .end_%d", uniqueId);
+					Emit(context, ".case_%d_%d:", uniqueId, i++);
 
-					i++;
+					GenerateStatement(caseNode->body, context);
+
+					if (!caseNode->isFallthrough)
+					{
+						Emit(context, "    jmp .end_%d", uniqueId);
+					}
 				}
 			}
+
+			// TODO: the default case is always generated at the bottom instead
+			// of where it is defined in the source code
 
 			if (node->defaultBody)
 			{
 				Emit(context, ".default_%d:", uniqueId);
+
 				GenerateStatement(node->defaultBody, context);
-				Emit(context, "    jmp .end_%d", uniqueId);
+
+				if (!node->isDefaultFallthrough)
+				{
+					Emit(context, "    jmp .end_%d", uniqueId);
+				}
 			}
 
 			Emit(context, ".end_%d:", uniqueId);

@@ -429,6 +429,7 @@ struct CaseNode : public Node
 	Node *label;
 	Node *body;
 	i64 labelValue;
+	bool isFallthrough;
 };
 
 struct SwitchNode : public Node
@@ -438,6 +439,7 @@ struct SwitchNode : public Node
 	Node *expr;
 	list<CaseNode> cases;
 	Node *defaultBody;
+	bool isDefaultFallthrough;
 };
 
 struct NullLiteralNode : public Node

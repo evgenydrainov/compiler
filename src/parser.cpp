@@ -856,13 +856,9 @@ ParseBlockOrSingleStatement(Parser *parser,
 internal Node *
 ParseCaseBlock(Parser *parser,
 			   Lexer *lexer,
-			   Arena *arena)
+			   Arena *arena,
+			   bool *isFallthrough)
 {
-	if (parser->current.kind == TokenKind_OpenBrace)
-	{
-		return ParseBlock(parser, lexer, arena);
-	}
-
 	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
 
 	while (!parser->hadError
@@ -870,7 +866,23 @@ ParseCaseBlock(Parser *parser,
 		   && parser->current.kind != TokenKind_Default
 		   && parser->current.kind != TokenKind_CloseBrace)
 	{
+		if (parser->current.kind == TokenKind_Hash)
+		{
+			Token peek = PeekToken(lexer);
+			if (peek.str == "fallthrough")
+			{
+				ExpectToken(parser, lexer, TokenKind_Hash);
+				ExpectToken(parser, lexer, TokenKind_Identifier);
+				ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+				*isFallthrough = true;
+
+				continue;
+			}
+		}
+
 		Node *statement = ParseStatement(parser, lexer, arena);
+
 		if (parser->hadError)
 		{
 			break;
@@ -1089,7 +1101,7 @@ ParseSwitchStatement(Parser *parser,
 {
 	SwitchNode *node = MakeNode<SwitchNode>(parser->current.location, arena);
 
-	AdvanceToken(parser, lexer); // eat the 'switch'
+	ExpectToken(parser, lexer, TokenKind_Switch);
 
 	node->expr = ParseExpression(parser, lexer, 0, arena);
 
@@ -1102,13 +1114,13 @@ ParseSwitchStatement(Parser *parser,
 		{
 			CaseNode *caseNode = MakeNode<CaseNode>(parser->current.location, arena);
 
-			AdvanceToken(parser, lexer); // eat the 'case'
+			ExpectToken(parser, lexer, TokenKind_Case);
 
 			caseNode->label = ParseExpression(parser, lexer, 0, arena);
 
 			ExpectToken(parser, lexer, TokenKind_Colon);
 
-			caseNode->body = ParseCaseBlock(parser, lexer, arena);
+			caseNode->body = ParseCaseBlock(parser, lexer, arena, &caseNode->isFallthrough);
 
 			list_append(&node->cases, caseNode);
 		}
@@ -1116,11 +1128,10 @@ ParseSwitchStatement(Parser *parser,
 		{
 			if (!node->defaultBody)
 			{
-				AdvanceToken(parser, lexer); // eat the 'default'
-
+				ExpectToken(parser, lexer, TokenKind_Default);
 				ExpectToken(parser, lexer, TokenKind_Colon);
 
-				node->defaultBody = ParseCaseBlock(parser, lexer, arena);
+				node->defaultBody = ParseCaseBlock(parser, lexer, arena, &node->isDefaultFallthrough);
 			}
 			else
 			{
