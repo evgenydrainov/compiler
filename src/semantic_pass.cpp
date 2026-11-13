@@ -523,88 +523,91 @@ ResolveType(Type *type,
 			SemanticContext *context,
 			Node *nodeForError)
 {
-	if (type->kind == TypeKind_Struct)
+	switch (type->kind)
 	{
-		if (!type->structInfo)
+		case TypeKind_Struct:
 		{
-			Type *typeInfo = LookupType(context->typeTable, type->name);
-			if (typeInfo)
+			if (type->structInfo)
 			{
-				if (typeInfo->kind == TypeKind_Struct)
-				{
-					type->structInfo = typeInfo->structInfo;
-				}
-				else if (typeInfo->kind == TypeKind_Enum)
-				{
-					type->kind = TypeKind_Enum;
-					type->enumInfo = typeInfo->enumInfo;
-				}
-				else
-				{
-					Assert(false);
-				}
+				// type is already resolved
+				break;
 			}
-			else
+
+			Type *typeInfo = LookupType(context->typeTable, type->name);
+
+			if (!typeInfo)
 			{
 				Error(context, nodeForError, "undeclared type '%s'", type->name);
-
-				// local_persist StructInfo dummyStructInfo;
-				// type->structInfo = &dummyStructInfo; // avoid crash
-
 				type->kind = TypeKind_Unknown;
+				break;
 			}
-		}
-		else
-		{
-			// type is already resolved
-		}
-	}
-	else if (type->kind == TypeKind_Array)
-	{
-		ResolveType(type->array.elementType, context, nodeForError);
 
-		if (type->array.length == 0)
-		{
-			i64 arrayLength = EvaluateConstantExpressionInt(type->array.lengthExpr, context);
-			if (arrayLength > 0)
+			if (typeInfo->kind == TypeKind_Struct)
 			{
-				type->array.length = (int)arrayLength;
+				type->structInfo = typeInfo->structInfo;
+			}
+			else if (typeInfo->kind == TypeKind_Enum)
+			{
+				type->kind = TypeKind_Enum;
+				type->enumInfo = typeInfo->enumInfo;
 			}
 			else
+			{
+				Assert(false);
+			}
+		} break;
+
+		case TypeKind_Array:
+		{
+			ResolveType(type->array.elementType, context, nodeForError);
+
+			if (type->array.length > 0)
+			{
+				// type is already resolved
+				break;
+			}
+
+			i64 arrayLength = EvaluateConstantExpressionInt(type->array.lengthExpr, context);
+
+			if (arrayLength <= 0)
 			{
 				Error(context, nodeForError,
 					  "array length must be greater than zero, but it is %lld",
 					  arrayLength);
-
-				type->array.length = 1; // avoid crash
+				type->kind = TypeKind_Unknown;
+				break;
 			}
-		}
-		else
-		{
-			// type is already resolved
-		}
-	}
-	else if (type->kind == TypeKind_Pointer)
-	{
-		ResolveType(type->pointee, context, nodeForError);
-	}
-	else if (type->kind == TypeKind_Slice
-			 || type->kind == TypeKind_DynamicArray)
-	{
-		ResolveType(type->array.elementType, context, nodeForError);
-	}
-	else if (type->kind == TypeKind_Proc)
-	{
-		Assert(type->procInfo);
 
-		for (usize i = 0;
-			 i < type->procInfo->params.count;
-			 i++)
-		{
-			ResolveType(&type->procInfo->params[i], context, nodeForError);
-		}
+			type->array.length = (int)arrayLength;
+		} break;
 
-		ResolveType(&type->procInfo->returnType, context, nodeForError);
+		case TypeKind_Pointer:
+		{
+			ResolveType(type->pointee, context, nodeForError);
+		} break;
+
+		case TypeKind_Slice:
+		case TypeKind_DynamicArray:
+		{
+			ResolveType(type->array.elementType, context, nodeForError);
+		} break;
+
+		case TypeKind_Proc:
+		{
+			Assert(type->procInfo);
+
+			for (auto &it : type->procInfo->params)
+			{
+				ResolveType(&it, context, nodeForError);
+			}
+
+			ResolveType(&type->procInfo->returnType, context, nodeForError);
+		} break;
+
+		default:
+		{
+			// nothing to do
+		} break;
 	}
 }
 
@@ -625,6 +628,7 @@ ReinterpretNode(SrcType *&node)
 	newNode->location = location;
 	newNode->next = next;
 
+	// make sure to not access the old pointer
 	node = nullptr;
 
 	return newNode;
@@ -647,22 +651,25 @@ ReinterpretNode(Node *&node)
 	newNode->location = location;
 	newNode->next = next;
 
+	// make sure to not access the old pointer
 	node = nullptr;
 
 	return newNode;
 }
 
 internal bool
-CanImplicitlyCast(Type destType,
+CanImplicitlyCast(Type targetType,
 				  Node *source,
 				  SemanticContext *context)
 {
-	if (destType.kind == TypeKind_Unknown)
+	// TODO: implicit casts don't generate any code, is this a problem?
+
+	/*if (targetType.kind == TypeKind_Unknown)
 	{
 		return false;
-	}
+	}*/
 
-	if (IsSignedInteger(destType))
+	if (IsSignedInteger(targetType))
 	{
 		i64 value;
 		if (TryEvaluateConstantExpressionInt(source, context, &value))
@@ -675,19 +682,19 @@ CanImplicitlyCast(Type destType,
 
 			Range range = {};
 
-			if (destType.kind == TypeKind_Int64)
+			if (targetType.kind == TypeKind_Int64)
 			{
 				range = { INT64_MIN, INT64_MAX };
 			}
-			else if (destType.kind == TypeKind_Int32)
+			else if (targetType.kind == TypeKind_Int32)
 			{
 				range = { INT32_MIN, INT32_MAX };
 			}
-			else if (destType.kind == TypeKind_Int16)
+			else if (targetType.kind == TypeKind_Int16)
 			{
 				range = { INT16_MIN, INT16_MAX };
 			}
-			else if (destType.kind == TypeKind_Int8)
+			else if (targetType.kind == TypeKind_Int8)
 			{
 				range = { INT8_MIN, INT8_MAX };
 			}
@@ -707,7 +714,7 @@ CanImplicitlyCast(Type destType,
 		}
 	}
 
-	if (IsUnsignedInteger(destType))
+	if (IsUnsignedInteger(targetType))
 	{
 		i64 value;
 		if (TryEvaluateConstantExpressionInt(source, context, &value))
@@ -720,19 +727,19 @@ CanImplicitlyCast(Type destType,
 
 			Range range = {};
 
-			if (destType.kind == TypeKind_UInt64)
+			if (targetType.kind == TypeKind_UInt64)
 			{
 				range = { 0, UINT64_MAX };
 			}
-			else if (destType.kind == TypeKind_UInt32)
+			else if (targetType.kind == TypeKind_UInt32)
 			{
 				range = { 0, UINT32_MAX };
 			}
-			else if (destType.kind == TypeKind_UInt16)
+			else if (targetType.kind == TypeKind_UInt16)
 			{
 				range = { 0, UINT16_MAX };
 			}
-			else if (destType.kind == TypeKind_UInt8)
+			else if (targetType.kind == TypeKind_UInt8)
 			{
 				range = { 0, UINT8_MAX };
 			}
@@ -752,7 +759,7 @@ CanImplicitlyCast(Type destType,
 		}
 	}
 
-	if (destType.kind == TypeKind_Float32)
+	if (targetType.kind == TypeKind_Float32)
 	{
 		i64 value;
 		if (TryEvaluateConstantExpressionInt(source, context, &value))
@@ -767,7 +774,7 @@ CanImplicitlyCast(Type destType,
 		}
 	}
 
-	if (destType.kind == TypeKind_Float64)
+	if (targetType.kind == TypeKind_Float64)
 	{
 		i64 value;
 		if (TryEvaluateConstantExpressionInt(source, context, &value))
@@ -782,73 +789,75 @@ CanImplicitlyCast(Type destType,
 		}
 	}
 
-	if (TypesEqual(destType, source->inferredType))
+	Type sourceType = source->inferredType;
+
+	if (TypesEqual(targetType, sourceType))
 	{
 		return true;
 	}
 
-	if (destType.kind == TypeKind_Int64)
+	// any integer can be implicitly converted into a bigger signed integer
+	if (IsSignedInteger(targetType))
 	{
-		if (source->inferredType.kind == TypeKind_Int32)
+		if (IsInteger(sourceType))
 		{
-			// int32 fits in int64
-			return true;
-		}
-		if (source->inferredType.kind == TypeKind_Int16)
-		{
-			// int16 fits in int64
-			return true;
-		}
-		if (source->inferredType.kind == TypeKind_Int8)
-		{
-			// int8 fits in int64
-			return true;
+			int destSize = SizeOfType(targetType);
+			int sourceSize = SizeOfType(sourceType);
+
+			if (destSize > sourceSize)
+			{
+				return true;
+			}
 		}
 	}
 
-	if (destType.kind == TypeKind_Int32)
+	// only unsigned integer can be implicitly converted into a bigger unsigned integer
+	if (IsUnsignedInteger(targetType))
 	{
-		if (source->inferredType.kind == TypeKind_Int16)
+		if (IsUnsignedInteger(sourceType))
 		{
-			// int16 fits in int32
-			return true;
-		}
-		if (source->inferredType.kind == TypeKind_Int8)
-		{
-			// int8 fits in int32
-			return true;
+			int destSize = SizeOfType(targetType);
+			int sourceSize = SizeOfType(sourceType);
+
+			if (destSize > sourceSize)
+			{
+				return true;
+			}
 		}
 	}
 
-	if (destType.kind == TypeKind_Int16)
+	// allow *void to implicitly cast into any pointer
+	if (IsAnyPointer(targetType)
+		&& IsVoidPointer(sourceType))
 	{
-		if (source->inferredType.kind == TypeKind_Int8)
-		{
-			// int8 fits in int16
-			return true;
-		}
+		return true;
 	}
 
-	// allow *void to cast into any pointer
-	if (destType.kind == TypeKind_Pointer
-		|| destType.kind == TypeKind_Proc)
+	// allow any pointer to implicitly cast into *void
+	if (IsVoidPointer(targetType)
+		&& IsAnyPointer(sourceType))
 	{
-		if (source->inferredType.kind == TypeKind_Pointer
-			&& source->inferredType.pointee->kind == TypeKind_Void)
-		{
-			return true;
-		}
+		return true;
 	}
 
-	// allow any pointer to cast into *void
-	if (destType.kind == TypeKind_Pointer
-		&& destType.pointee->kind == TypeKind_Void)
+	return false;
+}
+
+internal bool
+CanExplicitlyCast(Type targetType, Type sourceType)
+{
+	// TODO: revisit this function
+
+	if (IsIntegerLike(targetType)
+		&& IsIntegerLike(sourceType))
 	{
-		if (source->inferredType.kind == TypeKind_Pointer
-			|| source->inferredType.kind == TypeKind_Proc)
-		{
-			return true;
-		}
+		return true;
+	}
+
+	if (IsNumber(targetType)
+		&& IsNumber(sourceType))
+	{
+		return true;
 	}
 
 	return false;
@@ -2330,64 +2339,19 @@ AnalyzeExpression(Node *baseNode,
 
 			ResolveType(&node->targetType, context, node);
 
-			if (IsInteger(node->targetType))
+			if (CanExplicitlyCast(node->targetType, node->what->inferredType))
 			{
-				if (IsInteger(node->what->inferredType))
-				{
-					node->inferredType = node->targetType;
-					break;
-				}
-
-				if (IsFloatingPoint(node->what->inferredType))
-				{
-					node->inferredType = node->targetType;
-					break;
-				}
-
-				if (node->what->inferredType.kind == TypeKind_Enum)
-				{
-					node->inferredType = node->targetType;
-					break;
-				}
-
-				if (node->what->inferredType.kind == TypeKind_Pointer)
-				{
-					node->inferredType = node->targetType;
-					break;
-				}
+				node->inferredType = node->targetType;
 			}
-
-			if (IsFloatingPoint(node->targetType))
+			else
 			{
-				if (IsInteger(node->what->inferredType))
+				if (!IsPoisoned(node->what->inferredType)
+					&& !IsPoisoned(node->targetType))
 				{
-					node->inferredType = node->targetType;
-					break;
+					Error(context, node, "cannot cast '%s' to '%s'",
+						  TypeToString(node->what->inferredType),
+						  TypeToString(node->targetType));
 				}
-
-				if (IsFloatingPoint(node->what->inferredType))
-				{
-					node->inferredType = node->targetType;
-					break;
-				}
-			}
-
-			if (node->targetType.kind == TypeKind_Pointer)
-			{
-				if (node->what->inferredType.kind == TypeKind_Pointer)
-				{
-					// any pointer can be cast into any pointer
-					node->inferredType = node->targetType;
-					break;
-				}
-			}
-
-			if (!IsPoisoned(node->what->inferredType)
-				&& !IsPoisoned(node->targetType))
-			{
-				Error(context, node, "cannot cast '%s' to '%s'",
-					  TypeToString(node->what->inferredType),
-					  TypeToString(node->targetType));
 			}
 		} break;
 

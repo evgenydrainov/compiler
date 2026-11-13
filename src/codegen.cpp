@@ -62,10 +62,11 @@ GenerateBlock(Node *baseNode,
 }
 
 internal void
-EmitConvertRaxToIntegerType(Type type,
-							CodegenContext *context)
+EmitConvertRaxToIntegerType(Type type, CodegenContext *context)
 {
-	Assert(IsInteger(type));
+	// TODO: handle enum underlying type
+
+	Assert(IsIntegerLike(type));
 
 	int size = SizeOfType(type);
 
@@ -654,6 +655,63 @@ GetSymbolNameForFunction(string linkName, bool isForeign)
 }
 
 internal void
+EmitCast(Type targetType, Type sourceType, CodegenContext *context)
+{
+	// TODO: revisit this function
+
+	// TODO: handle enum underlying type
+
+	if (TypesEqual(targetType, sourceType))
+	{
+		return;
+	}
+
+	Emit(context, "    pop rax");
+
+	bool toFloat = IsFloatingPoint(targetType);
+	bool fromFloat = IsFloatingPoint(sourceType);
+
+	// widen the source
+	if (sourceType.kind == TypeKind_Float32)
+	{
+		Emit(context, "    movd xmm0, eax");
+		Emit(context, "    cvtss2sd xmm0, xmm0");
+	}
+	else if (sourceType.kind == TypeKind_Float64)
+	{
+		Emit(context, "    movq xmm0, rax");
+	}
+
+	// cross the domain
+	if (!fromFloat && toFloat)
+	{
+		Emit(context, "    cvtsi2sd xmm0, rax");
+	}
+	else if (fromFloat && !toFloat)
+	{
+		Emit(context, "    cvttsd2si rax, xmm0");
+	}
+
+	// narrow to the target
+	if (targetType.kind == TypeKind_Float32)
+	{
+		Emit(context, "    cvtsd2ss xmm0, xmm0");
+		Emit(context, "    movd eax, xmm0");
+	}
+	else if (targetType.kind == TypeKind_Float64)
+	{
+		Emit(context, "    movq rax, xmm0");
+	}
+	else
+	{
+		EmitConvertRaxToIntegerType(targetType, context);
+	}
+
+	Emit(context, "    push rax");
+	Emit(context, "");
+}
+
+internal void
 GenerateExpression(Node *baseNode,
 				   CodegenContext *context)
 {
@@ -867,56 +925,7 @@ GenerateExpression(Node *baseNode,
 
 			GenerateExpression(node->what, context);
 
-			Type from = node->what->inferredType;
-			Type to = node->targetType;
-
-			bool fromFloat = IsFloatingPoint(from);
-			bool toFloat = IsFloatingPoint(to);
-
-			if (fromFloat
-				|| toFloat
-				|| (IsInteger(to) && SizeOfType(to) < 8))
-			{
-				Emit(context, "    pop rax");
-
-				// widen the source
-				if (from.kind == TypeKind_Float32)
-				{
-					Emit(context, "    movd xmm0, eax");
-					Emit(context, "    cvtss2sd xmm0, xmm0");
-				}
-				else if (from.kind == TypeKind_Float64)
-				{
-					Emit(context, "    movq xmm0, rax");
-				}
-
-				// convert
-				if (!fromFloat && toFloat)
-				{
-					Emit(context, "    cvtsi2sd xmm0, rax");
-				}
-				else if (fromFloat && !toFloat)
-				{
-					Emit(context, "    cvttsd2si rax, xmm0");
-				}
-
-				// narrow to the target
-				if (to.kind == TypeKind_Float32)
-				{
-					Emit(context, "    cvtsd2ss xmm0, xmm0");
-					Emit(context, "    movd eax, xmm0");
-				}
-				else if (to.kind == TypeKind_Float64)
-				{
-					Emit(context, "    movq rax, xmm0");
-				}
-				else if (IsInteger(to))
-				{
-					EmitConvertRaxToIntegerType(to, context);
-				}
-
-				Emit(context, "    push rax");
-			}
+			EmitCast(node->targetType, node->what->inferredType, context);
 		} break;
 
 		case NodeKind_Call:

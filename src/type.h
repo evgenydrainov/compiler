@@ -33,14 +33,16 @@ enum TypeKind : u32
 	TypeKind_Float32,
 	TypeKind_Float64,
 
-	TypeKind_Bool,
 	TypeKind_Pointer,
-	TypeKind_Struct,
+	TypeKind_Proc,
 	TypeKind_Enum,
+
+	TypeKind_Bool,
+
+	TypeKind_Struct,
 	TypeKind_Array,
 	TypeKind_Slice,
 	TypeKind_DynamicArray,
-	TypeKind_Proc,
 };
 
 struct StructInfo;
@@ -415,6 +417,36 @@ IsRegisterSized(Type type)
 			|| size == 2
 			|| size == 4
 			|| size == 8);
+}
+
+inline bool
+IsIntegerLike(Type type)
+{
+	return (IsInteger(type)
+			|| type.kind == TypeKind_Pointer
+			|| type.kind == TypeKind_Proc
+			|| type.kind == TypeKind_Enum);
+}
+
+inline bool
+IsNumber(Type type)
+{
+	return (IsInteger(type)
+			|| IsFloatingPoint(type));
+}
+
+inline bool
+IsAnyPointer(Type type)
+{
+	return (type.kind == TypeKind_Pointer
+			|| type.kind == TypeKind_Proc);
+}
+
+inline bool
+IsVoidPointer(Type type)
+{
+	return (type.kind == TypeKind_Pointer
+			&& type.pointee->kind == TypeKind_Void);
 }
 
 inline int
