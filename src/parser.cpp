@@ -1126,17 +1126,21 @@ ParseSwitchStatement(Parser *parser,
 		}
 		else if (parser->current.kind == TokenKind_Default)
 		{
-			if (!node->defaultBody)
-			{
-				ExpectToken(parser, lexer, TokenKind_Default);
-				ExpectToken(parser, lexer, TokenKind_Colon);
+			CaseNode *caseNode = MakeNode<CaseNode>(parser->current.location, arena);
 
-				node->defaultBody = ParseCaseBlock(parser, lexer, arena, &node->isDefaultFallthrough);
-			}
-			else
+			ExpectToken(parser, lexer, TokenKind_Default);
+			ExpectToken(parser, lexer, TokenKind_Colon);
+
+			caseNode->body = ParseCaseBlock(parser, lexer, arena, &caseNode->isFallthrough);
+
+			list_append(&node->cases, caseNode);
+
+			if (node->hasDefault)
 			{
 				ErrorAtCurrent(parser, "default case was already defined");
 			}
+
+			node->hasDefault = true;
 		}
 		else
 		{

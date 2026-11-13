@@ -438,8 +438,7 @@ struct SwitchNode : public Node
 
 	Node *expr;
 	list<CaseNode> cases;
-	Node *defaultBody;
-	bool isDefaultFallthrough;
+	bool hasDefault;
 };
 
 struct NullLiteralNode : public Node

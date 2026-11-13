@@ -389,22 +389,20 @@ PrintStatement(PrintContext *context,
 			PrintLn(context, "{");
 			context->indentation++;
 
-			for (CaseNode *it : node->cases)
+			for (auto *it : node->cases)
 			{
-				Print(context, "case ");
-
-				PrintExpression(context, it->label);
-
-				PrintLn(context, ":");
+				if (it->label)
+				{
+					Print(context, "case ");
+					PrintExpression(context, it->label);
+					PrintLn(context, ":");
+				}
+				else
+				{
+					PrintLn(context, "default:");
+				}
 
 				PrintStatement(context, it->body);
-			}
-
-			if (node->defaultBody)
-			{
-				PrintLn(context, "default:");
-
-				PrintStatement(context, node->defaultBody);
 			}
 
 			context->indentation--;

@@ -1476,13 +1476,12 @@ InstantiateMacro(Node *baseNode,
 
 			SwitchNode *result = MakeNode<SwitchNode>(node->location, arena);
 			result->expr = InstantiateMacro(node->expr, context);
-			result->defaultBody = InstantiateMacro(node->defaultBody, context);
+			result->hasDefault = node->hasDefault;
 
 			for (CaseNode *it : node->cases)
 			{
-				Node *_caseNode = InstantiateMacro(it, context);
-				CaseNode *caseNode = As<CaseNode>(_caseNode);
-				list_append(&result->cases, caseNode);
+				list_append(&result->cases,
+							As<CaseNode>(InstantiateMacro(it, context)));
 			}
 
 			return result;
@@ -2639,14 +2638,20 @@ AnalyzeStatement(Node *baseNode,
 
 			AnalyzeExpression(node->expr, context);
 
-			if (IsInteger(node->expr->inferredType)
-				|| node->expr->inferredType.kind == TypeKind_Enum)
+			if (!(IsInteger(node->expr->inferredType)
+				  || node->expr->inferredType.kind == TypeKind_Enum))
 			{
-				for (CaseNode *caseNode : node->cases)
+				Error(context, node->expr, "switch expression must be an integer or an enum");
+				break;
+			}
+
+			for (CaseNode *caseNode : node->cases)
+			{
+				AnalyzeStatement(caseNode->body, context);
+
+				if (caseNode->label)
 				{
 					AnalyzeExpression(caseNode->label, context, node->expr->inferredType);
-
-					AnalyzeStatement(caseNode->body, context);
 
 					i64 result;
 					if (TryEvaluateConstantExpressionInt(caseNode->label, context, &result))
@@ -2658,15 +2663,10 @@ AnalyzeStatement(Node *baseNode,
 						Error(context, caseNode->label, "case label must be constant");
 					}
 				}
-
-				if (node->defaultBody)
+				else
 				{
-					AnalyzeStatement(node->defaultBody, context);
+					// it's the default case
 				}
-			}
-			else
-			{
-				Error(context, node->expr, "switch expression must be an integer or an enum");
 			}
 		} break;
 
@@ -2815,7 +2815,7 @@ AlwaysReturns(Node *_node, SemanticContext *context)
 			SwitchNode *node = As<SwitchNode>(_node);
 
 			// must have a default case
-			if (!node->defaultBody)
+			if (!node->hasDefault)
 			{
 				return false;
 			}
@@ -2826,11 +2826,6 @@ AlwaysReturns(Node *_node, SemanticContext *context)
 				{
 					return false;
 				}
-			}
-
-			if (!AlwaysReturns(node->defaultBody, context))
-			{
-				return false;
 			}
 
 			return true;

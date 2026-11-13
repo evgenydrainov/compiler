@@ -20,11 +20,6 @@ struct list
 			return node;
 		}
 
-		bool operator==(iterator other)
-		{
-			return node == other.node;
-		}
-
 		bool operator!=(iterator other)
 		{
 			return node != other.node;

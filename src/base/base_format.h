@@ -14,6 +14,7 @@ enum FormatSpec : u32
 	FormatSpec_s,
 	FormatSpec_f,
 	FormatSpec_X,
+	FormatSpec_zu,
 	FormatSpec_lld,
 	FormatSpec_llu,
 	FormatSpec_llX,
@@ -39,14 +40,15 @@ type_formatter(FormatContext *context, u32 value)
 {
 	Assert(context->spec == FormatSpec_v
 		   || context->spec == FormatSpec_u
-		   || context->spec == FormatSpec_X);
-	if (context->spec == FormatSpec_v || context->spec == FormatSpec_u)
-	{
-		builder_write(context->builder, value);
-	}
-	else if (context->spec == FormatSpec_X)
+		   || context->spec == FormatSpec_X
+		   || context->spec == FormatSpec_zu);
+	if (context->spec == FormatSpec_X)
 	{
 		builder_write_hex(context->builder, value);
+	}
+	else
+	{
+		builder_write(context->builder, value);
 	}
 }
 
@@ -63,14 +65,15 @@ type_formatter(FormatContext *context, u64 value)
 {
 	Assert(context->spec == FormatSpec_v
 		   || context->spec == FormatSpec_llu
-		   || context->spec == FormatSpec_llX);
-	if (context->spec == FormatSpec_v || context->spec == FormatSpec_llu)
-	{
-		builder_write(context->builder, value);
-	}
-	else if (context->spec == FormatSpec_llX)
+		   || context->spec == FormatSpec_llX
+		   || context->spec == FormatSpec_zu);
+	if (context->spec == FormatSpec_llX)
 	{
 		builder_write_hex(context->builder, value);
+	}
+	else
+	{
+		builder_write(context->builder, value);
 	}
 }
 
@@ -165,6 +168,11 @@ write_until_placeholder(FormatContext *context)
 		else if (context->format[0] == 'X')
 		{
 			context->spec = FormatSpec_X;
+		}
+		else if (starts_with(context->format, "zu"))
+		{
+			context->spec = FormatSpec_zu;
+			length = 2;
 		}
 		else if (starts_with(context->format, "lld"))
 		{
