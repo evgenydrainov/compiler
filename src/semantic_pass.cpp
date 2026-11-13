@@ -7,10 +7,6 @@
 #include "macro_table.h"
 #include "profiler.h"
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-
 template <typename... Args>
 internal void
 Error(SemanticContext *context,

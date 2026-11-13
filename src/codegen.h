@@ -2,7 +2,7 @@
 
 #include "base/base.h"
 #include "parser.h"
-#include <stdio.h>
+#include <stdio.h> // for FILE
 
 struct CodegenContext
 {

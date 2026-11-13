@@ -2,7 +2,7 @@
 
 #include "base_types.h"
 #include "base_assert.h"
-#include <stdlib.h>
+#include <stdlib.h> // for malloc, free
 
 enum AllocatorMode : u32
 {

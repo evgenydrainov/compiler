@@ -4,7 +4,6 @@
 #include "base_slice.h"
 #include "base_allocator.h"
 #include <string.h> // for memcpy
-#include <stdio.h> // for snprintf
 
 #define STR_FMT "%.*s"
 #define STR_FMT_QUOTED "'%.*s'"

@@ -1,8 +1,6 @@
 #pragma once
 
 #include "base/base.h"
-#include <stdio.h> // for sprintf_s
-#include <string.h> // for strlen
 
 #ifndef TYPE_USE_DECLSPEC_PROPERTY
 #  define TYPE_USE_DECLSPEC_PROPERTY 0

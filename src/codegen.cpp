@@ -1,7 +1,6 @@
 #include "codegen.h"
 #include "profiler.h"
 #include "function_table.h"
-#include <stdio.h> // for fprintf
 
 template <typename... Args>
 internal void
@@ -1825,7 +1824,7 @@ WriteStringBytes(string str,
 	{
 		if (needComma)
 		{
-			fprintf(out, ",");
+			file_print(out, ",");
 		}
 
 		if (str[i] == '\\')
@@ -1833,11 +1832,11 @@ WriteStringBytes(string str,
 			i++;
 
 			int value = GetEscapeSequenceValue(str[i]);
-			fprintf(out, "%d", value);
+			file_print(out, "%d", value);
 		}
 		else
 		{
-			fprintf(out, "%d", str[i]);
+			file_print(out, "%d", (int)str[i]);
 		}
 
 		stringLength++;
@@ -1846,9 +1845,9 @@ WriteStringBytes(string str,
 
 	if (needComma)
 	{
-		fprintf(out, ",");
+		file_print(out, ",");
 	}
-	fprintf(out, "0\n");
+	file_print(out, "0\n");
 
 	return stringLength;
 }

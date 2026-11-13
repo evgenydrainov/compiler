@@ -1,8 +1,6 @@
 #include "parser.h"
 #include "compiler.h"
 #include "profiler.h"
-#include <stdio.h>
-#include <stdarg.h>
 
 internal int
 LeftBindingPower(TokenKind type)

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
-#include <stddef.h>
+#include <stdint.h> // for int64_t etc
+#include <stddef.h> // for size_t
 
 #define internal static
 #define local_persist static

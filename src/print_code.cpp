@@ -1,9 +1,6 @@
 #include "print_code.h"
 #include "parser.h"
 
-#include <stdio.h>
-#include <stdarg.h>
-
 template <typename... Args>
 internal void
 Print(PrintContext *context,

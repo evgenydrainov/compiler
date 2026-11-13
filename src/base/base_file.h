@@ -4,7 +4,6 @@
 #include "base_string.h"
 #include "base_allocator.h"
 #include "base_format.h"
-#include <stdlib.h> // for malloc
 #include <stdio.h> // for fopen
 
 extern "C"
