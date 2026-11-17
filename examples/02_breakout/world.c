@@ -105,27 +105,44 @@ BALL_MAX_SPEED    :: 5.5;
 BALL_SPEEDUP      :: 1.05;
 
 BRICK_COLUMNS  :: 6;
-BRICK_MAX_ROWS :: 6;
+BRICK_ROWS     :: 6;
 
-// one more row of bricks per level
+level_has_brick :: proc(level: int, row: int, column: int) -> bool
+{
+	switch (level - 1) % 6
+	{
+		case 0: return column >= row; // staircase
+		case 1: return row == 0 || column < 2 || column >= 4; // center tunnel
+		case 2: return (row + column) % 2 == 0; // checkerboard
+		case 3: return row < 2 || (column >= 1 && column < 5); // side entrances
+		case 4: return row + column >= 2 && row + column <= 8 && row - column >= -3 && row - column <= 3; // diamond
+		default: return row == 0 || row == BRICK_ROWS - 1 || column == 0 || column == BRICK_COLUMNS - 1; // hollow box
+	}
+}
+
 world_spawn_bricks :: proc(world: *World)
 {
 	world.bricks.count = 0;
 
-	rows := min_i64(world.level + 1, BRICK_MAX_ROWS);
-
-	for i in 0..<BRICK_COLUMNS*rows
+	for i in 0..<BRICK_COLUMNS*BRICK_ROWS
 	{
+		row := i/BRICK_COLUMNS;
+		column := i%BRICK_COLUMNS;
+		if !level_has_brick(world.level, row, column)
+		{
+			continue;
+		}
+
 		brick: Entity;
 		brick.size = vec2(40, 10);
-		brick.pos = vec2(35 + (brick.size.x + 10) * cast(f32)(i%BRICK_COLUMNS),
-						 20 + (brick.size.y + 10) * cast(f32)(i/BRICK_COLUMNS));
-		brick.color = brick_row_color(i/BRICK_COLUMNS);
+		brick.pos = vec2(35 + (brick.size.x + 10) * cast(f32)column,
+						 20 + (brick.size.y + 10) * cast(f32)row);
+		brick.color = brick_row_color(row);
 
 		// higher rows are worth more
-		brick.points = (rows - i/BRICK_COLUMNS) * 10;
+		brick.points = (BRICK_ROWS - row) * 10;
 
-		brick.appear_time = cast(f32)(i * BRICK_APPEAR_INTERVAL);
+		brick.appear_time = cast(f32)(world.bricks.count * BRICK_APPEAR_INTERVAL);
 
 		array_add(&world.bricks, brick);
 	}
@@ -160,8 +177,8 @@ ball_bounce_off_paddle :: proc(ball: *Entity, paddle: *Entity)
 	offset := clamp_f32((ball.pos.x - paddle.pos.x) / (paddle.size.x*0.5), -1, 1);
 
 	// keep at least some vertical speed so the ball never goes flat
-	ball.vel = vec2(speed * offset * 0.8,
-					-sqrtf(speed*speed - ball.vel.x*ball.vel.x));
+	outgoing_x := speed * offset * 0.8;
+	ball.vel = vec2(outgoing_x, -sqrtf(speed*speed - outgoing_x*outgoing_x));
 }
 
 // bounce along the axis with the smallest penetration
@@ -193,6 +210,10 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 	switch world.state
 	{
 	case .playing:
+		if DEVELOPER_HOTKEYS && IsKeyPressed(KEY_N)
+		{
+			world_next_level(world);
+		}
 		world_update_playing(world, delta);
 
 	case .ball_lost:
@@ -351,10 +372,16 @@ world_update_level_clear :: proc(world: *World, delta: f32)
 	world.level_clear_timer -= delta;
 	if world.level_clear_timer <= 0
 	{
-		world.level += 1;
-		world_spawn_bricks(world);
-		world.state = .playing;
+		world_next_level(world);
 	}
+}
+
+world_next_level :: proc(world: *World)
+{
+	world.level += 1;
+	world_spawn_bricks(world);
+	world.ball.ball_state = .stick_to_paddle;
+	world.state = .playing;
 }
 
 PADDLE_SPEED :: 5;

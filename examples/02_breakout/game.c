@@ -1,6 +1,8 @@
 GAME_WIDTH  :: 320;
 GAME_HEIGHT :: 240;
 
+DEVELOPER_HOTKEYS :: true;
+
 GameState :: enum
 {
 	title;
