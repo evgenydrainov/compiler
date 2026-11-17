@@ -101,8 +101,8 @@ world_init :: proc(world: *World)
 }
 
 BALL_LAUNCH_SPEED :: 4;
-BALL_MAX_SPEED    :: 5.5;
-BALL_SPEEDUP      :: 1.05;
+BALL_MAX_SPEED    :: 5.25;
+BALL_SPEEDUP      :: 1.04;
 
 BRICK_COLUMNS  :: 6;
 BRICK_ROWS     :: 6;
@@ -338,6 +338,7 @@ world_update_playing :: proc(world: *World, delta: f32)
 	// win condition: short pause, then the next level
 	if world.bricks.count == 0
 	{
+		world.lives += 1;
 		world.state = .level_clear;
 		world.level_clear_timer = LEVEL_CLEAR_TIME;
 		ball.ball_state = .stick_to_paddle;
