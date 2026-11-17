@@ -160,6 +160,7 @@ struct StructInfo
 {
 	string name;
 	list<StructField> fields;
+	Type asFieldType;
 	int size;
 	int alignment;
 };

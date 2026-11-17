@@ -843,6 +843,18 @@ CanImplicitlyCast(Type targetType,
 		return true;
 	}
 
+	// cast subclass pointer to base class pointer
+	if (targetType.kind == TypeKind_Pointer
+		&& sourceType.kind == TypeKind_Pointer
+		&& sourceType.pointee->kind == TypeKind_Struct
+		&& sourceType.pointee->structInfo->asFieldType.kind != TypeKind_Unknown)
+	{
+		if (TypesEqual(*targetType.pointee, sourceType.pointee->structInfo->asFieldType))
+		{
+			return true;
+		}
+	}
+
 	return false;
 }
 
@@ -3084,6 +3096,18 @@ EarlyAnalyze2(Node *baseNode,
 
 							list_append(&type->structInfo->fields, fieldInfo);
 						}
+					}
+				}
+
+				if (field->asField)
+				{
+					if (offset == 0)
+					{
+						type->structInfo->asFieldType = field->type;
+					}
+					else
+					{
+						Error(context, field, "'#as' field must have offset zero (it must be the first field of a struct)");
 					}
 				}
 

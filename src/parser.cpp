@@ -1608,6 +1608,8 @@ ParseStructDefinition(Parser *parser,
 
 	bool multipleDeclarations = false;
 	int explicitSetOffset = -1;
+	bool importMembers = false;
+	bool asField = false;
 
 	while (!parser->hadError
 		   && parser->current.kind != TokenKind_CloseBrace)
@@ -1625,6 +1627,12 @@ ParseStructDefinition(Parser *parser,
 				ExpectToken(parser, lexer, TokenKind_Int64Literal);
 				ExpectToken(parser, lexer, TokenKind_Semicolon);
 			}
+			else if (parser->current.str == "as")
+			{
+				ExpectToken(parser, lexer, TokenKind_Identifier);
+
+				asField = true;
+			}
 			else
 			{
 				UnexpectedCurrentToken(parser);
@@ -1633,19 +1641,23 @@ ParseStructDefinition(Parser *parser,
 			continue;
 		}
 
-		bool importMembers = false;
-
 		if (parser->current.kind == TokenKind_Using)
 		{
 			ExpectToken(parser, lexer, TokenKind_Using);
 			importMembers = true;
+
+			continue;
 		}
 
 		StructFieldDeclNode *field = MakeNode<StructFieldDeclNode>(parser->current.location, arena);
 		field->name = parser->current.str;
 		field->explicitSetOffset = explicitSetOffset;
 		field->importMembers = importMembers;
+		field->asField = asField;
+
 		explicitSetOffset = -1;
+		importMembers = false;
+		asField = false;
 
 		ExpectToken(parser, lexer, TokenKind_Identifier);
 

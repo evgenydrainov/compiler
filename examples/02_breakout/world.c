@@ -6,19 +6,29 @@ BallState :: enum
 
 Entity :: struct
 {
+	dead: bool;
+
 	pos: vec2;
 	vel: vec2;
 	size: vec2;
+};
 
-	ball_state: BallState;
+Ball :: struct
+{
+	#as using entity: Entity;
 
-	color: vec4;
+	state: BallState;
+};
+
+Brick :: struct
+{
+	#as using entity: Entity;
+
 	points: int;
+	color: vec4;
 
 	// bricks pop in one by one at the start of a level
 	appear_time: f32;
-
-	dead: bool;
 };
 
 WorldState :: enum
@@ -63,9 +73,9 @@ World :: struct
 	level_time: f32;
 
 	paddle: Entity;
-	ball: Entity;
+	ball: Ball;
 
-	bricks: [..]Entity;
+	bricks: [..]Brick;
 
 	lives: int;
 	level: int;
@@ -133,7 +143,7 @@ world_spawn_bricks :: proc(world: *World)
 			continue;
 		}
 
-		brick: Entity;
+		brick: Brick;
 		brick.size = vec2(40, 10);
 		brick.pos = vec2(35 + (brick.size.x + 10) * cast(f32)column,
 						 20 + (brick.size.y + 10) * cast(f32)row);
@@ -260,7 +270,7 @@ world_update_playing :: proc(world: *World, delta: f32)
 
 	paddle_update(paddle, delta);
 
-	switch ball.ball_state
+	switch ball.state
 	{
 	case .stick_to_paddle:
 		ball.pos = paddle.pos - vec2(0, (paddle.size.y + ball.size.y)*0.5);
@@ -270,7 +280,7 @@ world_update_playing :: proc(world: *World, delta: f32)
 		{
 			// launch straight up, aim with the paddle
 			ball.vel = vec2(0, -BALL_LAUNCH_SPEED);
-			ball.ball_state = .move;
+			ball.state = .move;
 		}
 
 	case .move:
@@ -341,7 +351,7 @@ world_update_playing :: proc(world: *World, delta: f32)
 		world.lives += 1;
 		world.state = .level_clear;
 		world.level_clear_timer = LEVEL_CLEAR_TIME;
-		ball.ball_state = .stick_to_paddle;
+		ball.state = .stick_to_paddle;
 	}
 }
 
@@ -359,7 +369,7 @@ world_update_ball_lost :: proc(world: *World, delta: f32)
 		}
 		else
 		{
-			world.ball.ball_state = .stick_to_paddle;
+			world.ball.state = .stick_to_paddle;
 			world.state = .playing;
 		}
 	}
@@ -381,7 +391,7 @@ world_next_level :: proc(world: *World)
 {
 	world.level += 1;
 	world_spawn_bricks(world);
-	world.ball.ball_state = .stick_to_paddle;
+	world.ball.state = .stick_to_paddle;
 	world.state = .playing;
 }
 
@@ -442,7 +452,7 @@ world_draw_ui :: proc(world: *World)
 		{
 			draw_text_centered2(TextFormat("LEVEL %lld", world.level), x, y, 20);
 		}
-		else if world.ball.ball_state == .stick_to_paddle
+		else if world.ball.state == .stick_to_paddle
 		{
 			draw_text_centered2("PRESS SPACE TO LAUNCH", x, y + 20, 10);
 		}
