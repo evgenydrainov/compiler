@@ -31,6 +31,13 @@ Brick :: struct
 	appear_time: f32;
 };
 
+BrickParticleEffect :: struct
+{
+	pos: vec2;
+	color: vec4;
+	age: f32;
+};
+
 WorldState :: enum
 {
 	playing;
@@ -50,6 +57,7 @@ LEVEL_CLEAR_TIME :: 90;
 
 BRICK_APPEAR_INTERVAL :: 2;
 BRICK_APPEAR_DURATION :: 8;
+BRICK_PARTICLE_LIFETIME :: 16;
 
 // pause after the ball falls off the screen
 BALL_LOST_TIME :: 60;
@@ -76,6 +84,7 @@ World :: struct
 	ball: Ball;
 
 	bricks: [..]Brick;
+	particle_effects: [..]BrickParticleEffect;
 
 	lives: int;
 	level: int;
@@ -87,6 +96,7 @@ World :: struct
 world_deinit :: proc(world: *World)
 {
 	array_free(&world.bricks);
+	array_free(&world.particle_effects);
 	
 	zero_world: World;
 	*world = zero_world;
@@ -133,6 +143,7 @@ level_has_brick :: proc(level: int, row: int, column: int) -> bool
 world_spawn_bricks :: proc(world: *World)
 {
 	world.bricks.count = 0;
+	world.particle_effects.count = 0;
 
 	for i in 0..<BRICK_COLUMNS*BRICK_ROWS
 	{
@@ -217,6 +228,20 @@ ball_bounce_off_brick :: proc(ball: *Entity, brick: *Entity)
 
 world_update :: proc(world: *World, game: *Game, delta: f32)
 {
+	if world.state != .paused
+	{
+		i := world.particle_effects.count;
+		while i > 0
+		{
+			i -= 1;
+			world.particle_effects[i].age += delta;
+			if world.particle_effects[i].age >= BRICK_PARTICLE_LIFETIME
+			{
+				array_unordered_remove(&world.particle_effects, i);
+			}
+		}
+	}
+
 	switch world.state
 	{
 	case .playing:
@@ -320,6 +345,12 @@ world_update_playing :: proc(world: *World, delta: f32)
 			if entities_collide(ball, brick)
 			{
 				ball_bounce_off_brick(ball, brick);
+
+				effect: BrickParticleEffect;
+				effect.pos = brick.pos;
+				effect.color = brick.color;
+				array_add(&world.particle_effects, effect);
+
 				brick.dead = true;
 				world.score += brick.points;
 
@@ -497,6 +528,20 @@ draw_dim_overlay :: proc(amount: f32)
 				  color_to_raylib(vec4(0, 0, 0, 0.70*amount)));
 }
 
+draw_brick_particles :: proc(effect: *BrickParticleEffect)
+{
+	t := effect.age;
+	color := color_to_raylib(color_fade(effect.color, 1 - t/BRICK_PARTICLE_LIFETIME));
+	for i in 0..<4
+	{
+		side := cast(f32)((i%2)*2 - 1);
+		row := cast(f32)((i/2)*2 - 1);
+		x := effect.pos.x + side*(8 + 0.8*t);
+		y := effect.pos.y + row*(2 + 0.65*t) - 0.7*t + 0.05*t*t;
+		DrawRectangle(cast(i32)x - 2, cast(i32)y - 1, 5, 3, color);
+	}
+}
+
 world_draw :: proc(world: *World)
 {
 	entity_draw3(&world.paddle);
@@ -509,6 +554,11 @@ world_draw :: proc(world: *World)
 		{
 			entity_draw2(brick, brick.color, fminf(t, 1));
 		}
+	}
+
+	for *effect in world.particle_effects
+	{
+		draw_brick_particles(effect);
 	}
 
 	// game over: the ball is lost, it's just sitting at the bottom of the screen
