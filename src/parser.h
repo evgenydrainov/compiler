@@ -48,7 +48,8 @@
 	X(Proxy) \
 	X(RangeBasedFor) \
 	X(Foreach) \
-	X(StaticAssert)
+	X(StaticAssert) \
+	X(Typedef)
 
 #define GENERATE_NODE_KIND_ENUM(Name) NodeKind_##Name,
 
@@ -525,6 +526,14 @@ struct StaticAssertNode : public Node
 
 	Node *what;
 	string message;
+};
+
+struct TypedefNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Typedef;
+
+	string name;
+	Type type;
 };
 
 template <typename T>

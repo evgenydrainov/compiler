@@ -5,12 +5,14 @@
 #include "vec3.c"
 #include "vec4.c"
 
+// VOLATILE: struct layout must match the compiler implementation
 string :: struct
 {
 	data: *u8;
 	count: int;
 };
 
+// VOLATILE: struct layout must match the compiler implementation
 Raw_Dynamic_Array :: struct
 {
 	data     : *void;

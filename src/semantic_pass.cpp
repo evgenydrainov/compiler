@@ -519,6 +519,10 @@ ResolveType(Type *type,
 			SemanticContext *context,
 			Node *nodeForError)
 {
+	//
+	// NOTE: "unresolved" type means "forward-declared" type
+	//
+
 	switch (type->kind)
 	{
 		case TypeKind_Struct:
@@ -529,28 +533,33 @@ ResolveType(Type *type,
 				break;
 			}
 
-			Type *typeInfo = LookupType(context->typeTable, type->name);
+			Type *foundType = LookupType(context->typeTable, type->name);
 
-			if (!typeInfo)
+			if (!foundType)
 			{
 				Error(context, nodeForError, "undeclared type '%s'", type->name);
 				type->kind = TypeKind_Unknown;
 				break;
 			}
 
-			if (typeInfo->kind == TypeKind_Struct)
+			//
+			// NOTE: foundType->structInfo can be null
+			//
+
+			*type = *foundType;
+		} break;
+
+		case TypeKind_Enum:
+		{
+			if (type->enumInfo)
 			{
-				type->structInfo = typeInfo->structInfo;
+				// type is already resolved
+				break;
 			}
-			else if (typeInfo->kind == TypeKind_Enum)
-			{
-				type->kind = TypeKind_Enum;
-				type->enumInfo = typeInfo->enumInfo;
-			}
-			else
-			{
-				Assert(false);
-			}
+
+			// not sure if this path is ever taken
+
+			Assert(false);
 		} break;
 
 		case TypeKind_Array:
@@ -590,8 +599,6 @@ ResolveType(Type *type,
 
 		case TypeKind_Proc:
 		{
-			Assert(type->procInfo);
-
 			for (auto &it : type->procInfo->params)
 			{
 				ResolveType(&it, context, nodeForError);
@@ -1121,19 +1128,6 @@ InstantiateMacro(Node *baseNode,
 
 	switch (baseNode->kind)
 	{
-		case NodeKind_ProcDecl:
-		case NodeKind_Param:
-		case NodeKind_StructDecl:
-		case NodeKind_StructFieldDecl:
-		case NodeKind_EnumDecl:
-		case NodeKind_EnumeratorDecl:
-		case NodeKind_ConstantDecl:
-		case NodeKind_MacroDecl:
-		{
-			Assert(false);
-			return nullptr;
-		} break;
-
 		case NodeKind_Binary:
 		{
 			BinaryNode *node = As<BinaryNode>(baseNode);
@@ -1570,6 +1564,21 @@ InstantiateMacro(Node *baseNode,
 			result->message = node->message;
 
 			return result;
+		} break;
+
+		case NodeKind_ProcDecl:
+		case NodeKind_Param:
+		case NodeKind_StructDecl:
+		case NodeKind_StructFieldDecl:
+		case NodeKind_EnumDecl:
+		case NodeKind_EnumeratorDecl:
+		case NodeKind_ConstantDecl:
+		case NodeKind_MacroDecl:
+		case NodeKind_Typedef:
+		{
+			// these nodes shouldn't be able to appear in a macro instantiation
+			Assert(false);
+			return nullptr;
 		} break;
 	}
 
@@ -2928,9 +2937,56 @@ AnalyzeTopLevelStatement(Node *baseNode,
 }
 
 internal void
-EarlyAnalyze(Node *baseNode,
-			 SemanticContext *context,
-			 Arena *arena)
+EarlyAnalyze1(Node *baseNode,
+			  SemanticContext *context,
+			  Arena *arena)
+{
+	//
+	// do forward-declarations for all types
+	//
+
+	switch (baseNode->kind)
+	{
+		default: {} break;
+
+		case NodeKind_StructDecl:
+		{
+			StructDeclNode *node = As<StructDeclNode>(baseNode);
+
+			if (LookupType(context->typeTable, node->name))
+			{
+				Error(context, node,
+					  "cannot declare struct '%s': a type with this name already exists",
+					  node->name);
+				break;
+			}
+
+			Type *type = DeclareType(context->typeTable, node->name);
+			type->kind = TypeKind_Struct;
+		} break;
+
+		case NodeKind_EnumDecl:
+		{
+			EnumDeclNode *node = As<EnumDeclNode>(baseNode);
+
+			if (LookupType(context->typeTable, node->name))
+			{
+				Error(context, node,
+					  "cannot declare enum '%s': a type with this name already exists",
+					  node->name);
+				break;
+			}
+
+			Type *type = DeclareType(context->typeTable, node->name);
+			type->kind = TypeKind_Enum;
+		} break;
+	}
+}
+
+internal void
+EarlyAnalyze2(Node *baseNode,
+			  SemanticContext *context,
+			  Arena *arena)
 {
 	switch (baseNode->kind)
 	{
@@ -2970,17 +3026,9 @@ EarlyAnalyze(Node *baseNode,
 		{
 			StructDeclNode *node = As<StructDeclNode>(baseNode);
 
-			if (LookupType(context->typeTable, node->name))
-			{
-				Error(context, node,
-					  "cannot declare struct '%s': a type with this name already exists",
-					  node->name);
-				break;
-			}
+			Type *type = LookupType(context->typeTable, node->name);
+			Assert(type);
 
-			Type *type = DeclareType(context->typeTable, node->name);
-
-			type->kind = TypeKind_Struct;
 			type->structInfo = push_struct<StructInfo>(arena);
 			type->structInfo->name = node->name;
 
@@ -3061,49 +3109,39 @@ EarlyAnalyze(Node *baseNode,
 		{
 			EnumDeclNode *node = As<EnumDeclNode>(baseNode);
 
-			if (!LookupType(context->typeTable, node->name))
+			Type *type = LookupType(context->typeTable, node->name);
+			Assert(type);
+
+			type->enumInfo = push_struct<EnumInfo>(arena);
+			type->enumInfo->name = node->name;
+			type->enumInfo->underlyingType = node->underlyingType;
+			// TODO: maybe allocate from somewhere else since node->enumerators.count can be large
+			type->enumInfo->enumerators = push_bump_array<EnumeratorInfo>(arena, node->enumerators.count);
+
+			i64 enumeratorValue = 0;
+
+			for (auto *enumerator : node->enumerators)
 			{
-				Type *type = DeclareType(context->typeTable, node->name);
-
-				type->kind = TypeKind_Enum;
-				type->enumInfo = push_struct<EnumInfo>(arena);
-				type->enumInfo->name = node->name;
-				type->enumInfo->underlyingType = node->underlyingType;
-				// TODO: maybe allocate from somewhere else since node->enumerators.count can be large
-				type->enumInfo->enumerators = push_bump_array<EnumeratorInfo>(arena, node->enumerators.count);
-
-				i64 enumeratorValue = 0;
-
-				for (EnumeratorDeclNode *enumerator : node->enumerators)
+				if (!FindEnumerator(type->enumInfo, enumerator->name))
 				{
-					if (!FindEnumerator(type->enumInfo, enumerator->name))
+					if (enumerator->value)
 					{
-						EnumeratorInfo info = {};
-						info.name = enumerator->name;
-
-						if (enumerator->value)
-						{
-							enumeratorValue = EvaluateConstantExpressionInt(enumerator->value, context);
-						}
-
-						info.value = enumeratorValue++;
-
-						array_add(&type->enumInfo->enumerators, info);
+						enumeratorValue = EvaluateConstantExpressionInt(enumerator->value, context);
 					}
-					else
-					{
-						Error(context, enumerator,
-							  "enum '%s' already has an enumerator '%s'",
-							  node->name,
-							  enumerator->name);
-					}
+
+					EnumeratorInfo info = {};
+					info.name = enumerator->name;
+					info.value = enumeratorValue++;
+
+					array_add(&type->enumInfo->enumerators, info);
 				}
-			}
-			else
-			{
-				Error(context, node,
-					  "cannot declare enum '%s': a type with this name already exists",
-					  node->name);
+				else
+				{
+					Error(context, enumerator,
+						  "enum '%s' already has an enumerator '%s'",
+						  node->name,
+						  enumerator->name);
+				}
 			}
 		} break;
 
@@ -3172,6 +3210,28 @@ EarlyAnalyze(Node *baseNode,
 				Error(context, node, "redefinition of macro '%s'", node->name);
 			}
 		} break;
+
+		case NodeKind_Typedef:
+		{
+			TypedefNode *node = As<TypedefNode>(baseNode);
+
+			ResolveType(&node->type, context, node);
+
+			if (LookupType(context->typeTable, node->name))
+			{
+				Error(context, node,
+					  "cannot typedef '%s': a type with this name already exists",
+					  node->name);
+				break;
+			}
+
+			Type *type = DeclareType(context->typeTable, node->name);
+
+			// this assignment will stomp the name
+			*type = node->type;
+			
+			type->name = node->name;
+		} break;
 	}
 }
 
@@ -3197,9 +3257,20 @@ SemanticPass(Node *_program,
 	context->macroTable  = &macroTable;
 
 	BlockNode *program = As<BlockNode>(_program);
+
 	for (Node *it : program->statements)
 	{
-		EarlyAnalyze(it, context, arena);
+		EarlyAnalyze1(it, context, arena);
+	}
+
+	if (context->hadError)
+	{
+		return;
+	}
+
+	for (Node *it : program->statements)
+	{
+		EarlyAnalyze2(it, context, arena);
 	}
 
 	if (context->hadError)

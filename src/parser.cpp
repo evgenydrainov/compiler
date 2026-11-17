@@ -1576,6 +1576,24 @@ ParseMacroDefinition(Parser *parser,
 }
 
 internal Node *
+ParseTypedef(Parser *parser,
+			 Lexer *lexer,
+			 Arena *arena,
+			 string typeName)
+{
+	// foo :: #type T;
+
+	TypedefNode *node = MakeNode<TypedefNode>(parser->current.location, arena);
+	node->name = typeName;
+
+	node->type = ParseType(parser, lexer, arena);
+
+	ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+	return node;
+}
+
+internal Node *
 ParseStructDefinition(Parser *parser,
 					  Lexer *lexer,
 					  Arena *arena,
@@ -1782,6 +1800,22 @@ ParseTopLevelStatement(Parser *parser,
 			if (parser->current.kind == TokenKind_Macro)
 			{
 				return ParseMacroDefinition(parser, lexer, arena, name);
+			}
+
+			if (parser->current.kind == TokenKind_Hash)
+			{
+				ExpectToken(parser, lexer, TokenKind_Hash);
+
+				if (parser->current.str == "type")
+				{
+					ExpectToken(parser, lexer, TokenKind_Identifier);
+					return ParseTypedef(parser, lexer, arena, name);
+				}
+				else
+				{
+					UnexpectedCurrentToken(parser);
+					return nullptr;
+				}
 			}
 
 			return ParseConstantDefinition(parser, lexer, arena, name, type);

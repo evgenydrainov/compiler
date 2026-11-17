@@ -1,18 +1,15 @@
+Coroutine_Proc :: #type proc(co: *Coroutine) #coroutine;
+
+// VOLATILE: struct layout must match the compiler implementation
 Coroutine :: struct
 {
-	// has to be at offset 0
 	state: int;
-
-	// has to be at offset 8
 	frame: *void;
-
-	func: proc(co: *Coroutine) #coroutine;
-	
+	func: Coroutine_Proc;
 	userdata: *void;
 };
 
-coroutine_init :: proc(co: *Coroutine,
-					   func: proc(co: *Coroutine) #coroutine)
+coroutine_init :: proc(co: *Coroutine, func: Coroutine_Proc)
 {
 	co.func = func;
 	co.state = 0;
