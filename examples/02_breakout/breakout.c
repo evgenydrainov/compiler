@@ -38,6 +38,8 @@ main :: proc() -> int
 	InitWindow(GAME_WIDTH*WINDOW_SCALE, GAME_HEIGHT*WINDOW_SCALE, "BREAKOUT");
 	SetExitKey(KEY_NULL);
 
+	font = LoadFont("dos_font.png");
+
 	game: Game;
 	leaderboard_init(&game.board);
 

@@ -472,32 +472,32 @@ entity_draw3 :: proc(entity: *Entity)
 world_draw_ui :: proc(world: *World)
 {
 	// small margin from the top edge; the top row of bricks starts at y=15
-	draw_text_centered2(TextFormat("LEVEL: %lld", world.level), 60,  3, 10);
-	draw_text_centered2(TextFormat("SCORE: %lld", world.score), 160, 3, 10);
-	draw_text_centered2(TextFormat("LIVES: %lld", world.lives), 260, 3, 10);
+	draw_text_centered2(TextFormat("LEVEL: %lld", world.level), 60,  3, 1);
+	draw_text_centered2(TextFormat("SCORE: %lld", world.score), 160, 3, 1);
+	draw_text_centered2(TextFormat("LIVES: %lld", world.lives), 260, 3, 1);
 
-	x := GAME_WIDTH/2;
-	y := GAME_HEIGHT/2;
+	x := GAME_WIDTH*0.5;
+	y := GAME_HEIGHT*0.5;
 
 	switch world.state
 	{
 	case .playing:
 		if world.level_banner_timer > 0
 		{
-			draw_text_centered2(TextFormat("LEVEL %lld", world.level), x, y, 20);
+			draw_text_centered2(TextFormat("LEVEL %lld", world.level), x, y, 2);
 		}
 		else if world.ball.state == .stick_to_paddle
 		{
-			draw_text_centered2("PRESS SPACE TO LAUNCH", x, y + 20, 10);
+			draw_text_centered2("PRESS SPACE TO LAUNCH", x, y + 20, 1);
 		}
 
 	case .level_clear:
-		draw_text_centered(TextFormat("LEVEL %lld CLEAR!", world.level), x, y, 20, color_from_u32(0xe0d040ff));
+		draw_text_centered1(TextFormat("LEVEL %lld CLEAR!", world.level), x, y, 2, color_from_u32(0xe0d040ff));
 
 	case .paused:
 		draw_dim_overlay(1);
-		draw_text_centered2("PAUSED", x, y - 10, 20);
-		draw_text_centered2("PRESS P TO RESUME", x, y + 20, 10);
+		draw_text_centered2("PAUSED", x, y - 10, 2);
+		draw_text_centered2("PRESS P TO RESUME", x, y + 20, 1);
 
 	case .game_over:
 		t := world.game_over_time;
@@ -509,13 +509,13 @@ world_draw_ui :: proc(world: *World)
 		white  := vec4(1, 1, 1, text_alpha);
 		yellow := color_fade(color_from_u32(0xe0d040ff), text_alpha);
 
-		draw_text_centered("GAME OVER", x, y - 40, 20, white);
-		draw_text_centered(TextFormat("YOU REACHED LEVEL %lld", world.level), x, y - 10, 10, white);
-		draw_text_centered(TextFormat("SCORE: %lld", world.score), x, y + 5, 10, white);
+		draw_text_centered1("GAME OVER", x, y - 40, 2, white);
+		draw_text_centered1(TextFormat("YOU REACHED LEVEL %lld", world.level), x, y - 10, 1, white);
+		draw_text_centered1(TextFormat("SCORE: %lld", world.score), x, y + 5, 1, white);
 
 		if t >= GAME_OVER_INPUT_TIME
 		{
-			draw_text_centered("PRESS ENTER", x, y + 45, 10, white);
+			draw_text_centered1("PRESS ENTER", x, y + 45, 1, white);
 		}
 	}
 }

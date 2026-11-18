@@ -41,6 +41,15 @@ Rectangle :: struct {
     height : f32;           // Rectangle height
 };
 
+// Image, pixel data stored in CPU memory (RAM)
+Image :: struct {
+    data    : *void;         // Image raw data
+    width   : i32;           // Image base width
+    height  : i32;           // Image base height
+    mipmaps : i32;           // Mipmap levels, 1 by default
+    format  : i32;           // Data format (PixelFormat type)
+};
+
 // Texture, tex data stored in GPU memory (VRAM)
 Texture :: struct {
     id      : u32;            // OpenGL texture id
@@ -48,6 +57,25 @@ Texture :: struct {
     height  : i32;            // Texture base height
     mipmaps : i32;            // Mipmap levels, 1 by default
     format  : i32;            // Data format (PixelFormat type)
+};
+
+// GlyphInfo, font characters glyphs info
+GlyphInfo :: struct {
+    value    : i32;          // Character value (Unicode)
+    offsetX  : i32;          // Character offset X when drawing
+    offsetY  : i32;          // Character offset Y when drawing
+    advanceX : i32;          // Character advance position X
+    image    : Image;        // Character image data
+};
+
+// Font, font texture and GlyphInfo array data
+Font :: struct {
+    baseSize     : i32;        // Base size (default chars height)
+    glyphCount   : i32;        // Number of glyph characters
+    glyphPadding : i32;        // Padding around the glyph characters
+    texture      : Texture;    // Texture atlas containing the glyphs
+    recs         : *Rectangle; // Rectangles in texture for the glyphs
+    glyphs       : *GlyphInfo; // Glyphs info data
 };
 
 // Camera2D, defines position/orientation in 2d space
@@ -261,14 +289,60 @@ ColorNormalize      :: proc(color: Color)        -> Vector4 #foreign; // Get Col
 ColorFromNormalized :: proc(normalized: Vector4) -> Color   #foreign; // Get Color from normalized values [0..1]
 GetColor            :: proc(hexValue: u32)       -> Color   #foreign; // Get Color structure from hexadecimal value
 
+//------------------------------------------------------------------------------------
+// Font Loading and Text Drawing Functions (Module: text)
+//------------------------------------------------------------------------------------
+
+// Font loading/unloading functions
+LoadFont :: proc(fileName: *u8) -> Font #foreign; // Load font from file into GPU memory (VRAM)
+
 // Text drawing functions
-DrawFPS  :: proc(posX: i32, posY: i32)                                         #foreign; // Draw current FPS
-DrawText :: proc(text: *u8, posX: i32, posY: i32, fontSize: i32, color: Color) #foreign; // Draw text (using default font)
+DrawFPS    :: proc(posX: i32, posY: i32)                                                               #foreign; // Draw current FPS
+DrawText   :: proc(text: *u8, posX: i32, posY: i32, fontSize: i32, color: Color)                       #foreign; // Draw text (using default font)
+DrawTextEx :: proc(font: Font, text: *u8, position: Vector2, fontSize: f32, spacing: f32, tint: Color) #foreign; // Draw text using font and additional parameters
 
 // Text font info functions
-MeasureText :: proc(text: *u8, fontSize: i32) -> i32 #foreign; // Measure string width for default font
+MeasureText   :: proc(text: *u8, fontSize: i32)                           -> i32     #foreign; // Measure string width for default font
+MeasureTextEx :: proc(font: Font, text: *u8, fontSize: f32, spacing: f32) -> Vector2 #foreign; // Measure string size for Font
 
 // Text strings management functions (no UTF-8 strings, only byte chars)
 // WARNING 1: Most of these functions use internal static buffers[], it's recommended to store returned data on user-side for re-use
 // WARNING 2: Some functions allocate memory internally for the returned strings, those strings must be freed by user using MemFree()
 TextFormat :: proc(text: *u8) -> *u8 #foreign #variadic; // Text formatting with variables (sprintf() style)
+
+Vector2 :: proc(x: f32, y: f32) -> Vector2
+{
+    result: Vector2 = ---;
+    result.x = x;
+    result.y = y;
+    return result;
+}
+
+Vector3 :: proc(x: f32, y: f32, z: f32) -> Vector3
+{
+    result: Vector3 = ---;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    return result;
+}
+
+Vector4 :: proc(x: f32, y: f32, z: f32, w: f32) -> Vector4
+{
+    result: Vector4 = ---;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    result.w = w;
+    return result;
+}
+
+Color :: proc(r: u8, g: u8, b: u8, a: u8) -> Color
+{
+    result: Color = ---;
+    result.r = r;
+    result.g = g;
+    result.b = b;
+    result.a = a;
+    return result;
+}

@@ -90,30 +90,34 @@ name_entry_update :: proc(game: *Game)
 
 name_entry_draw :: proc(game: *Game)
 {
-	x := GAME_WIDTH/2;
-	draw_text_centered2("ENTER YOUR NAME", x, 48, 20);
-	draw_text_centered2(TextFormat("SCORE: %lld", game.world.score), x, 82, 10);
-	draw_text_centered2(TextFormat("%s_", &game.board.name[0]), x, 110, 20);
-	draw_text_centered2("UP TO 12 CHARACTERS", x, 153, 10);
-	draw_text_centered2("PRESS ENTER TO ADD SCORE", x, 185, 10);
+	x := GAME_WIDTH*0.5;
+
+	draw_text_centered2("ENTER YOUR NAME", x, 48, 2);
+	draw_text_centered2(TextFormat("SCORE: %lld", game.world.score), x, 82, 1);
+	draw_text_centered2(TextFormat("%s_", &game.board.name[0]), x, 110, 2);
+	draw_text_centered2("UP TO 12 CHARACTERS", x, 153, 1);
+	draw_text_centered2("PRESS ENTER TO ADD SCORE", x, 185, 1);
 }
 
 leaderboard_draw_row :: proc(board: *Leaderboard, i: int)
 {
-	white := GetColor(0xffffffff);
-	y := cast(i32)(50 + i*18);
-	DrawText(TextFormat("%lld.", i + 1), 30, y, 10, white);
-	DrawText(&board.names[i][0], 57, y, 10, white);
+	y := 50.0 + cast(f32)i*18.0;
+
+	draw_text1(TextFormat("%lld.", i + 1), 30, y, 1);
+	draw_text1(&board.names[i][0], 57, y, 1);
+
 	score := TextFormat("%lld", board.scores[i]);
-	DrawText(score, cast(i32)(290 - MeasureText(score, 10)), y, 10, white);
+	score_size := measure_text(score, 1);
+	x := 290.0 - score_size.x;
+	draw_text1(score, x, y, 1);
 }
 
 leaderboard_draw :: proc(board: *Leaderboard)
 {
-	draw_text_centered2("LEADERBOARD", GAME_WIDTH/2, 15, 20);
+	draw_text_centered2("LEADERBOARD", GAME_WIDTH*0.5, 15, 2);
 	for i in 0..<board.count
 	{
 		leaderboard_draw_row(board, i);
 	}
-	draw_text_centered2("PRESS ENTER FOR TITLE", GAME_WIDTH/2, 214, 10);
+	draw_text_centered2("PRESS ENTER FOR TITLE", GAME_WIDTH*0.5, 214, 1);
 }

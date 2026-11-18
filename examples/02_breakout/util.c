@@ -13,28 +13,36 @@ color_fade :: proc(color: vec4, amount: f32) -> vec4
 	return color;
 }
 
-draw_text_centered :: proc(text: *u8,
-						   x: int, y: int,
-						   font_size: i32, color: vec4)
+font: Font;
+
+measure_text :: proc(text: *u8, scale: f32) -> Vector2
 {
-	text_width := MeasureText(text, font_size);
-	DrawText(text,
-			 cast(i32)(x - text_width/2),
-			 cast(i32)y,
-			 font_size,
-			 color_to_raylib(color));
+	font_size := cast(f32)font.baseSize * scale;
+	return MeasureTextEx(font, text, font_size, 0);
 }
 
-draw_text_centered2 :: proc(text: *u8,
-							x: int, y: int,
-							font_size: i32)
+draw_text_centered1 :: proc(text: *u8, x: f32, y: f32, scale: f32, color: vec4)
 {
-	draw_text_centered(text, x, y, font_size, vec4(1, 1, 1, 1));
+	font_size := cast(f32)font.baseSize * scale;
+	text_size := measure_text(text, scale);
+	position := Vector2(x - text_size.x*0.5, y);
+	DrawTextEx(font, text, position, font_size, 0, color_to_raylib(color));
+}
+
+draw_text_centered2 :: proc(text: *u8, x: f32, y: f32, scale: f32)
+{
+	draw_text_centered1(text, x, y, scale, vec4(1, 1, 1, 1));
+}
+
+draw_text1 :: proc(text: *u8, x: f32, y: f32, scale: f32)
+{
+	font_size := cast(f32)font.baseSize * scale;
+	DrawTextEx(font, text, Vector2(x,y), font_size, 0, Color(255,255,255,255));
 }
 
 color_from_u32 :: proc(color: u32) -> vec4
 {
-	result: vec4;
+	result: vec4 = ---;
 	result.r = cast(f32)((color >> 24) & 0xff) / 255.0;
 	result.g = cast(f32)((color >> 16) & 0xff) / 255.0;
 	result.b = cast(f32)((color >> 8)  & 0xff) / 255.0;
@@ -44,7 +52,7 @@ color_from_u32 :: proc(color: u32) -> vec4
 
 color_to_raylib :: proc(color: vec4) -> Color
 {
-	result: Color;
+	result: Color = ---;
 	result.r = cast(u8)(color.r * 255.0);
 	result.g = cast(u8)(color.g * 255.0);
 	result.b = cast(u8)(color.b * 255.0);
