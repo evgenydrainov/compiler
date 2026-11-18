@@ -281,9 +281,45 @@ TypesEqual(Type a, Type b)
 	return a.kind == b.kind;
 }
 
+inline bool
+IsComplete(Type type)
+{
+	//
+	// NOTE: incomplete type == forward-declared type
+	//
+
+	bool result = true;
+
+	switch (type.kind)
+	{
+		case TypeKind_Struct:
+		{
+			result = (type.structInfo != nullptr);
+		} break;
+
+		case TypeKind_Enum:
+		{
+			result = (type.enumInfo != nullptr
+					  && IsComplete(type.enumInfo->underlyingType));
+		} break;
+
+		case TypeKind_Array:
+		{
+			result = (type.array.length > 0
+					  && IsComplete(*type.array.elementType));
+		} break;
+
+		default: {} break;
+	}
+
+	return result;
+}
+
 inline int
 SizeOfType(Type type)
 {
+	Assert(IsComplete(type));
+
 	int result = 0;
 
 	switch (type.kind)
@@ -311,24 +347,18 @@ SizeOfType(Type type)
 		// it has a large struct return value
 		case TypeKind_Void:    {result = 1;} break;
 
-		case TypeKind_Enum:
-		{
-			Assert(type.enumInfo, "type was not resolved");
-
-			result = SizeOfType(type.enumInfo->underlyingType);
-		} break;
-
 		case TypeKind_Struct:
 		{
-			Assert(type.structInfo, "type was not resolved");
-
 			result = type.structInfo->size;
+		} break;
+
+		case TypeKind_Enum:
+		{
+			result = SizeOfType(type.enumInfo->underlyingType);
 		} break;
 
 		case TypeKind_Array:
 		{
-			Assert(type.array.length != 0, "type was not resolved");
-
 			int elementSize = SizeOfType(*type.array.elementType);
 			result = type.array.length * elementSize;
 		} break;
@@ -451,21 +481,19 @@ IsVoidPointer(Type type)
 inline int
 AlignmentOfType(Type type)
 {
+	Assert(IsComplete(type));
+
 	int result = 0;
 
 	switch (type.kind)
 	{
 		case TypeKind_Struct:
 		{
-			Assert(type.structInfo, "type was not resolved");
-
 			result = type.structInfo->alignment;
 		} break;
 
 		case TypeKind_Array:
 		{
-			Assert(type.array.length != 0, "type was not resolved");
-
 			result = AlignmentOfType(*type.array.elementType);
 		} break;
 
@@ -519,12 +547,12 @@ WriteType(Type type, string_builder *builder)
 
 		case TypeKind_Struct:
 		{
-			builder_write(builder, type.structInfo->name);
+			builder_write(builder, type.name);
 		} break;
 
 		case TypeKind_Enum:
 		{
-			builder_write(builder, type.enumInfo->name);
+			builder_write(builder, type.name);
 		} break;
 
 		case TypeKind_Array:

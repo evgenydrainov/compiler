@@ -1379,6 +1379,7 @@ InstantiateMacro(Node *baseNode,
 
 			StringNode *result = MakeNode<StringNode>(node->location, arena);
 			result->value = node->value;
+			result->uniqueId = node->uniqueId;
 
 			return result;
 		} break;
@@ -1389,6 +1390,7 @@ InstantiateMacro(Node *baseNode,
 
 			CStringNode *result = MakeNode<CStringNode>(node->location, arena);
 			result->value = node->value;
+			result->uniqueId = node->uniqueId;
 
 			return result;
 		} break;
@@ -3057,6 +3059,12 @@ EarlyAnalyze2(Node *baseNode,
 				}
 
 				ResolveType(&field->type, context, field);
+
+				if (!IsComplete(field->type))
+				{
+					Error(context, field, "cannot use incomplete type");
+					continue;
+				}
 
 				int size = SizeOfType(field->type);
 				int alignment = AlignmentOfType(field->type);
