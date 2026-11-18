@@ -1846,11 +1846,11 @@ ParseTopLevelStatement(Parser *parser,
 
 		// global variable declaration
 		// name : Type;
-		ExpectToken(parser, lexer, TokenKind_Semicolon);
-
 		VarDeclNode *node = MakeNode<VarDeclNode>(parser->current.location, arena);
 		node->name = name;
 		node->type = type;
+
+		ExpectToken(parser, lexer, TokenKind_Semicolon);
 
 		return node;
 	}
