@@ -1,11 +1,15 @@
 #import "raylib/raylib.c"
 
 #include "title.c"
+#include "leaderboard.c"
 #include "world.c"
 #include "game.c"
 #include "util.c"
 
 WINDOW_SCALE :: 2;
+
+mouse_x: f32;
+mouse_y: f32;
 
 setup_screen_camera :: proc(camera: *Camera2D)
 {
@@ -23,6 +27,9 @@ setup_screen_camera :: proc(camera: *Camera2D)
 	camera.offset.x = (screen_width  - scaled_width)  * 0.5;
 	camera.offset.y = (screen_height - scaled_height) * 0.5;
 	camera.zoom = scale;
+	
+	mouse_x = (cast(f32)GetMouseX() - camera.offset.x)/scale;
+	mouse_y = (cast(f32)GetMouseY() - camera.offset.y)/scale;
 }
 
 main :: proc() -> int
@@ -32,6 +39,7 @@ main :: proc() -> int
 	SetExitKey(KEY_NULL);
 
 	game: Game;
+	leaderboard_init(&game.board);
 
 	while !WindowShouldClose()
 	{

@@ -237,7 +237,12 @@ IsKeyPressedRepeat :: proc(key: i32) -> bool #foreign; // Check if a key has bee
 IsKeyDown          :: proc(key: i32) -> bool #foreign; // Check if a key is being pressed
 IsKeyReleased      :: proc(key: i32) -> bool #foreign; // Check if a key has been released once
 IsKeyUp            :: proc(key: i32) -> bool #foreign; // Check if a key is NOT being pressed
+GetCharPressed     :: proc() -> i32          #foreign; // Get char pressed (unicode), call it multiple times for chars queued, returns 0 when the queue is empty
 SetExitKey         :: proc(key: i32)         #foreign; // Set a custom key to exit program (default is ESC)
+
+// Input-related functions: mouse
+GetMouseX :: proc() -> i32 #foreign; // Get mouse position X
+GetMouseY :: proc() -> i32 #foreign; // Get mouse position Y
 
 // Basic shapes drawing functions
 DrawPixel     :: proc(posX: i32, posY: i32, color: Color)                          #foreign; // Draw a pixel using geometry [Can be slow, use with care]

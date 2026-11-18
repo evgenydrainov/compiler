@@ -89,8 +89,6 @@ World :: struct
 	lives: int;
 	level: int;
 	score: int;
-
-	new_high_score: bool;
 };
 
 world_deinit :: proc(world: *World)
@@ -254,12 +252,6 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 	case .ball_lost:
 		world_update_ball_lost(world, delta);
 
-		if world.state == .game_over && world.score > game.high_score
-		{
-			game.high_score = world.score;
-			world.new_high_score = true;
-		}
-
 	case .level_clear:
 		world_update_level_clear(world, delta);
 
@@ -274,7 +266,16 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 
 		if world.game_over_time >= GAME_OVER_INPUT_TIME && is_confirm_pressed()
 		{
-			game.state = .title;
+			if game.board.count < LEADERBOARD_SIZE || world.score > game.board.scores[LEADERBOARD_SIZE - 1]
+			{
+				game.board.name_length = 0;
+				game.board.name[0] = 0;
+				game.state = .name_entry;
+			}
+			else
+			{
+				game.state = .leaderboard;
+			}
 		}
 	}
 }
@@ -440,8 +441,10 @@ paddle_update :: proc(paddle: *Entity, delta: f32)
 	{
 		paddle.vel.x -= PADDLE_SPEED;
 	}
-	
+
 	paddle.pos += paddle.vel*delta;
+
+	// paddle.pos.x = mouse_x;
 
 	paddle.pos.x = clamp_f32(paddle.pos.x, paddle.size.x*0.5, GAME_WIDTH - paddle.size.x*0.5);
 }
@@ -509,10 +512,6 @@ world_draw_ui :: proc(world: *World)
 		draw_text_centered("GAME OVER", x, y - 40, 20, white);
 		draw_text_centered(TextFormat("YOU REACHED LEVEL %lld", world.level), x, y - 10, 10, white);
 		draw_text_centered(TextFormat("SCORE: %lld", world.score), x, y + 5, 10, white);
-		if world.new_high_score
-		{
-			draw_text_centered("NEW HIGH SCORE!", x, y + 20, 10, yellow);
-		}
 
 		if t >= GAME_OVER_INPUT_TIME
 		{
