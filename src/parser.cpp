@@ -1908,12 +1908,25 @@ ParseTopLevelStatement(Parser *parser,
 
 		if (parser->current.str == "use_vendor_lld")
 		{
-			ExpectToken(parser, lexer, TokenKind_Identifier);
-
 			parser->options->useVendorLld = true;
-
+			ExpectToken(parser, lexer, TokenKind_Identifier);
 			ExpectToken(parser, lexer, TokenKind_Semicolon);
+			return nullptr;
+		}
 
+		if (parser->current.str == "subsystem_console")
+		{
+			parser->options->subsystem = Subsystem_Console;
+			ExpectToken(parser, lexer, TokenKind_Identifier);
+			ExpectToken(parser, lexer, TokenKind_Semicolon);
+			return nullptr;
+		}
+
+		if (parser->current.str == "subsystem_windows")
+		{
+			parser->options->subsystem = Subsystem_Windows;
+			ExpectToken(parser, lexer, TokenKind_Identifier);
+			ExpectToken(parser, lexer, TokenKind_Semicolon);
 			return nullptr;
 		}
 	}

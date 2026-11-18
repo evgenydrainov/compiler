@@ -8,6 +8,12 @@ enum VCRuntimeType : u32
 	VCRuntimeType_Dynamic,
 };
 
+enum Subsystem : u32
+{
+	Subsystem_Console,
+	Subsystem_Windows,
+};
+
 struct CompileOptions
 {
 	string inputFilePath;
@@ -24,6 +30,7 @@ struct CompileOptions
 	bool generateDebugInfo;
 
 	VCRuntimeType vcruntimeType;
+	Subsystem subsystem;
 };
 
 enum CompileResult : u32

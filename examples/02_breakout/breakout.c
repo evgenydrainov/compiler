@@ -6,6 +6,8 @@
 #include "game.c"
 #include "util.c"
 
+//#subsystem_windows;
+
 WINDOW_SCALE :: 2;
 
 mouse_x: f32;
@@ -33,6 +35,7 @@ setup_screen_camera :: proc(camera: *Camera2D)
 }
 
 main :: proc() -> int
+//WinMain :: proc(hInstance: *void, hPrevInstance: *void, lpCmdLine: *u8, nShowCmd: i32) -> int #foreign
 {
 	SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
 	InitWindow(GAME_WIDTH*WINDOW_SCALE, GAME_HEIGHT*WINDOW_SCALE, "BREAKOUT");

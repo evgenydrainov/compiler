@@ -272,7 +272,13 @@ Compile(CompileOptions *options)
 
 		array_add(&commandLine, "/OPT:REF");
 		array_add(&commandLine, "/OPT:ICF");
-		array_add(&commandLine, "/SUBSYSTEM:CONSOLE");
+
+		switch (options->subsystem)
+		{
+			case Subsystem_Console: {array_add(&commandLine, "/SUBSYSTEM:CONSOLE");} break;
+			case Subsystem_Windows: {array_add(&commandLine, "/SUBSYSTEM:WINDOWS");} break;
+		}
+
 		array_add(&commandLine, objFilePath);
 
 		for (string lib : options->libraries)
@@ -311,7 +317,13 @@ Compile(CompileOptions *options)
 		array_add(&commandLine, "/INCREMENTAL:NO");
 		array_add(&commandLine, "/OPT:REF");
 		array_add(&commandLine, "/OPT:ICF");
-		array_add(&commandLine, "/SUBSYSTEM:CONSOLE");
+		
+		switch (options->subsystem)
+		{
+			case Subsystem_Console: {array_add(&commandLine, "/SUBSYSTEM:CONSOLE");} break;
+			case Subsystem_Windows: {array_add(&commandLine, "/SUBSYSTEM:WINDOWS");} break;
+		}
+
 		array_add(&commandLine, objFilePath);
 
 		for (string lib : options->libraries)

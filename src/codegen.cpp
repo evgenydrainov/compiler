@@ -1597,7 +1597,8 @@ GenerateStatement(Node *baseNode,
 internal bool
 IsAlive(ProcDeclNode *node)
 {
-	if (node->name == "main")
+	if (node->name == "main"
+		|| node->name == "WinMain")
 	{
 		return true;
 	}
