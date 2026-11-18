@@ -234,51 +234,50 @@ AreEqual(ProcInfo *a, ProcInfo *b)
 inline bool
 TypesEqual(Type a, Type b)
 {
-	if (a.kind == TypeKind_Pointer
-		&& b.kind == TypeKind_Pointer)
+	if (a.kind != b.kind)
+	{
+		return false;
+	}
+
+	if (a.kind == TypeKind_Pointer)
 	{
 		return TypesEqual(*a.pointee, *b.pointee);
 	}
 
-	if (a.kind == TypeKind_Struct
-		&& b.kind == TypeKind_Struct)
+	if (a.kind == TypeKind_Struct)
 	{
-		return a.name == b.name;
+		return (a.structInfo == b.structInfo
+				|| a.name == b.name);
 	}
 
-	if (a.kind == TypeKind_Enum
-		&& b.kind == TypeKind_Enum)
+	if (a.kind == TypeKind_Enum)
 	{
-		return a.name == b.name;
+		return (a.enumInfo == b.enumInfo
+				|| a.name == b.name);
 	}
 
-	if (a.kind == TypeKind_Array
-		&& b.kind == TypeKind_Array)
+	if (a.kind == TypeKind_Array)
 	{
-		return (a.array.length != 0
-				&& a.array.length == b.array.length
+		return (a.array.length == b.array.length
 				&& TypesEqual(*a.array.elementType, *b.array.elementType));
 	}
 
-	if (a.kind == TypeKind_Slice
-		&& b.kind == TypeKind_Slice)
+	if (a.kind == TypeKind_Slice)
 	{
 		return TypesEqual(*a.array.elementType, *b.array.elementType);
 	}
 
-	if (a.kind == TypeKind_DynamicArray
-		&& b.kind == TypeKind_DynamicArray)
+	if (a.kind == TypeKind_DynamicArray)
 	{
 		return TypesEqual(*a.array.elementType, *b.array.elementType);
 	}
 
-	if (a.kind == TypeKind_Proc
-		&& b.kind == TypeKind_Proc)
+	if (a.kind == TypeKind_Proc)
 	{
 		return AreEqual(a.procInfo, b.procInfo);
 	}
 
-	return a.kind == b.kind;
+	return true;
 }
 
 inline bool

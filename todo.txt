@@ -32,16 +32,6 @@ cast bool to integers
 
 remove unused keywords
 
-fix typedef'd types not being equal:
-
-Foo :: struct {};
-
-Bar :: #type Foo;
-
-foo: Foo;
-bar: Bar;
-foo = bar;
-
 fix crash when accessing member of a small struct:
 
 foo :: proc() -> Foo
