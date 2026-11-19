@@ -1815,6 +1815,7 @@ GenerateTopLevelStatement(Node *baseNode,
 		case NodeKind_VarDecl:
 		case NodeKind_MacroDecl:
 		case NodeKind_Typedef:
+		case NodeKind_Embed:
 		{
 			// do nothing
 		} break;
@@ -1827,16 +1828,13 @@ GenerateTopLevelStatement(Node *baseNode,
 }
 
 internal int
-WriteStringBytes(string str,
-				 FILE *out)
+WriteStringBytes(string str, FILE *out)
 {
 	int stringLength = 0;
 
 	bool needComma = false;
 
-	for (usize i = 0;
-		 i < str.count;
-		 i++)
+	for (usize i = 0; i < str.count; i++)
 	{
 		if (needComma)
 		{
@@ -1852,7 +1850,7 @@ WriteStringBytes(string str,
 		}
 		else
 		{
-			file_print(out, "%d", (int)str[i]);
+			file_print(out, "%d", (int)(u8)str[i]);
 		}
 
 		stringLength++;
@@ -1866,6 +1864,50 @@ WriteStringBytes(string str,
 	file_print(out, "0\n");
 
 	return stringLength;
+}
+
+internal void
+WriteRawBytes(string str, FILE *out)
+{
+	bool needComma = false;
+	bool needDB = true;
+
+	for (usize i = 0; i < str.count; i++)
+	{
+		if (needDB)
+		{
+			file_print(out, "db ");
+		}
+
+		if (needComma)
+		{
+			file_print(out, ",");
+		}
+
+		file_print(out, "%d", (int)(u8)str[i]);
+
+		needComma = true;
+		needDB = false;
+
+		if (i%16 == 15)
+		{
+			file_print(out, "\n");
+			needDB = true;
+			needComma = false;
+		}
+	}
+
+	if (needDB)
+	{
+		file_print(out, "db ");
+	}
+
+	if (needComma)
+	{
+		file_print(out, ",");
+	}
+
+	file_print(out, "0\n");
 }
 
 void
@@ -1933,6 +1975,20 @@ Generate_x86_64(Node *_program,
 				   literal.uniqueLabelId, literal.uniqueLabelId, stringLength);
 
 		file_print(out, "\n");
+	}
+
+	file_print(out, "\n");
+
+	for (Node *it : program->statements)
+	{
+		if (it->kind == NodeKind_Embed)
+		{
+			EmbedNode *node = As<EmbedNode>(it);
+
+			file_print(out, "%s: ", node->name);
+			WriteRawBytes(node->fileData, out);
+			file_print(out, "\n");
+		}
 	}
 
 	file_print(out, "\n");

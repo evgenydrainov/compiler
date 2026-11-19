@@ -1589,6 +1589,7 @@ InstantiateMacro(Node *baseNode,
 		case NodeKind_ConstantDecl:
 		case NodeKind_MacroDecl:
 		case NodeKind_Typedef:
+		case NodeKind_Embed:
 		{
 			// these nodes shouldn't be able to appear in a macro instantiation
 			Assert(false);
@@ -3263,6 +3264,24 @@ EarlyAnalyze2(Node *baseNode,
 			*type = node->type;
 			
 			type->name = node->name;
+		} break;
+
+		case NodeKind_Embed:
+		{
+			EmbedNode *node = As<EmbedNode>(baseNode);
+
+			VarDeclNode varDecl = {};
+			varDecl.kind = NodeKind_VarDecl;
+			varDecl.location = node->location;
+			varDecl.name = node->name;
+
+			local_persist Type u8Type = {TypeKind_UInt8};
+
+			varDecl.type.kind = TypeKind_Array;
+			varDecl.type.array.length = (int)node->fileData.count;
+			varDecl.type.array.elementType = &u8Type;
+
+			EarlyAnalyze2(&varDecl, context, arena);
 		} break;
 	}
 }

@@ -13,6 +13,8 @@ WINDOW_SCALE :: 2;
 mouse_x: f32;
 mouse_y: f32;
 
+dos_font_png :: #embed "dos_font.png";
+
 setup_screen_camera :: proc(camera: *Camera2D)
 {
 	screen_width  := cast(f32)GetScreenWidth();
@@ -41,7 +43,7 @@ main :: proc() -> int
 	InitWindow(GAME_WIDTH*WINDOW_SCALE, GAME_HEIGHT*WINDOW_SCALE, "BREAKOUT");
 	SetExitKey(KEY_NULL);
 
-	font = LoadFont("dos_font.png");
+	font = LoadImageFontFromMemory(".png", &dos_font_png[0], dos_font_png.count);
 
 	game: Game;
 	leaderboard_init(&game.board);

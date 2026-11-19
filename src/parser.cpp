@@ -52,17 +52,23 @@ LeftBindingPower(TokenKind type)
 
 template <typename... Args>
 internal void
-ErrorAtToken(Parser *parser,
-			 Token token,
-			 string format,
-			 Args... args)
+ErrorAtLocation(Parser *parser, SourceLocation location,
+				string format, Args... args)
 {
 	file_print(stderr, "%s(%d, %d): error: ",
-			   token.location.fileName, token.location.line, token.location.column);
+			   location.fileName, location.line, location.column);
 	file_print(stderr, format, args...);
 	file_print(stderr, "\n");
 
 	parser->hadError = true;
+}
+
+template <typename... Args>
+internal void
+ErrorAtToken(Parser *parser, Token token,
+			 string format, Args... args)
+{
+	ErrorAtLocation(parser, token.location, format, args...);
 }
 
 template <typename... Args>
@@ -1769,6 +1775,29 @@ ParseConstantDefinition(Parser *parser,
 }
 
 internal Node *
+ParseEmbedStatement(Parser *parser, Lexer *lexer,
+					Arena *arena, string varName)
+{
+	EmbedNode *node = MakeNode<EmbedNode>(parser->current.location, arena);
+	node->name = varName;
+
+	string filePath = string_slice(parser->current.str, 1, -1);
+	ExpectToken(parser, lexer, TokenKind_String);
+
+	node->fileData = read_entire_file(filePath, heap_allocator());
+
+	if (!node->fileData)
+	{
+		ErrorAtLocation(parser, node->location, "cannot open file '%s'", filePath);
+		return nullptr;
+	}
+
+	ExpectToken(parser, lexer, TokenKind_Semicolon);
+
+	return node;
+}
+
+internal Node *
 ParseTopLevelStatement(Parser *parser,
 					   Lexer *lexer,
 					   Arena *arena)
@@ -1822,6 +1851,11 @@ ParseTopLevelStatement(Parser *parser,
 				{
 					ExpectToken(parser, lexer, TokenKind_Identifier);
 					return ParseTypedef(parser, lexer, arena, name);
+				}
+				else if (parser->current.str == "embed")
+				{
+					ExpectToken(parser, lexer, TokenKind_Identifier);
+					return ParseEmbedStatement(parser, lexer, arena, name);
 				}
 				else
 				{

@@ -49,7 +49,8 @@
 	X(RangeBasedFor) \
 	X(Foreach) \
 	X(StaticAssert) \
-	X(Typedef)
+	X(Typedef) \
+	X(Embed)
 
 #define GENERATE_NODE_KIND_ENUM(Name) NodeKind_##Name,
 
@@ -535,6 +536,14 @@ struct TypedefNode : public Node
 
 	string name;
 	Type type;
+};
+
+struct EmbedNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_Embed;
+
+	string name;
+	string fileData;
 };
 
 template <typename T>

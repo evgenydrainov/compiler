@@ -276,6 +276,15 @@ GetMouseY :: proc() -> i32 #foreign; // Get mouse position Y
 DrawPixel     :: proc(posX: i32, posY: i32, color: Color)                          #foreign; // Draw a pixel using geometry [Can be slow, use with care]
 DrawRectangle :: proc(posX: i32, posY: i32, width: i32, height: i32, color: Color) #foreign; // Draw a color-filled rectangle
 
+//------------------------------------------------------------------------------------
+// Texture Loading and Drawing Functions (Module: textures)
+//------------------------------------------------------------------------------------
+
+// Image loading functions
+// NOTE: These functions do not require GPU access
+LoadImageFromMemory :: proc(fileType: *u8, fileData: *u8, dataSize: i32) -> Image #foreign; // Load image from memory buffer, fileType refers to extension: i.e. '.png'
+UnloadImage         :: proc(image: Image)                                         #foreign; // Unload image from CPU memory (RAM)
+
 // Texture loading functions
 // NOTE: These functions require GPU access
 LoadTexture :: proc(fileName: *u8) -> Texture #foreign; // Load texture from file into GPU memory (VRAM)
@@ -294,7 +303,8 @@ GetColor            :: proc(hexValue: u32)       -> Color   #foreign; // Get Col
 //------------------------------------------------------------------------------------
 
 // Font loading/unloading functions
-LoadFont :: proc(fileName: *u8) -> Font #foreign; // Load font from file into GPU memory (VRAM)
+LoadFont          :: proc(fileName: *u8)                            -> Font #foreign; // Load font from file into GPU memory (VRAM)
+LoadFontFromImage :: proc(image: Image, key: Color, firstChar: i32) -> Font #foreign; // Load font from Image (XNA style)
 
 // Text drawing functions
 DrawFPS    :: proc(posX: i32, posY: i32)                                                               #foreign; // Draw current FPS
@@ -345,4 +355,12 @@ Color :: proc(r: u8, g: u8, b: u8, a: u8) -> Color
     result.b = b;
     result.a = a;
     return result;
+}
+
+LoadImageFontFromMemory :: proc(fileType: *u8, fileData: *u8, dataSize: int) -> Font
+{
+	image := LoadImageFromMemory(fileType, fileData, cast(i32)dataSize);
+	font := LoadFontFromImage(image, Color(255,0,255,255), 32);
+	UnloadImage(image);
+	return font;
 }
