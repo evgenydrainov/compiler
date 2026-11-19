@@ -29,6 +29,11 @@ leaderboard_load :: proc(board: *Leaderboard) -> bool
 
 leaderboard_save :: proc(board: *Leaderboard) -> bool
 {
+	if !SAVE_LEADERBOARD
+	{
+		return false;
+	}
+
 	file: ScoreFile;
 	file.scores = board.scores;
 	file.names = board.names;
