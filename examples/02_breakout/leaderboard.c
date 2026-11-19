@@ -5,7 +5,6 @@ Leaderboard :: struct
 {
 	scores: [LEADERBOARD_SIZE]int;
 	names: [LEADERBOARD_SIZE][NAME_CAPACITY]u8;
-	count: int;
 
 	name: [NAME_CAPACITY]u8;
 	name_length: int;
@@ -43,7 +42,7 @@ leaderboard_init :: proc(board: *Leaderboard)
 leaderboard_submit :: proc(board: *Leaderboard, score: int)
 {
 	rank := 0;
-	while rank < board.count && board.scores[rank] >= score
+	while rank < LEADERBOARD_SIZE && board.scores[rank] >= score
 	{
 		rank += 1;
 	}
@@ -53,8 +52,7 @@ leaderboard_submit :: proc(board: *Leaderboard, score: int)
 		return;
 	}
 
-	board.count = min_i64(board.count + 1, LEADERBOARD_SIZE);
-	i := board.count - 1;
+	i := LEADERBOARD_SIZE - 1;
 	while i > rank
 	{
 		board.scores[i] = board.scores[i - 1];
@@ -120,7 +118,7 @@ leaderboard_draw_row :: proc(board: *Leaderboard, i: int)
 leaderboard_draw :: proc(board: *Leaderboard)
 {
 	draw_text_centered2("LEADERBOARD", GAME_WIDTH*0.5, 15, 2);
-	for i in 0..<board.count
+	for i in 0..<LEADERBOARD_SIZE
 	{
 		leaderboard_draw_row(board, i);
 	}

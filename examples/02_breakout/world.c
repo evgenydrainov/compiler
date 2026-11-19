@@ -266,7 +266,7 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 
 		if world.game_over_time >= GAME_OVER_INPUT_TIME && is_confirm_pressed()
 		{
-			if game.board.count < LEADERBOARD_SIZE || world.score > game.board.scores[LEADERBOARD_SIZE - 1]
+			if world.score > game.board.scores[LEADERBOARD_SIZE - 1]
 			{
 				game.board.name_length = 0;
 				game.board.name[0] = 0;

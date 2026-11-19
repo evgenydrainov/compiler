@@ -23,7 +23,6 @@ leaderboard_load :: proc(board: *Leaderboard) -> bool
 
 	board.scores = file.scores;
 	board.names = file.names;
-	board.count = LEADERBOARD_SIZE;
 
 	return true;
 }
