@@ -255,6 +255,11 @@ GetFPS       :: proc() -> i32  #foreign; // Get current FPS
 // Misc. functions
 SetConfigFlags :: proc(flags: u32) #foreign; // Setup init configuration flags (view FLAGS)
 
+// File system management functions
+LoadFileData   :: proc(fileName: *u8, dataSize: *i32) -> *u8              #foreign; // Load file data as byte array (read)
+UnloadFileData :: proc(data: *u8)                                         #foreign; // Unload file data allocated by LoadFileData()
+SaveFileData   :: proc(fileName: *u8, data: *void, dataSize: i32) -> bool #foreign; // Save data to file from byte array (write), returns true on success
+
 //------------------------------------------------------------------------------------
 // Input Handling Functions (Module: core)
 //------------------------------------------------------------------------------------

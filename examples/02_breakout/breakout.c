@@ -2,6 +2,7 @@
 
 #include "title.c"
 #include "leaderboard.c"
+#include "leaderboard_file.c"
 #include "world.c"
 #include "game.c"
 #include "util.c"

@@ -25,6 +25,10 @@ leaderboard_seed_score :: proc(board: *Leaderboard, name: *u8, score: int)
 
 leaderboard_init :: proc(board: *Leaderboard)
 {
+	if leaderboard_load(board)
+	{
+		return;
+	}
 	leaderboard_seed_score(board, "NOVA", 800);
 	leaderboard_seed_score(board, "COMET", 600);
 	leaderboard_seed_score(board, "PIXEL", 450);
@@ -84,6 +88,7 @@ name_entry_update :: proc(game: *Game)
 	if is_confirm_pressed() && board.name_length > 0
 	{
 		leaderboard_submit(board, game.world.score);
+		leaderboard_save(board);
 		game.state = .leaderboard;
 	}
 }
