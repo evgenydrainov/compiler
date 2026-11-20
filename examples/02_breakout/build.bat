@@ -1,2 +1,2 @@
 @echo off
-..\..\compiler.exe breakout.c
+..\..\compiler.exe breakout.lang

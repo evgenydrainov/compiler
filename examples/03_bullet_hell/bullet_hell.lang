@@ -1,7 +1,7 @@
-#import "raylib/raylib.c"
+#import "raylib/raylib.lang"
 
-#include "util.c"
-#include "world.c"
+#include "util.lang"
+#include "world.lang"
 
 GAME_WIDTH :: 640;
 GAME_HEIGHT :: 480;

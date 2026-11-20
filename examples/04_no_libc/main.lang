@@ -2,7 +2,7 @@
 #link_library "kernel32_imp.lib";
 #link_library "msvcrt_imp.lib";
 
-#import "gamelib/gamelib.c"
+#import "gamelib/gamelib.lang"
 
 ExitProcess :: proc(code: u32) #foreign;
 

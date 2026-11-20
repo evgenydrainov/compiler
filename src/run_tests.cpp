@@ -21,7 +21,7 @@ TestReturnCode(char *testName, int expectedCode)
 
 	{
 		char inputPath[1024];
-		sprintf_s(inputPath, "%s.c", testName);
+		sprintf_s(inputPath, "%s.lang", testName);
 
 		if (_spawnl(_P_WAIT,
 					compilerPath,
@@ -59,7 +59,7 @@ TestCompileError(char *testName)
 	}
 
 	char inputPath[1024];
-	sprintf_s(inputPath, "%s.c", testName);
+	sprintf_s(inputPath, "%s.lang", testName);
 
 	if (_spawnl(_P_WAIT,
 				compilerPath,
@@ -83,7 +83,7 @@ TestCompiles(char *testName)
 	}
 
 	char inputPath[1024];
-	sprintf_s(inputPath, "%s.c", testName);
+	sprintf_s(inputPath, "%s.lang", testName);
 
 	if (_spawnl(_P_WAIT,
 				compilerPath,

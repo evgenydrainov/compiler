@@ -91,7 +91,6 @@ main :: proc() -> i64
 	}
 
 	// ---- struct elements: the case this form exists for ----
-	// this is world.c:55 rewritten as a foreach
 	{
 		w: World;
 		w.num_bricks = 3;

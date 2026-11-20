@@ -1,9 +1,9 @@
-#include "coroutine.c"
-#include "libc.c"
-#include "math.c"
-#include "vec2.c"
-#include "vec3.c"
-#include "vec4.c"
+#include "coroutine.lang"
+#include "libc.lang"
+#include "math.lang"
+#include "vec2.lang"
+#include "vec3.lang"
+#include "vec4.lang"
 
 // VOLATILE: struct layout must match the compiler implementation
 string :: struct

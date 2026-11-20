@@ -228,7 +228,7 @@ main :: proc() -> i64
 		if a.data != null  { return 40; }
 	}
 
-	// ---- array_add and array_reserve, now expanded from builtin.c ----
+	// ---- array_add and array_reserve ----
 	{
 		a: [..]int;
 		defer array_free(&a);

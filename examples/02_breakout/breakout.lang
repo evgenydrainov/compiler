@@ -1,11 +1,11 @@
-#import "raylib/raylib.c"
+#import "raylib/raylib.lang"
 
-#include "title.c"
-#include "leaderboard.c"
-#include "leaderboard_file.c"
-#include "world.c"
-#include "game.c"
-#include "util.c"
+#include "title.lang"
+#include "leaderboard.lang"
+#include "leaderboard_file.lang"
+#include "world.lang"
+#include "game.lang"
+#include "util.lang"
 
 //#subsystem_windows;
 

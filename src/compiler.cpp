@@ -131,7 +131,7 @@ Compile(CompileOptions *options)
 	lexer.context = &lexerContext;
 
 	{
-		string builtinFilePath = string_concat(options->compilerInstallDir, "modules/builtin/builtin.c", heap_allocator());
+		string builtinFilePath = string_concat(options->compilerInstallDir, "modules/builtin/builtin.lang", heap_allocator());
 
 		string builtinFileSrc = read_entire_file(builtinFilePath, heap_allocator());
 		if (!builtinFileSrc)
