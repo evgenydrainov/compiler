@@ -964,7 +964,7 @@ ParseForStatement(Parser *parser,
 
 	ExpectToken(parser, lexer, TokenKind_For);
 
-	// TODO: decide if to keep this syntax or not
+	// TODO: decide whether to keep this syntax or not
 	// for (init; cond; incr) { statements; }
 	// for (;;) { statements; }
 	bool parenthesis = false;
