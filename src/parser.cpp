@@ -948,7 +948,7 @@ ParseWhileStatement(Parser *parser,
 
 	node->condition = ParseExpression(parser, lexer, 0, arena);	
 
-	node->body = ParseBlock(parser, lexer, arena);
+	node->body = ParseBlockOrSingleStatement(parser, lexer, arena);
 
 	return node;
 }

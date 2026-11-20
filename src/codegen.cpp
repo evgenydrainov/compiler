@@ -1370,7 +1370,7 @@ GenerateStatement(Node *baseNode,
 			Emit(context, "    je .end_%d", uniqueId);
 			Emit(context, "");
 
-			GenerateBlock(node->body, context);
+			GenerateStatement(node->body, context);
 
 			Emit(context, "    jmp .loop_%d", uniqueId);
 			Emit(context, ".end_%d:", uniqueId);

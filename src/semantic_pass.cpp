@@ -2520,7 +2520,7 @@ AnalyzeStatement(Node *baseNode,
 			Node *saveCurrentLoop = context->currentLoop;
 			context->currentLoop = node;
 
-			AnalyzeBlock(node->body, context);
+			AnalyzeStatement(node->body, context);
 
 			context->currentLoop = saveCurrentLoop;
 
