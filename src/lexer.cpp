@@ -668,7 +668,7 @@ SkipWhitespace(Lexer *lexer)
 {
 	int commentDepth = 0;
 
-	for (;;)
+	while (!IsAtEnd(lexer))
 	{
 		if (commentDepth == 0
 			&& (lexer->current[0] == ' '
