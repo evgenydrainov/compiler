@@ -805,7 +805,7 @@ GetToken(Lexer *lexer)
 		return ParseNumber(lexer, location);
 	}
 
-	auto AdvanceAndMakeToken = [](Lexer *lexer, TokenKind kind, SourceLocation location, u32 count)
+	auto AdvanceAndMakeToken = [](Lexer *lexer, TokenKind kind, SourceLocation location, u32 count) -> Token
 	{
 		string str = {lexer->current, count};
 		AdvanceChar(lexer, count);

@@ -796,8 +796,8 @@ ParseBlock(Parser *parser,
 
 	ExpectToken(parser, lexer, TokenKind_OpenBrace);
 
-	while (parser->current.kind != TokenKind_CloseBrace
-		   && !parser->hadError)
+	while (!parser->hadError
+		   && parser->current.kind != TokenKind_CloseBrace)
 	{
 		Node *statement = ParseStatement(parser, lexer, arena);
 		if (parser->hadError)
@@ -1798,9 +1798,41 @@ ParseEmbedStatement(Parser *parser, Lexer *lexer,
 }
 
 internal Node *
-ParseTopLevelStatement(Parser *parser,
-					   Lexer *lexer,
-					   Arena *arena)
+ParseTopLevelStatement(Parser *parser, Lexer *lexer, Arena *arena);
+
+internal BlockNode *
+ParseTopLevelBlock(Parser *parser, Lexer *lexer, Arena *arena)
+{
+	BlockNode *block = MakeNode<BlockNode>(parser->current.location, arena);
+
+	ExpectToken(parser, lexer, TokenKind_OpenBrace);
+
+	while (!parser->hadError
+		   && parser->current.kind != TokenKind_CloseBrace)
+	{
+		Node *statement = ParseTopLevelStatement(parser, lexer, arena);
+		if (parser->hadError)
+		{
+			break;
+		}
+
+		if (statement)
+		{
+			list_append(&block->statements, statement);
+		}
+		else
+		{
+			// it's an empty statement - ignore it
+		}
+	}
+
+	ExpectToken(parser, lexer, TokenKind_CloseBrace);
+
+	return block;
+}
+
+internal Node *
+ParseTopLevelStatement(Parser *parser, Lexer *lexer, Arena *arena)
 {
 	if (parser->current.kind == TokenKind_Identifier)
 	{
@@ -1899,6 +1931,26 @@ ParseTopLevelStatement(Parser *parser,
 	if (parser->current.kind == TokenKind_Hash)
 	{
 		ExpectToken(parser, lexer, TokenKind_Hash);
+
+		if (parser->current.kind == TokenKind_If)
+		{
+			StaticIfNode *node = MakeNode<StaticIfNode>(parser->current.location, arena);
+
+			ExpectToken(parser, lexer, TokenKind_If);
+
+			node->condition = ParseExpression(parser, lexer, 0, arena);
+
+			node->thenBlock = ParseTopLevelBlock(parser, lexer, arena);
+
+			if (parser->current.kind == TokenKind_Else)
+			{
+				ExpectToken(parser, lexer, TokenKind_Else);
+
+				node->elseBlock = ParseTopLevelBlock(parser, lexer, arena);
+			}
+
+			return node;
+		}
 
 		if (parser->current.str == "link_library")
 		{

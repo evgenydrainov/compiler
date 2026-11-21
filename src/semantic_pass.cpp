@@ -141,33 +141,25 @@ EvaluateConstantExpression(Node *baseNode,
 		case NodeKind_Int64Literal:
 		{
 			Int64LiteralNode *node = As<Int64LiteralNode>(baseNode);
-		
-			result.kind = ConstantKind_Int64;
-			result.int64Value = node->value;
+			result = Int64Constant(node->value);
 		} break;
 
 		case NodeKind_Float32Literal:
 		{
 			Float32LiteralNode *node = As<Float32LiteralNode>(baseNode);
-
-			result.kind = ConstantKind_Float32;
-			result.float32Value = node->value;
+			result = Float32Constant(node->value);
 		} break;
 
 		case NodeKind_Float64Literal:
 		{
 			Float64LiteralNode *node = As<Float64LiteralNode>(baseNode);
-
-			result.kind = ConstantKind_Float64;
-			result.float64Value = node->value;
+			result = Float64Constant(node->value);
 		} break;
 
 		case NodeKind_BoolLiteral:
 		{
 			BoolLiteralNode *node = As<BoolLiteralNode>(baseNode);
-
-			result.kind = ConstantKind_Bool;
-			result.boolValue = node->value;
+			result = BoolConstant(node->value);
 		} break;
 
 		case NodeKind_Binary:
@@ -197,30 +189,28 @@ EvaluateConstantExpression(Node *baseNode,
 				}
 			}
 
-			result.kind = value1.kind;
-
 			switch (value1.kind)
 			{
 				case ConstantKind_Int64:
 				{
 					switch (node->op)
 					{
-						case BinaryOp_Add:          {result.int64Value = value1.int64Value +  value2.int64Value;} break;
-						case BinaryOp_Subtract:     {result.int64Value = value1.int64Value -  value2.int64Value;} break;
-						case BinaryOp_Multiply:     {result.int64Value = value1.int64Value *  value2.int64Value;} break;
-						case BinaryOp_Divide:       {result.int64Value = value1.int64Value /  value2.int64Value;} break;
-						case BinaryOp_Modulo:       {result.int64Value = value1.int64Value %  value2.int64Value;} break;
-						case BinaryOp_Less:         {result.int64Value = value1.int64Value <  value2.int64Value;} break;
-						case BinaryOp_Greater:      {result.int64Value = value1.int64Value >  value2.int64Value;} break;
-						case BinaryOp_EqualEqual:   {result.int64Value = value1.int64Value == value2.int64Value;} break;
-						case BinaryOp_LessEqual:    {result.int64Value = value1.int64Value <= value2.int64Value;} break;
-						case BinaryOp_GreaterEqual: {result.int64Value = value1.int64Value >= value2.int64Value;} break;
-						case BinaryOp_NotEqual:     {result.int64Value = value1.int64Value != value2.int64Value;} break;
-						case BinaryOp_BitAnd:       {result.int64Value = value1.int64Value &  value2.int64Value;} break;
-						case BinaryOp_BitOr:        {result.int64Value = value1.int64Value |  value2.int64Value;} break;
-						case BinaryOp_BitXor:       {result.int64Value = value1.int64Value ^  value2.int64Value;} break;
-						case BinaryOp_ShiftLeft:    {result.int64Value = value1.int64Value << value2.int64Value;} break;
-						case BinaryOp_ShiftRight:   {result.int64Value = value1.int64Value >> value2.int64Value;} break;
+						case BinaryOp_Add:          {result = Int64Constant(value1.int64Value +  value2.int64Value);} break;
+						case BinaryOp_Subtract:     {result = Int64Constant(value1.int64Value -  value2.int64Value);} break;
+						case BinaryOp_Multiply:     {result = Int64Constant(value1.int64Value *  value2.int64Value);} break;
+						case BinaryOp_Divide:       {result = Int64Constant(value1.int64Value /  value2.int64Value);} break;
+						case BinaryOp_Modulo:       {result = Int64Constant(value1.int64Value %  value2.int64Value);} break;
+						case BinaryOp_Less:         {result = BoolConstant(value1.int64Value <  value2.int64Value);} break;
+						case BinaryOp_Greater:      {result = BoolConstant(value1.int64Value >  value2.int64Value);} break;
+						case BinaryOp_EqualEqual:   {result = BoolConstant(value1.int64Value == value2.int64Value);} break;
+						case BinaryOp_LessEqual:    {result = BoolConstant(value1.int64Value <= value2.int64Value);} break;
+						case BinaryOp_GreaterEqual: {result = BoolConstant(value1.int64Value >= value2.int64Value);} break;
+						case BinaryOp_NotEqual:     {result = BoolConstant(value1.int64Value != value2.int64Value);} break;
+						case BinaryOp_BitAnd:       {result = Int64Constant(value1.int64Value &  value2.int64Value);} break;
+						case BinaryOp_BitOr:        {result = Int64Constant(value1.int64Value |  value2.int64Value);} break;
+						case BinaryOp_BitXor:       {result = Int64Constant(value1.int64Value ^  value2.int64Value);} break;
+						case BinaryOp_ShiftLeft:    {result = Int64Constant(value1.int64Value << value2.int64Value);} break;
+						case BinaryOp_ShiftRight:   {result = Int64Constant(value1.int64Value >> value2.int64Value);} break;
 
 						default:
 						{
@@ -236,16 +226,16 @@ EvaluateConstantExpression(Node *baseNode,
 				{
 					switch (node->op)
 					{
-						case BinaryOp_Add:          {result.float32Value = value1.float32Value +  value2.float32Value;} break;
-						case BinaryOp_Subtract:     {result.float32Value = value1.float32Value -  value2.float32Value;} break;
-						case BinaryOp_Multiply:     {result.float32Value = value1.float32Value *  value2.float32Value;} break;
-						case BinaryOp_Divide:       {result.float32Value = value1.float32Value /  value2.float32Value;} break;
-						case BinaryOp_Less:         {result.float32Value = value1.float32Value <  value2.float32Value;} break;
-						case BinaryOp_Greater:      {result.float32Value = value1.float32Value >  value2.float32Value;} break;
-						case BinaryOp_EqualEqual:   {result.float32Value = value1.float32Value == value2.float32Value;} break;
-						case BinaryOp_LessEqual:    {result.float32Value = value1.float32Value <= value2.float32Value;} break;
-						case BinaryOp_GreaterEqual: {result.float32Value = value1.float32Value >= value2.float32Value;} break;
-						case BinaryOp_NotEqual:     {result.float32Value = value1.float32Value != value2.float32Value;} break;
+						case BinaryOp_Add:          {result = Float32Constant(value1.float32Value +  value2.float32Value);} break;
+						case BinaryOp_Subtract:     {result = Float32Constant(value1.float32Value -  value2.float32Value);} break;
+						case BinaryOp_Multiply:     {result = Float32Constant(value1.float32Value *  value2.float32Value);} break;
+						case BinaryOp_Divide:       {result = Float32Constant(value1.float32Value /  value2.float32Value);} break;
+						case BinaryOp_Less:         {result = BoolConstant(value1.float32Value <  value2.float32Value);} break;
+						case BinaryOp_Greater:      {result = BoolConstant(value1.float32Value >  value2.float32Value);} break;
+						case BinaryOp_EqualEqual:   {result = BoolConstant(value1.float32Value == value2.float32Value);} break;
+						case BinaryOp_LessEqual:    {result = BoolConstant(value1.float32Value <= value2.float32Value);} break;
+						case BinaryOp_GreaterEqual: {result = BoolConstant(value1.float32Value >= value2.float32Value);} break;
+						case BinaryOp_NotEqual:     {result = BoolConstant(value1.float32Value != value2.float32Value);} break;
 
 						default:
 						{
@@ -261,16 +251,16 @@ EvaluateConstantExpression(Node *baseNode,
 				{
 					switch (node->op)
 					{
-						case BinaryOp_Add:          {result.float64Value = value1.float64Value +  value2.float64Value;} break;
-						case BinaryOp_Subtract:     {result.float64Value = value1.float64Value -  value2.float64Value;} break;
-						case BinaryOp_Multiply:     {result.float64Value = value1.float64Value *  value2.float64Value;} break;
-						case BinaryOp_Divide:       {result.float64Value = value1.float64Value /  value2.float64Value;} break;
-						case BinaryOp_Less:         {result.float64Value = value1.float64Value <  value2.float64Value;} break;
-						case BinaryOp_Greater:      {result.float64Value = value1.float64Value >  value2.float64Value;} break;
-						case BinaryOp_EqualEqual:   {result.float64Value = value1.float64Value == value2.float64Value;} break;
-						case BinaryOp_LessEqual:    {result.float64Value = value1.float64Value <= value2.float64Value;} break;
-						case BinaryOp_GreaterEqual: {result.float64Value = value1.float64Value >= value2.float64Value;} break;
-						case BinaryOp_NotEqual:     {result.float64Value = value1.float64Value != value2.float64Value;} break;
+						case BinaryOp_Add:          {result = Float64Constant(value1.float64Value +  value2.float64Value);} break;
+						case BinaryOp_Subtract:     {result = Float64Constant(value1.float64Value -  value2.float64Value);} break;
+						case BinaryOp_Multiply:     {result = Float64Constant(value1.float64Value *  value2.float64Value);} break;
+						case BinaryOp_Divide:       {result = Float64Constant(value1.float64Value /  value2.float64Value);} break;
+						case BinaryOp_Less:         {result = BoolConstant(value1.float64Value <  value2.float64Value);} break;
+						case BinaryOp_Greater:      {result = BoolConstant(value1.float64Value >  value2.float64Value);} break;
+						case BinaryOp_EqualEqual:   {result = BoolConstant(value1.float64Value == value2.float64Value);} break;
+						case BinaryOp_LessEqual:    {result = BoolConstant(value1.float64Value <= value2.float64Value);} break;
+						case BinaryOp_GreaterEqual: {result = BoolConstant(value1.float64Value >= value2.float64Value);} break;
+						case BinaryOp_NotEqual:     {result = BoolConstant(value1.float64Value != value2.float64Value);} break;
 
 						default:
 						{
@@ -286,10 +276,10 @@ EvaluateConstantExpression(Node *baseNode,
 				{
 					switch (node->op)
 					{
-						case BinaryOp_EqualEqual:   {result.float64Value = value1.float64Value == value2.float64Value;} break;
-						case BinaryOp_NotEqual:     {result.float64Value = value1.float64Value != value2.float64Value;} break;
-						case BinaryOp_LogicalAnd:   {result.float64Value = value1.float64Value && value2.float64Value;} break;
-						case BinaryOp_LogicalOr:    {result.float64Value = value1.float64Value || value2.float64Value;} break;
+						case BinaryOp_EqualEqual:   {result = BoolConstant(value1.boolValue == value2.boolValue);} break;
+						case BinaryOp_NotEqual:     {result = BoolConstant(value1.boolValue != value2.boolValue);} break;
+						case BinaryOp_LogicalAnd:   {result = BoolConstant(value1.boolValue && value2.boolValue);} break;
+						case BinaryOp_LogicalOr:    {result = BoolConstant(value1.boolValue || value2.boolValue);} break;
 
 						default:
 						{
@@ -309,16 +299,14 @@ EvaluateConstantExpression(Node *baseNode,
 
 			ConstantValue value = EvaluateConstantExpression(node->expr, context);
 
-			result.kind = value.kind;
-
 			switch (value.kind)
 			{
 				case ConstantKind_Int64:
 				{
 					switch (node->op)
 					{
-						case UnaryOp_Negate:     {result.int64Value = -value.int64Value;} break;
-						case UnaryOp_BitNegate:  {result.int64Value = ~value.int64Value;} break;
+						case UnaryOp_Negate:     {result = Int64Constant(-value.int64Value);} break;
+						case UnaryOp_BitNegate:  {result = Int64Constant(~value.int64Value);} break;
 
 						default:
 						{
@@ -334,7 +322,7 @@ EvaluateConstantExpression(Node *baseNode,
 				{
 					switch (node->op)
 					{
-						case UnaryOp_Negate:     {result.float32Value = -value.float32Value;} break;
+						case UnaryOp_Negate:     {result = Float32Constant(-value.float32Value);} break;
 
 						default:
 						{
@@ -350,7 +338,7 @@ EvaluateConstantExpression(Node *baseNode,
 				{
 					switch (node->op)
 					{
-						case UnaryOp_Negate:     {result.float64Value = -value.float64Value;} break;
+						case UnaryOp_Negate:     {result = Float64Constant(-value.float64Value);} break;
 
 						default:
 						{
@@ -366,7 +354,7 @@ EvaluateConstantExpression(Node *baseNode,
 				{
 					switch (node->op)
 					{
-						case UnaryOp_LogicalNot:     {result.boolValue = !value.boolValue;} break;
+						case UnaryOp_LogicalNot:     {result = BoolConstant(!value.boolValue);} break;
 
 						default:
 						{
@@ -406,26 +394,22 @@ EvaluateConstantExpression(Node *baseNode,
 			{
 				case TypeKind_Int64:
 				{
-					result.kind = ConstantKind_Int64;
-					result.int64Value = AsInt64(value);
+					result = Int64Constant(AsInt64(value));
 				} break;
 
 				case TypeKind_Float32:
 				{
-					result.kind = ConstantKind_Float32;
-					result.float32Value = AsFloat32(value);
+					result = Float32Constant(AsFloat32(value));
 				} break;
 
 				case TypeKind_Float64:
 				{
-					result.kind = ConstantKind_Float64;
-					result.float64Value = AsFloat64(value);
+					result = Float64Constant(AsFloat64(value));
 				} break;
 
 				case TypeKind_Bool:
 				{
-					result.kind = ConstantKind_Bool;
-					result.boolValue = AsBool(value);
+					result = BoolConstant(AsBool(value));
 				} break;
 
 				default:
@@ -447,8 +431,7 @@ EvaluateConstantExpression(Node *baseNode,
 }
 
 internal i64
-EvaluateConstantExpressionInt(Node *baseNode,
-							  SemanticContext *context)
+EvaluateConstantExpressionInt(Node *baseNode, SemanticContext *context)
 {
 	ConstantValue value = EvaluateConstantExpression(baseNode, context);
 
@@ -459,7 +442,23 @@ EvaluateConstantExpressionInt(Node *baseNode,
 	else
 	{
 		Error(context, baseNode, "constant must be an integer");
-		return 0;
+		return {};
+	}
+}
+
+internal bool
+EvaluateConstantExpressionBool(Node *baseNode, SemanticContext *context)
+{
+	ConstantValue value = EvaluateConstantExpression(baseNode, context);
+
+	if (value.kind == ConstantKind_Bool)
+	{
+		return value.boolValue;
+	}
+	else
+	{
+		Error(context, baseNode, "constant must be a boolean");
+		return {};
 	}
 }
 
@@ -1580,6 +1579,18 @@ InstantiateMacro(Node *baseNode,
 			return result;
 		} break;
 
+		case NodeKind_StaticIf:
+		{
+			StaticIfNode *node = As<StaticIfNode>(baseNode);
+
+			StaticIfNode *result = MakeNode<StaticIfNode>(node->location, arena);
+			result->condition = InstantiateMacro(node->condition, context);
+			result->thenBlock = As<BlockNode>(InstantiateMacro(node->thenBlock, context));
+			result->elseBlock = As<BlockNode>(InstantiateMacro(node->elseBlock, context));
+
+			return result;
+		} break;
+
 		case NodeKind_ProcDecl:
 		case NodeKind_Param:
 		case NodeKind_StructDecl:
@@ -2153,7 +2164,7 @@ AnalyzeExpression(Node *baseNode,
 				}
 			}
 
-			auto HandleField = [&](Type *type)
+			auto HandleField = [&](Type *type) -> void
 			{
 				if (type->kind == TypeKind_Struct)
 				{
@@ -2775,9 +2786,9 @@ AnalyzeStatement(Node *baseNode,
 
 			AnalyzeExpression(node->what, context);
 
-			i64 value = EvaluateConstantExpressionInt(node->what, context);
+			bool condition = EvaluateConstantExpressionBool(node->what, context);
 
-			if (value != 0)
+			if (condition)
 			{
 				// success
 			}
@@ -2871,6 +2882,8 @@ AnalyzeTopLevelStatement(Node *baseNode,
 {
 	switch (baseNode->kind)
 	{
+		default: {} break;
+
 		case NodeKind_ProcDecl:
 		{
 			ProcDeclNode *node = As<ProcDeclNode>(baseNode);
@@ -2947,7 +2960,15 @@ AnalyzeTopLevelStatement(Node *baseNode,
 			}
 		} break;
 
-		default: {} break;
+		case NodeKind_Block:
+		{
+			BlockNode *node = As<BlockNode>(baseNode);
+
+			for (Node *it : node->statements)
+			{
+				AnalyzeTopLevelStatement(it, context);
+			}
+		} break;
 	}
 }
 
@@ -3282,6 +3303,55 @@ EarlyAnalyze2(Node *baseNode,
 			varDecl.type.array.elementType = &u8Type;
 
 			EarlyAnalyze2(&varDecl, context, arena);
+		} break;
+
+		case NodeKind_StaticIf:
+		{
+			StaticIfNode *node = As<StaticIfNode>(baseNode);
+
+			AnalyzeExpression(node->condition, context);
+
+			bool condition = EvaluateConstantExpressionBool(node->condition, context);
+
+			auto Handle = [&](list<Node> statements) -> void
+			{
+				BlockNode *newNode = ReinterpretNode<BlockNode>(node);
+				newNode->statements = statements;
+
+				for (Node *it : newNode->statements)
+				{
+					EarlyAnalyze1(it, context, arena);
+				}
+
+				if (context->hadError)
+				{
+					return;
+				}
+
+				for (Node *it : newNode->statements)
+				{
+					EarlyAnalyze2(it, context, arena);
+				}
+			};
+
+			if (condition)
+			{
+				auto statements = node->thenBlock->statements;
+				Handle(statements);
+			}
+			else
+			{
+				if (node->elseBlock)
+				{
+					auto statements = node->elseBlock->statements;
+					Handle(statements);
+				}
+				else
+				{
+					// pass empty list
+					Handle({});
+				}
+			}
 		} break;
 	}
 }

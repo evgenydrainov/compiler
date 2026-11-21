@@ -148,3 +148,39 @@ ConstantKindToTypeKind(ConstantKind kind)
 	Assert(false);
 	return {};
 }
+
+inline ConstantValue
+Int64Constant(i64 value)
+{
+	ConstantValue result = {};
+	result.kind = ConstantKind_Int64;
+	result.int64Value = value;
+	return result;
+}
+
+inline ConstantValue
+Float32Constant(f32 value)
+{
+	ConstantValue result = {};
+	result.kind = ConstantKind_Float32;
+	result.float32Value = value;
+	return result;
+}
+
+inline ConstantValue
+Float64Constant(f64 value)
+{
+	ConstantValue result = {};
+	result.kind = ConstantKind_Float64;
+	result.float64Value = value;
+	return result;
+}
+
+inline ConstantValue
+BoolConstant(bool value)
+{
+	ConstantValue result = {};
+	result.kind = ConstantKind_Bool;
+	result.boolValue = value;
+	return result;
+}

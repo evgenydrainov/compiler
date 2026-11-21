@@ -50,7 +50,8 @@
 	X(Foreach) \
 	X(StaticAssert) \
 	X(Typedef) \
-	X(Embed)
+	X(Embed) \
+	X(StaticIf)
 
 #define GENERATE_NODE_KIND_ENUM(Name) NodeKind_##Name,
 
@@ -544,6 +545,15 @@ struct EmbedNode : public Node
 
 	string name;
 	string fileData;
+};
+
+struct StaticIfNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_StaticIf;
+
+	Node *condition;
+	BlockNode *thenBlock;
+	BlockNode *elseBlock;
 };
 
 template <typename T>

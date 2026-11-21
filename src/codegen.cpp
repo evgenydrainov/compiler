@@ -1613,6 +1613,22 @@ GenerateTopLevelStatement(Node *baseNode,
 {
 	switch (baseNode->kind)
 	{
+		default:
+		{
+			Assert(false);
+		} break;
+
+		case NodeKind_StructDecl:
+		case NodeKind_EnumDecl:
+		case NodeKind_ConstantDecl:
+		case NodeKind_VarDecl:
+		case NodeKind_MacroDecl:
+		case NodeKind_Typedef:
+		case NodeKind_Embed:
+		{
+			// do nothing
+		} break;
+
 		case NodeKind_ProcDecl:
 		{
 			ProcDeclNode *node = As<ProcDeclNode>(baseNode);
@@ -1809,20 +1825,14 @@ GenerateTopLevelStatement(Node *baseNode,
 			Assert(context->deferStack.count == 0);
 		} break;
 
-		case NodeKind_StructDecl:
-		case NodeKind_EnumDecl:
-		case NodeKind_ConstantDecl:
-		case NodeKind_VarDecl:
-		case NodeKind_MacroDecl:
-		case NodeKind_Typedef:
-		case NodeKind_Embed:
+		case NodeKind_Block:
 		{
-			// do nothing
-		} break;
+			BlockNode *node = As<BlockNode>(baseNode);
 
-		default:
-		{
-			Assert(false);
+			for (Node *it : node->statements)
+			{
+				GenerateTopLevelStatement(it, out, context);
+			}
 		} break;
 	}
 }
