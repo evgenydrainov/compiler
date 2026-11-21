@@ -1,0 +1,66 @@
+{
+  "name": "Compiler Lang",
+  "scopeName": "source.compiler-lang",
+  "patterns": [
+    { "name": "comment.line.double-slash.compiler-lang", "match": "//.*" },
+    { "include": "#block-comment" },
+    {
+      "name": "string.quoted.double.compiler-lang",
+      "begin": "\"",
+      "end": "\"c?|$",
+      "patterns": [{ "include": "#escapes" }]
+    },
+    {
+      "name": "string.quoted.single.compiler-lang",
+      "begin": "'",
+      "end": "'|$",
+      "patterns": [{ "include": "#escapes" }]
+    },
+    {
+      "name": "keyword.control.directive.compiler-lang",
+      "match": "#(?:include|import|foreign|variadic|coroutine|assert|no_bind|offset|as|type|embed|link_library|link_system_library|use_vendor_lld|subsystem_console|subsystem_windows)\\b"
+    },
+    {
+      "name": "keyword.control.compiler-lang",
+      "match": "\\b(?:break|case|continue|default|defer|do|else|for|foreach|if|in|return|switch|while|yield)\\b"
+    },
+    { "name": "storage.type.compiler-lang", "match": "\\b(?:proc|macro|struct|enum)\\b" },
+    { "name": "storage.modifier.compiler-lang", "match": "\\busing\\b" },
+    { "name": "keyword.operator.word.compiler-lang", "match": "\\b(?:cast|sizeof)\\b" },
+    { "name": "constant.language.compiler-lang", "match": "\\b(?:true|false|null)\\b" },
+    {
+      "name": "entity.name.type.compiler-lang",
+      "match": "\\b[A-Za-z_][A-Za-z_0-9]*(?=\\s*::\\s*(?:struct|enum|#type)\\b)"
+    },
+    {
+      "name": "support.type.compiler-lang",
+      "match": "\\b(?:[iu](?:8|16|32|64)|f(?:32|64)|int|size_t|bool|void|string|vec[234])\\b"
+    },
+    {
+      "name": "entity.name.function.compiler-lang",
+      "match": "\\b[A-Za-z_][A-Za-z_0-9]*(?=\\s*(?:::\\s*(?:proc|macro)\\b|\\())"
+    },
+    {
+      "name": "constant.numeric.compiler-lang",
+      "match": "\\b(?:0x[0-9A-Fa-f_]+|0o[0-7_]+|0b[01_]+|[0-9][0-9_]*(?:\\.[0-9][0-9_]*(?:f32|f64)?)?)\\b"
+    },
+    {
+      "name": "keyword.operator.compiler-lang",
+      "match": "\\.\\.[<=]?|---|->|::|:=|<<|>>|&&|\\|\\||[=!<>+*/%\\-]=?|[&|^~]"
+    }
+  ],
+  "repository": {
+    "block-comment": {
+      "name": "comment.block.compiler-lang",
+      "begin": "/\\*",
+      "end": "\\*/",
+      "patterns": [{ "include": "#block-comment" }]
+    },
+    "escapes": {
+      "patterns": [
+        { "name": "constant.character.escape.compiler-lang", "match": "\\\\[ntr0\\\\\"']" },
+        { "name": "invalid.illegal.escape.compiler-lang", "match": "\\\\." }
+      ]
+    }
+  }
+}

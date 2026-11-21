@@ -1,0 +1,22 @@
+{
+  "name": "compiler-lang",
+  "displayName": "Compiler Lang",
+  "description": "Syntax highlighting for this compiler's .lang source files.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": { "vscode": "^1.60.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [{
+      "id": "compiler-lang",
+      "aliases": ["Compiler Lang"],
+      "extensions": [".lang"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "compiler-lang",
+      "scopeName": "source.compiler-lang",
+      "path": "./syntaxes/compiler-lang.tmLanguage.json"
+    }]
+  }
+}
