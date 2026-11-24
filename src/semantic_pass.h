@@ -9,6 +9,8 @@ struct TypeTable;
 struct ConstantsTable;
 struct MacroTable;
 
+struct CompileOptions;
+
 struct SemanticContext
 {
 	bool hadError;
@@ -32,6 +34,8 @@ struct SemanticContext
 	Arena *arena;
 
 	int macroInstantiationUniqueId;
+
+	CompileOptions *options;
 };
 
 void SemanticPass(Node *_program,

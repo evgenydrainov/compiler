@@ -1625,6 +1625,7 @@ GenerateTopLevelStatement(Node *baseNode,
 		case NodeKind_MacroDecl:
 		case NodeKind_Typedef:
 		case NodeKind_Embed:
+		case NodeKind_CompileOption:
 		{
 			// do nothing
 		} break;

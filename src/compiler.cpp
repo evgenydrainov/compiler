@@ -168,7 +168,6 @@ Compile(CompileOptions *options)
 	arena.data = (u8 *)malloc(arena.capacity);
 
 	Parser parser = {};
-	parser.options = options;
 	parser.current = GetToken(&lexer);
 
 	Node *program = ParseProgram(&parser, &lexer, &arena);
@@ -183,6 +182,7 @@ Compile(CompileOptions *options)
 
 	SemanticContext semanticContext = {};
 	semanticContext.arena = &arena;
+	semanticContext.options = options;
 	SemanticPass(program, &semanticContext, &arena);
 
 	reset_temporary_storage();

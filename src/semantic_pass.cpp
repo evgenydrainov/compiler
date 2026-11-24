@@ -6,6 +6,7 @@
 #include "constants_table.h"
 #include "macro_table.h"
 #include "profiler.h"
+#include "compiler.h"
 
 template <typename... Args>
 internal void
@@ -899,7 +900,21 @@ IsPoisoned(Type type)
 	// Type will have kind=TypeKind_Unknown, and this may hide some bugs in the
 	// compiler, because errors related to this default-initialized Type will
 	// not be printed.
-	return (type.kind == TypeKind_Unknown);
+
+	bool result = false;
+
+	switch (type.kind)
+	{
+		default: {} break;
+
+		case TypeKind_Pointer:      {result = IsPoisoned(*type.pointee);} break;
+		case TypeKind_Array:        {result = IsPoisoned(*type.array.elementType);} break;
+		case TypeKind_Slice:        {result = IsPoisoned(*type.array.elementType);} break;
+		case TypeKind_DynamicArray: {result = IsPoisoned(*type.array.elementType);} break;
+		case TypeKind_Unknown:      {result = true;} break;
+	}
+
+	return result;
 }
 
 internal string
@@ -1601,6 +1616,7 @@ InstantiateMacro(Node *baseNode,
 		case NodeKind_MacroDecl:
 		case NodeKind_Typedef:
 		case NodeKind_Embed:
+		case NodeKind_CompileOption:
 		{
 			// these nodes shouldn't be able to appear in a macro instantiation
 			Assert(false);
@@ -3351,6 +3367,20 @@ EarlyAnalyze2(Node *baseNode,
 					// pass empty list
 					Handle({});
 				}
+			}
+		} break;
+
+		case NodeKind_CompileOption:
+		{
+			CompileOptionNode *node = As<CompileOptionNode>(baseNode);
+
+			switch (node->optionKind)
+			{
+				case CompileOptionKind_link_library:        {array_add(&context->options->libraries, node->libPath);      } break;
+				case CompileOptionKind_link_system_library: {array_add(&context->options->systemLibraries, node->libPath);} break;
+				case CompileOptionKind_use_vendor_lld:      {context->options->useVendorLld = true;                       } break;
+				case CompileOptionKind_subsystem_console:   {context->options->subsystem = Subsystem_Console;             } break;
+				case CompileOptionKind_subsystem_windows:   {context->options->subsystem = Subsystem_Windows;             } break;
 			}
 		} break;
 	}

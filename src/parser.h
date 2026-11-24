@@ -51,7 +51,8 @@
 	X(StaticAssert) \
 	X(Typedef) \
 	X(Embed) \
-	X(StaticIf)
+	X(StaticIf) \
+	X(CompileOption)
 
 #define GENERATE_NODE_KIND_ENUM(Name) NodeKind_##Name,
 
@@ -556,6 +557,23 @@ struct StaticIfNode : public Node
 	BlockNode *elseBlock;
 };
 
+enum CompileOptionKind : u32
+{
+	CompileOptionKind_link_library,
+	CompileOptionKind_link_system_library,
+	CompileOptionKind_use_vendor_lld,
+	CompileOptionKind_subsystem_console,
+	CompileOptionKind_subsystem_windows,
+};
+
+struct CompileOptionNode : public Node
+{
+	static constexpr NodeKind KIND = NodeKind_CompileOption;
+
+	CompileOptionKind optionKind;
+	string libPath;
+};
+
 template <typename T>
 inline T *
 As(Node *node)
@@ -577,8 +595,6 @@ SizeOfNode(NodeKind kind)
 	return 0;
 }
 
-struct CompileOptions;
-
 struct Parser
 {
 	Token current;
@@ -587,8 +603,6 @@ struct Parser
 	int uniqueLabelId;
 
 	int numInsertSemicolons;
-
-	CompileOptions *options;
 };
 
 Node *ParseProgram(Parser *parser,

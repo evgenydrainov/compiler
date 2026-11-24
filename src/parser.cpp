@@ -1956,64 +1956,71 @@ ParseTopLevelStatement(Parser *parser, Lexer *lexer, Arena *arena)
 		{
 			ExpectToken(parser, lexer, TokenKind_Identifier);
 
-			string libPath = string_slice(parser->current.str, 1, -1);
+			CompileOptionNode *node = MakeNode<CompileOptionNode>(parser->current.location, arena);
 
-			if (is_path_absolute(libPath))
-			{
-				array_add(&parser->options->libraries, libPath);
-			}
-			else
+			node->optionKind = CompileOptionKind_link_library;
+			node->libPath = string_slice(parser->current.str, 1, -1);
+
+			if (!is_path_absolute(node->libPath))
 			{
 				string dir = strip_filename(lexer->fileName);
-
-				string fullLibPath = string_concat(dir, libPath, heap_allocator());
-				array_add(&parser->options->libraries, fullLibPath);
+				node->libPath = string_concat(dir, node->libPath, heap_allocator());
 			}
 
 			ExpectToken(parser, lexer, TokenKind_String);
 
 			ExpectToken(parser, lexer, TokenKind_Semicolon);
 
-			return nullptr;
+			return node;
 		}
 
 		if (parser->current.str == "link_system_library")
 		{
 			ExpectToken(parser, lexer, TokenKind_Identifier);
 
-			string libName = string_slice(parser->current.str, 1, -1);
+			CompileOptionNode *node = MakeNode<CompileOptionNode>(parser->current.location, arena);
 
-			array_add(&parser->options->systemLibraries, libName);
+			node->optionKind = CompileOptionKind_link_system_library;
+			node->libPath = string_slice(parser->current.str, 1, -1);
 
 			ExpectToken(parser, lexer, TokenKind_String);
 
 			ExpectToken(parser, lexer, TokenKind_Semicolon);
 
-			return nullptr;
+			return node;
 		}
 
 		if (parser->current.str == "use_vendor_lld")
 		{
-			parser->options->useVendorLld = true;
+			CompileOptionNode *node = MakeNode<CompileOptionNode>(parser->current.location, arena);
+			node->optionKind = CompileOptionKind_use_vendor_lld;
+
 			ExpectToken(parser, lexer, TokenKind_Identifier);
 			ExpectToken(parser, lexer, TokenKind_Semicolon);
-			return nullptr;
+
+			return node;
 		}
 
 		if (parser->current.str == "subsystem_console")
 		{
-			parser->options->subsystem = Subsystem_Console;
+			CompileOptionNode *node = MakeNode<CompileOptionNode>(parser->current.location, arena);
+			node->optionKind = CompileOptionKind_subsystem_console;
+
 			ExpectToken(parser, lexer, TokenKind_Identifier);
 			ExpectToken(parser, lexer, TokenKind_Semicolon);
-			return nullptr;
+
+			return node;
 		}
 
 		if (parser->current.str == "subsystem_windows")
 		{
-			parser->options->subsystem = Subsystem_Windows;
+			CompileOptionNode *node = MakeNode<CompileOptionNode>(parser->current.location, arena);
+			node->optionKind = CompileOptionKind_subsystem_windows;
+
 			ExpectToken(parser, lexer, TokenKind_Identifier);
 			ExpectToken(parser, lexer, TokenKind_Semicolon);
-			return nullptr;
+
+			return node;
 		}
 	}
 
