@@ -2,8 +2,6 @@ lexer synchronization
 
 some kind of typeof() operator and compile-time type comparison
 
-#embed file
-
 constants of custom types (FOO :: Foo{1, 2, 3})
 
 pointer arithmetic maybe
@@ -13,8 +11,6 @@ run-time bounds checking
 struct literals
 
 multiple return values
-
-editor support (simple syntax highlighting)
 
 fix crashes in the compiler
 
