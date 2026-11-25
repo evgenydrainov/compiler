@@ -2046,7 +2046,11 @@ AnalyzeExpression(Node *baseNode,
 			{
 				// TODO: is this alignment correct?
 				context->symTable->stackSize = (int)align_forward(context->symTable->stackSize, 16);
-
+				node->returnSlotOffset = ReserveSpace(context->symTable, node->inferredType);
+			}
+			else if (node->inferredType.kind == TypeKind_Struct || node->inferredType.kind == TypeKind_Array)
+			{
+				// Field access and subscripting need an address even for register returns.
 				node->returnSlotOffset = ReserveSpace(context->symTable, node->inferredType);
 			}
 		} break;

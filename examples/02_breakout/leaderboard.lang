@@ -110,8 +110,7 @@ leaderboard_draw_row :: proc(board: *Leaderboard, i: int)
 	draw_text1(&board.names[i][0], 57, y, 1);
 
 	score := TextFormat("%lld", board.scores[i]);
-	score_size := measure_text(score, 1);
-	x := 290.0 - score_size.x;
+	x := 290.0 - measure_text(score, 1).x;
 	draw_text1(score, x, y, 1);
 }
 

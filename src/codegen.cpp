@@ -121,6 +121,31 @@ internal void
 GenerateExpression(Node *baseNode,
 				   CodegenContext *context);
 
+internal char *
+GetRegisterForTypeSize(Type type)
+{
+	int size = SizeOfType(type);
+	if (size == 8)
+	{
+		return "rax";
+	}
+	else if (size == 4)
+	{
+		return "eax";
+	}
+	else if (size == 2)
+	{
+		return "ax";
+	}
+	else if (size == 1)
+	{
+		return "al";
+	}
+
+	Assert(false);
+	return "error";
+}
+
 internal void
 GenerateLValueAddress(Node *baseNode,
 					  CodegenContext *context)
@@ -249,10 +274,21 @@ GenerateLValueAddress(Node *baseNode,
 		{
 			CallNode *node = As<CallNode>(baseNode);
 
-			Assert(!IsRegisterSized(node->inferredType));
-
-			// this will push rax, which is the address of the returned struct
 			GenerateExpression(node, context);
+
+			if (IsRegisterSized(node->inferredType))
+			{
+				// write the result value to stack memory and push a pointer to it
+
+				Emit(context, "    pop rax");
+				Emit(context, "    lea rcx, [%s - %d]", context->frameReg, node->returnSlotOffset);
+				Emit(context, "    mov [rcx], %s", GetRegisterForTypeSize(node->inferredType));
+				Emit(context, "    push rcx");
+			}
+			else
+			{
+				// rax contains the pointer to the result struct
+			}
 		} break;
 
 		default:
@@ -1159,31 +1195,6 @@ GenerateExpression(Node *baseNode,
 			GenerateExpression(node->proxy, context);
 		} break;
 	}
-}
-
-internal char *
-GetRegisterForTypeSize(Type type)
-{
-	int size = SizeOfType(type);
-	if (size == 8)
-	{
-		return "rax";
-	}
-	else if (size == 4)
-	{
-		return "eax";
-	}
-	else if (size == 2)
-	{
-		return "ax";
-	}
-	else if (size == 1)
-	{
-		return "al";
-	}
-
-	Assert(false);
-	return "error";
 }
 
 internal char *

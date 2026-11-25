@@ -32,14 +32,4 @@ cast bool to integers
 
 remove unused keywords
 
-fix crash when accessing member of a small struct:
-
-foo :: proc() -> Foo
-{
-	foo: Foo;
-	return foo;
-}
-
-Foo :: struct { x: int; };
-
-_ := foo().x;
+__FILE__ __LINE__
