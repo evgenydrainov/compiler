@@ -661,7 +661,7 @@ ReinterpretNode(Node *&node)
 }
 
 internal bool
-CanImplicitlyCast(Type targetType,
+CanImplicitlyCast(Type *targetType,
 				  Node *source,
 				  SemanticContext *context)
 {
@@ -672,7 +672,7 @@ CanImplicitlyCast(Type targetType,
 		return false;
 	}*/
 
-	if (IsSignedInteger(targetType))
+	if (IsSignedInteger(*targetType))
 	{
 		i64 value;
 		if (TryEvaluateConstantExpressionInt(source, context, &value))
@@ -685,19 +685,19 @@ CanImplicitlyCast(Type targetType,
 
 			Range range = {};
 
-			if (targetType.kind == TypeKind_Int64)
+			if (targetType->kind == TypeKind_Int64)
 			{
 				range = { INT64_MIN, INT64_MAX };
 			}
-			else if (targetType.kind == TypeKind_Int32)
+			else if (targetType->kind == TypeKind_Int32)
 			{
 				range = { INT32_MIN, INT32_MAX };
 			}
-			else if (targetType.kind == TypeKind_Int16)
+			else if (targetType->kind == TypeKind_Int16)
 			{
 				range = { INT16_MIN, INT16_MAX };
 			}
-			else if (targetType.kind == TypeKind_Int8)
+			else if (targetType->kind == TypeKind_Int8)
 			{
 				range = { INT8_MIN, INT8_MAX };
 			}
@@ -717,7 +717,7 @@ CanImplicitlyCast(Type targetType,
 		}
 	}
 
-	if (IsUnsignedInteger(targetType))
+	if (IsUnsignedInteger(*targetType))
 	{
 		i64 value;
 		if (TryEvaluateConstantExpressionInt(source, context, &value))
@@ -730,19 +730,19 @@ CanImplicitlyCast(Type targetType,
 
 			Range range = {};
 
-			if (targetType.kind == TypeKind_UInt64)
+			if (targetType->kind == TypeKind_UInt64)
 			{
 				range = { 0, UINT64_MAX };
 			}
-			else if (targetType.kind == TypeKind_UInt32)
+			else if (targetType->kind == TypeKind_UInt32)
 			{
 				range = { 0, UINT32_MAX };
 			}
-			else if (targetType.kind == TypeKind_UInt16)
+			else if (targetType->kind == TypeKind_UInt16)
 			{
 				range = { 0, UINT16_MAX };
 			}
-			else if (targetType.kind == TypeKind_UInt8)
+			else if (targetType->kind == TypeKind_UInt8)
 			{
 				range = { 0, UINT8_MAX };
 			}
@@ -762,7 +762,7 @@ CanImplicitlyCast(Type targetType,
 		}
 	}
 
-	if (targetType.kind == TypeKind_Float32)
+	if (targetType->kind == TypeKind_Float32)
 	{
 		i64 value;
 		if (TryEvaluateConstantExpressionInt(source, context, &value))
@@ -777,7 +777,7 @@ CanImplicitlyCast(Type targetType,
 		}
 	}
 
-	if (targetType.kind == TypeKind_Float64)
+	if (targetType->kind == TypeKind_Float64)
 	{
 		i64 value;
 		if (TryEvaluateConstantExpressionInt(source, context, &value))
@@ -792,20 +792,20 @@ CanImplicitlyCast(Type targetType,
 		}
 	}
 
-	Type sourceType = source->inferredType;
+	Type *sourceType = &source->inferredType;
 
-	if (TypesEqual(targetType, sourceType))
+	if (AreEqual(targetType, sourceType))
 	{
 		return true;
 	}
 
 	// any integer can be implicitly converted into a bigger signed integer
-	if (IsSignedInteger(targetType))
+	if (IsSignedInteger(*targetType))
 	{
-		if (IsInteger(sourceType))
+		if (IsInteger(*sourceType))
 		{
-			int destSize = SizeOfType(targetType);
-			int sourceSize = SizeOfType(sourceType);
+			int destSize = SizeOfType(*targetType);
+			int sourceSize = SizeOfType(*sourceType);
 
 			if (destSize > sourceSize)
 			{
@@ -815,12 +815,12 @@ CanImplicitlyCast(Type targetType,
 	}
 
 	// only unsigned integer can be implicitly converted into a bigger unsigned integer
-	if (IsUnsignedInteger(targetType))
+	if (IsUnsignedInteger(*targetType))
 	{
-		if (IsUnsignedInteger(sourceType))
+		if (IsUnsignedInteger(*sourceType))
 		{
-			int destSize = SizeOfType(targetType);
-			int sourceSize = SizeOfType(sourceType);
+			int destSize = SizeOfType(*targetType);
+			int sourceSize = SizeOfType(*sourceType);
 
 			if (destSize > sourceSize)
 			{
@@ -830,26 +830,26 @@ CanImplicitlyCast(Type targetType,
 	}
 
 	// allow *void to implicitly cast into any pointer
-	if (IsAnyPointer(targetType)
-		&& IsVoidPointer(sourceType))
+	if (IsAnyPointer(*targetType)
+		&& IsVoidPointer(*sourceType))
 	{
 		return true;
 	}
 
 	// allow any pointer to implicitly cast into *void
-	if (IsVoidPointer(targetType)
-		&& IsAnyPointer(sourceType))
+	if (IsVoidPointer(*targetType)
+		&& IsAnyPointer(*sourceType))
 	{
 		return true;
 	}
 
 	// cast subclass pointer to base class pointer
-	if (targetType.kind == TypeKind_Pointer
-		&& sourceType.kind == TypeKind_Pointer
-		&& sourceType.pointee->kind == TypeKind_Struct
-		&& sourceType.pointee->structInfo->asFieldType.kind != TypeKind_Unknown)
+	if (targetType->kind == TypeKind_Pointer
+		&& sourceType->kind == TypeKind_Pointer
+		&& sourceType->pointee->kind == TypeKind_Struct
+		&& sourceType->pointee->structInfo->asFieldType.kind != TypeKind_Unknown)
 	{
-		if (TypesEqual(*targetType.pointee, sourceType.pointee->structInfo->asFieldType))
+		if (AreEqual(targetType->pointee, &sourceType->pointee->structInfo->asFieldType))
 		{
 			return true;
 		}
@@ -959,24 +959,24 @@ GetTypeNameForOperator(Type type)
 }
 
 internal bool
-IsOverloadedOperator(Type lhsType, Type rhsType, BinaryOp op)
+IsOverloadedOperator(Type *lhsType, Type *rhsType, BinaryOp op)
 {
 	// vector +-*/ vector
-	if (IsVectorType(lhsType) && TypesEqual(lhsType, rhsType)
+	if (IsVectorType(*lhsType) && AreEqual(lhsType, rhsType)
 		&& (op == BinaryOp_Add || op == BinaryOp_Subtract || op == BinaryOp_Multiply || op == BinaryOp_Divide))
 	{
 		return true;
 	}
 
 	// vector */ scalar
-	if (IsVectorType(lhsType) && rhsType.kind == TypeKind_Float32
+	if (IsVectorType(*lhsType) && rhsType->kind == TypeKind_Float32
 		&& (op == BinaryOp_Multiply || op == BinaryOp_Divide))
 	{
 		return true;
 	}
 
 	// scalar */ vector
-	if (lhsType.kind == TypeKind_Float32 && IsVectorType(rhsType)
+	if (lhsType->kind == TypeKind_Float32 && IsVectorType(*rhsType)
 		&& (op == BinaryOp_Multiply || op == BinaryOp_Divide))
 	{
 		return true;
@@ -1014,7 +1014,7 @@ AnalyzeBinaryExpression(Node *baseNode,
 			AnalyzeExpression(node->lhs, context);
 			AnalyzeExpression(node->rhs, context);
 
-			if (IsOverloadedOperator(node->lhs->inferredType, node->rhs->inferredType, node->op))
+			if (IsOverloadedOperator(&node->lhs->inferredType, &node->rhs->inferredType, node->op))
 			{
 				string lhsName = GetTypeNameForOperator(node->lhs->inferredType);
 				string rhsName = GetTypeNameForOperator(node->rhs->inferredType);
@@ -1039,14 +1039,14 @@ AnalyzeBinaryExpression(Node *baseNode,
 			}
 
 			// try to cast rhs into lhs
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
+			if (CanImplicitlyCast(&node->lhs->inferredType, node->rhs, context))
 			{
 				node->inferredType = node->lhs->inferredType;
 				break;
 			}
 
 			// try to cast lhs into rhs
-			if (CanImplicitlyCast(node->rhs->inferredType, node->lhs, context))
+			if (CanImplicitlyCast(&node->rhs->inferredType, node->lhs, context))
 			{
 				node->inferredType = node->rhs->inferredType;
 				break;
@@ -1083,14 +1083,14 @@ AnalyzeBinaryExpression(Node *baseNode,
 			}
 
 			// try to cast rhs into lhs
-			if (CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
+			if (CanImplicitlyCast(&node->lhs->inferredType, node->rhs, context))
 			{
 				node->inferredType.kind = TypeKind_Bool;
 				break;
 			}
 
 			// try to cast lhs into rhs
-			if (CanImplicitlyCast(node->rhs->inferredType, node->lhs, context))
+			if (CanImplicitlyCast(&node->rhs->inferredType, node->lhs, context))
 			{
 				node->inferredType.kind = TypeKind_Bool;
 				break;
@@ -2017,7 +2017,7 @@ AnalyzeExpression(Node *baseNode,
 			{
 				Node *expr = node->arguments[i];
 
-				if (CanImplicitlyCast(node->signature->params[i], expr, context))
+				if (CanImplicitlyCast(&node->signature->params[i], expr, context))
 				{
 					if (!IsRegisterSized(node->signature->params[i]))
 					{
@@ -2473,7 +2473,7 @@ AnalyzeStatement(Node *baseNode,
 
 			if (node->expr)
 			{
-				if (!CanImplicitlyCast(symbol->type, node->expr, context))
+				if (!CanImplicitlyCast(&symbol->type, node->expr, context))
 				{
 					if (!IsPoisoned(node->expr->inferredType)
 						&& !IsPoisoned(symbol->type))
@@ -2497,7 +2497,7 @@ AnalyzeStatement(Node *baseNode,
 
 			if (IsLValue(node->lhs))
 			{
-				if (!CanImplicitlyCast(node->lhs->inferredType, node->rhs, context))
+				if (!CanImplicitlyCast(&node->lhs->inferredType, node->rhs, context))
 				{
 					if (!IsPoisoned(node->rhs->inferredType)
 						&& !IsPoisoned(node->lhs->inferredType))
@@ -2623,7 +2623,7 @@ AnalyzeStatement(Node *baseNode,
 			{
 				AnalyzeExpression(node->expr, context, context->currentFunction->returnType);
 
-				good = CanImplicitlyCast(context->currentFunction->returnType, node->expr, context);
+				good = CanImplicitlyCast(&context->currentFunction->returnType, node->expr, context);
 				exprType = node->expr->inferredType;
 			}
 			else

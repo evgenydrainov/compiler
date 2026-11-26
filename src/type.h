@@ -188,11 +188,16 @@ struct ProcInfo
 };
 
 inline bool
-TypesEqual(Type a, Type b);
+AreEqual(Type *a, Type *b);
 
 inline bool
 AreEqual(ProcInfo *a, ProcInfo *b)
 {
+	if (a == b)
+	{
+		return true;
+	}
+
 	if (a->params.count != b->params.count)
 	{
 		return false;
@@ -213,16 +218,14 @@ AreEqual(ProcInfo *a, ProcInfo *b)
 		return false;
 	}
 
-	if (!TypesEqual(a->returnType, b->returnType))
+	if (!AreEqual(&a->returnType, &b->returnType))
 	{
 		return false;
 	}
 
-	for (usize i = 0;
-		 i < a->params.count;
-		 i++)
+	for (usize i = 0; i < a->params.count; i++)
 	{
-		if (!TypesEqual(a->params[i], b->params[i]))
+		if (!AreEqual(&a->params[i], &b->params[i]))
 		{
 			return false;
 		}
@@ -232,49 +235,54 @@ AreEqual(ProcInfo *a, ProcInfo *b)
 }
 
 inline bool
-TypesEqual(Type a, Type b)
+AreEqual(Type *a, Type *b)
 {
-	if (a.kind != b.kind)
+	if (a == b)
+	{
+		return true;
+	}
+
+	if (a->kind != b->kind)
 	{
 		return false;
 	}
 
-	if (a.kind == TypeKind_Pointer)
+	if (a->kind == TypeKind_Pointer)
 	{
-		return TypesEqual(*a.pointee, *b.pointee);
+		return AreEqual(a->pointee, b->pointee);
 	}
 
-	if (a.kind == TypeKind_Struct)
+	if (a->kind == TypeKind_Struct)
 	{
-		return (a.structInfo == b.structInfo
-				|| a.name == b.name);
+		return (a->structInfo == b->structInfo
+				|| a->name == b->name);
 	}
 
-	if (a.kind == TypeKind_Enum)
+	if (a->kind == TypeKind_Enum)
 	{
-		return (a.enumInfo == b.enumInfo
-				|| a.name == b.name);
+		return (a->enumInfo == b->enumInfo
+				|| a->name == b->name);
 	}
 
-	if (a.kind == TypeKind_Array)
+	if (a->kind == TypeKind_Array)
 	{
-		return (a.array.length == b.array.length
-				&& TypesEqual(*a.array.elementType, *b.array.elementType));
+		return (a->array.length == b->array.length
+				&& AreEqual(a->array.elementType, b->array.elementType));
 	}
 
-	if (a.kind == TypeKind_Slice)
+	if (a->kind == TypeKind_Slice)
 	{
-		return TypesEqual(*a.array.elementType, *b.array.elementType);
+		return AreEqual(a->array.elementType, b->array.elementType);
 	}
 
-	if (a.kind == TypeKind_DynamicArray)
+	if (a->kind == TypeKind_DynamicArray)
 	{
-		return TypesEqual(*a.array.elementType, *b.array.elementType);
+		return AreEqual(a->array.elementType, b->array.elementType);
 	}
 
-	if (a.kind == TypeKind_Proc)
+	if (a->kind == TypeKind_Proc)
 	{
-		return AreEqual(a.procInfo, b.procInfo);
+		return AreEqual(a->procInfo, b->procInfo);
 	}
 
 	return true;

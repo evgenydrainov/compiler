@@ -690,29 +690,29 @@ GetSymbolNameForFunction(string linkName, bool isForeign)
 }
 
 internal void
-EmitCast(Type targetType, Type sourceType, CodegenContext *context)
+EmitCast(Type *targetType, Type *sourceType, CodegenContext *context)
 {
 	// TODO: revisit this function
 
 	// TODO: handle enum underlying type
 
-	if (TypesEqual(targetType, sourceType))
+	if (AreEqual(targetType, sourceType))
 	{
 		return;
 	}
 
 	Emit(context, "    pop rax");
 
-	bool toFloat = IsFloatingPoint(targetType);
-	bool fromFloat = IsFloatingPoint(sourceType);
+	bool toFloat = IsFloatingPoint(*targetType);
+	bool fromFloat = IsFloatingPoint(*sourceType);
 
 	// widen the source
-	if (sourceType.kind == TypeKind_Float32)
+	if (sourceType->kind == TypeKind_Float32)
 	{
 		Emit(context, "    movd xmm0, eax");
 		Emit(context, "    cvtss2sd xmm0, xmm0");
 	}
-	else if (sourceType.kind == TypeKind_Float64)
+	else if (sourceType->kind == TypeKind_Float64)
 	{
 		Emit(context, "    movq xmm0, rax");
 	}
@@ -728,18 +728,18 @@ EmitCast(Type targetType, Type sourceType, CodegenContext *context)
 	}
 
 	// narrow to the target
-	if (targetType.kind == TypeKind_Float32)
+	if (targetType->kind == TypeKind_Float32)
 	{
 		Emit(context, "    cvtsd2ss xmm0, xmm0");
 		Emit(context, "    movd eax, xmm0");
 	}
-	else if (targetType.kind == TypeKind_Float64)
+	else if (targetType->kind == TypeKind_Float64)
 	{
 		Emit(context, "    movq rax, xmm0");
 	}
 	else
 	{
-		EmitConvertRaxToIntegerType(targetType, context);
+		EmitConvertRaxToIntegerType(*targetType, context);
 	}
 
 	Emit(context, "    push rax");
@@ -960,7 +960,7 @@ GenerateExpression(Node *baseNode,
 
 			GenerateExpression(node->what, context);
 
-			EmitCast(node->targetType, node->what->inferredType, context);
+			EmitCast(&node->targetType, &node->what->inferredType, context);
 		} break;
 
 		case NodeKind_Call:
