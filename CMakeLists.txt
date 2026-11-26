@@ -91,6 +91,9 @@ target_link_options(compiler PRIVATE ${LINK_FLAGS})
 target_link_options(run_tests PRIVATE ${LINK_FLAGS})
 
 target_compile_definitions(compiler PRIVATE
+    # ENABLE_ASSERTIONS=0
+    # ENABLE_PROFILER=0
+    # CLEAR_TEMP_MEMORY_WHEN_RESETTING=0
     TYPE_USE_DECLSPEC_PROPERTY=1
 )
 
