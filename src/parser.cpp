@@ -2040,9 +2040,7 @@ ParseTopLevelStatement(Parser *parser, Lexer *lexer, Arena *arena)
 }
 
 Node *
-ParseProgram(Parser *parser,
-			 Lexer *lexer,
-			 Arena *arena)
+ParseProgram(Parser *parser, Lexer *lexer, Arena *arena)
 {
 	PROFILE_FUNCTION();
 
