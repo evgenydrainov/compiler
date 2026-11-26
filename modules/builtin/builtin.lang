@@ -104,9 +104,9 @@ __foreach_expansion_by_pointer :: macro(array, it, index, body) #no_bind
 	index := 0;
 	__count := __array.count;
 
-	for ; index < __count; index += 1;
+	for ; index < __count; index += 1
 	{
-		it := &array[index];
+		it := &__array[index];
 		body;
 	}
 }
@@ -119,7 +119,7 @@ __foreach_expansion_by_value :: macro(array, it, index, body) #no_bind
 	index := 0;
 	__count := __array.count;
 
-	for ; index < __count; index += 1;
+	for ; index < __count; index += 1
 	{
 		it := __array[index];
 		body;
