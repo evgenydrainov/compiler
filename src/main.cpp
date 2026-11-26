@@ -27,48 +27,46 @@ int main(int argc, char *argv[])
 
 	for (int i = 1; i < argc; i++)
 	{
+		string arg = {argv[i], strlen(argv[i])};
+
 		if (readOutputFilePath)
 		{
-			string outputFilePathNoExt = { argv[i], strlen(argv[i]) };
-			outputFilePathNoExt = get_absolute_filepath(outputFilePathNoExt, heap_allocator());
-			outputFilePathNoExt = strip_extension(outputFilePathNoExt);
-
-			options.outputFilePathNoExt = outputFilePathNoExt;
+			string outputFilePath = get_absolute_filepath(arg, heap_allocator());
+			options.outputFilePathNoExt = strip_extension(outputFilePath);
 
 			readOutputFilePath = false;
 			continue;
 		}
 
-		if (argv[i][0] == '-')
+		if (arg[0] == '-')
 		{
-			if (strcmp(argv[i], "-print-code") == 0
-				|| strcmp(argv[i], "--print-code") == 0)
+			if (arg == "-print-code" || arg == "--print-code")
 			{
 				options.printCode = true;
 			}
-			else if (strcmp(argv[i], "-verbose") == 0
-					 || strcmp(argv[i], "--verbose") == 0)
+			else if (arg == "-verbose" || arg == "--verbose")
 			{
 				options.verboseMode = true;
 			}
-			else if (strcmp(argv[i], "-o") == 0)
+			else if (arg == "-o")
 			{
 				readOutputFilePath = true;
 			}
-			else if (strcmp(argv[i], "-static-vcruntime") == 0
-					 || strcmp(argv[i], "--static-vcruntime") == 0)
+			else if (arg == "-static-vcruntime" || arg == "--static-vcruntime")
 			{
 				options.vcruntimeType = VCRuntimeType_Static;
 			}
-			else if (strcmp(argv[i], "-dynamic-vcruntime") == 0
-					 || strcmp(argv[i], "--dynamic-vcruntime") == 0)
+			else if (arg == "-dynamic-vcruntime" || arg == "--dynamic-vcruntime")
 			{
 				options.vcruntimeType = VCRuntimeType_Dynamic;
 			}
-			else if (strcmp(argv[i], "-debug") == 0
-					 || strcmp(argv[i], "--debug") == 0)
+			else if (arg == "-debug" || arg == "--debug")
 			{
 				options.generateDebugInfo = true;
+			}
+			else if (arg == "-time" || arg == "--time")
+			{
+				options.showProfileTimings = true;
 			}
 			else
 			{
@@ -78,10 +76,7 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			string inputFilePath = { argv[i], strlen(argv[i]) };
-			inputFilePath = get_absolute_filepath(inputFilePath, heap_allocator());
-
-			options.inputFilePath = inputFilePath;
+			options.inputFilePath = get_absolute_filepath(arg, heap_allocator());
 		}
 	}
 
@@ -107,15 +102,20 @@ int main(int argc, char *argv[])
 #if ENABLE_PROFILER
 	Assert(g_profiler.numRecords <= array_length(g_profiler.records));
 
-	if (options.verboseMode)
+	if (options.showProfileTimings)
 	{
-		printf("[VERBOSE] profiler time records:\n");
+		printf("[PERF] profiler time records:\n");
 
 		for (int i = 0; i < g_profiler.numRecords; i++)
 		{
 			TimeRecord *it = &g_profiler.records[i];
 			f64 milliseconds = it->cycleCount * 1000.0 / (f64)get_performance_frequency();
-			printf("[VERBOSE]   %s: %.2fms\n", it->functionName, milliseconds);
+			printf("[PERF] ");
+			for (int j = 0; j < it->callDepth+1; j++)
+			{
+				printf("  ");
+			}
+			printf("%s: %.2fms\n", it->functionName, milliseconds);
 		}
 	}
 #endif

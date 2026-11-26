@@ -28,6 +28,7 @@ struct CompileOptions
 	bool printCode;
 	bool verboseMode;
 	bool generateDebugInfo;
+	bool showProfileTimings;
 
 	VCRuntimeType vcruntimeType;
 	Subsystem subsystem;

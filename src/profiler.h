@@ -22,12 +22,14 @@ struct TimeRecord
 	char *functionName;
 	u64 cycleCount;
 	int line;
+	int callDepth;
 };
 
 struct Profiler
 {
 	TimeRecord records[32];
 	int numRecords;
+	int callDepth;
 };
 
 extern Profiler g_profiler;
@@ -43,11 +45,13 @@ struct ProfileScope
 		record->line = line;
 		record->functionName = functionName;
 		record->cycleCount -= get_performance_counter();
+		record->callDepth = g_profiler.callDepth++;
 	}
 
 	~ProfileScope()
 	{
 		record->cycleCount += get_performance_counter();
+		g_profiler.callDepth--;
 	}
 };
 

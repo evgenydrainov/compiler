@@ -23,6 +23,8 @@
 internal string
 FindNasm(CompileOptions *options)
 {
+	PROFILE_FUNCTION();
+
 	string nasmPath = string_format(temp_allocator(), "%svendor\\nasm\\nasm.exe", options->compilerInstallDir);
 
 	char *cstr = to_cstring(nasmPath, temp_allocator());
@@ -39,6 +41,8 @@ FindNasm(CompileOptions *options)
 internal string
 FindLLDLink(CompileOptions *options)
 {
+	PROFILE_FUNCTION();
+
 	string lldPath = string_format(temp_allocator(), "%svendor\\LLVM\\lld-link.exe", options->compilerInstallDir);
 
 	char *cstr = to_cstring(lldPath, temp_allocator());
@@ -53,8 +57,10 @@ FindLLDLink(CompileOptions *options)
 }
 
 internal Find_Result
-FindLinker()
+FindMSVCLinker()
 {
+	PROFILE_FUNCTION();
+
 	Find_Result res = find_visual_studio_and_windows_sdk();
 
 	if (res.windows_sdk_version != 0)
@@ -228,9 +234,9 @@ Compile(CompileOptions *options)
 	}
 
 	{
-		PROFILE_SCOPE("nasm.exe");
-
 		string nasmPath = FindNasm(options);
+
+		PROFILE_SCOPE("nasm.exe");
 
 		dynamic_array<string> commandLine = {};
 		commandLine.allocator = temp_allocator();
@@ -256,9 +262,9 @@ Compile(CompileOptions *options)
 
 	if (options->useVendorLld)
 	{
-		PROFILE_SCOPE("lld-link.exe");
-
 		string lldExePath = FindLLDLink(options);
+
+		PROFILE_SCOPE("lld-link.exe");
 
 		dynamic_array<string> commandLine = {};
 		commandLine.allocator = temp_allocator();
@@ -294,9 +300,9 @@ Compile(CompileOptions *options)
 	}
 	else
 	{
-		PROFILE_SCOPE("link.exe");
+		Find_Result res = FindMSVCLinker();
 
-		Find_Result res = FindLinker();
+		PROFILE_SCOPE("link.exe");
 
 		string linkExePath    = string_format(temp_allocator(), "\"%s\\link.exe\"", res.vs_exe_path_a);
 		string vsLibpathArg   = string_format(temp_allocator(), "/LIBPATH:\"%s\"",  res.vs_library_path_a);
