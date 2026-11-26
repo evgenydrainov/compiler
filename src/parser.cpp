@@ -954,9 +954,29 @@ ParseWhileStatement(Parser *parser,
 }
 
 internal Node *
-ParseForStatement(Parser *parser,
-				  Lexer *lexer,
-				  Arena *arena)
+ParseForLoopIncrementStatement(Parser *parser, Lexer *lexer, Arena *arena)
+{
+	Node *node = nullptr;
+
+	if (parser->current.kind == TokenKind_OpenBrace)
+	{
+		node = ParseBlock(parser, lexer, arena);
+	}
+	else
+	{
+		int saveNumInsertSemicolons = parser->numInsertSemicolons;
+		parser->numInsertSemicolons++;
+
+		node = ParseStatement(parser, lexer, arena);
+
+		parser->numInsertSemicolons = saveNumInsertSemicolons;
+	}
+
+	return node;
+}
+
+internal Node *
+ParseForStatement(Parser *parser, Lexer *lexer, Arena *arena)
 {
 	// for init; cond; incr { statements; }
 	
@@ -986,12 +1006,7 @@ ParseForStatement(Parser *parser,
 
 	if (!(parenthesis && parser->current.kind == TokenKind_CloseParen))
 	{
-		int saveNumInsertSemicolons = parser->numInsertSemicolons;
-		parser->numInsertSemicolons++;
-
-		node->incr = ParseStatement(parser, lexer, arena);
-
-		parser->numInsertSemicolons = saveNumInsertSemicolons;
+		node->incr = ParseForLoopIncrementStatement(parser, lexer, arena);
 	}
 
 	if (parenthesis)
@@ -1218,9 +1233,7 @@ ParseVariableDeclaration(Parser *parser,
 }
 
 internal Node *
-ParseStatement(Parser *parser,
-			   Lexer *lexer,
-			   Arena *arena)
+ParseStatement(Parser *parser, Lexer *lexer, Arena *arena)
 {
 	if (parser->current.kind == TokenKind_If)
 	{
@@ -1261,17 +1274,14 @@ ParseStatement(Parser *parser,
 
 	if (parser->current.kind == TokenKind_Yield)
 	{
-		// yield;
 		YieldNode *node = MakeNode<YieldNode>(parser->current.location, arena);
-		AdvanceToken(parser, lexer); // eat the 'yield'
+		ExpectToken(parser, lexer, TokenKind_Yield);
 		ExpectToken(parser, lexer, TokenKind_Semicolon);
 		return node;
 	}
 
 	if (parser->current.kind == TokenKind_OpenBrace)
 	{
-		// empty scope
-		// { statements; }
 		return ParseBlock(parser, lexer, arena);
 	}
 
@@ -1343,7 +1353,7 @@ ParseStatement(Parser *parser,
 	{
 		// bare semicolon - empty statement
 
-		// call ExpectToken instead of AdvanceToken to handle numInsertSemicolons
+		// call ExpectToken instead of AdvanceToken to handle semicolon insertion
 		ExpectToken(parser, lexer, TokenKind_Semicolon);
 
 		return nullptr;
