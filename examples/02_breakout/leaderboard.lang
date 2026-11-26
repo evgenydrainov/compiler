@@ -10,35 +10,6 @@ Leaderboard :: struct
 	name_length: int;
 };
 
-leaderboard_seed_score :: proc(board: *Leaderboard, name: *u8, score: int)
-{
-	i := 0;
-	while i < NAME_CAPACITY - 1 && name[i] != 0
-	{
-		board.name[i] = name[i];
-		i += 1;
-	}
-	board.name[i] = 0;
-	leaderboard_submit(board, score);
-}
-
-leaderboard_init :: proc(board: *Leaderboard)
-{
-	if leaderboard_load(board)
-	{
-		return;
-	}
-	leaderboard_seed_score(board, "NOVA", 800);
-	leaderboard_seed_score(board, "COMET", 600);
-	leaderboard_seed_score(board, "PIXEL", 450);
-	leaderboard_seed_score(board, "ORBIT", 300);
-	leaderboard_seed_score(board, "EMBER", 200);
-	leaderboard_seed_score(board, "PIP", 100);
-	leaderboard_seed_score(board, "DOT", 50);
-	leaderboard_seed_score(board, "ACE", 10);
-	board.name[0] = 0;
-}
-
 leaderboard_submit :: proc(board: *Leaderboard, score: int)
 {
 	rank := 0;

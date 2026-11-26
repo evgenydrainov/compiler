@@ -47,7 +47,7 @@ main :: proc() -> int
 	font = LoadImageFontFromMemory(".png", &dos_font_png[0], dos_font_png.count);
 
 	game: Game;
-	leaderboard_init(&game.board);
+	leaderboard_load(&game.board);
 
 	while !WindowShouldClose()
 	{
