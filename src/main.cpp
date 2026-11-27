@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
 	g_tempArena.data = (u8 *)malloc(g_tempArena.capacity);
 
 	CompileOptions options = {};
+	options.generateDebugInfo = true; // enable by default
 
 	bool readOutputFilePath = false;
 
@@ -63,6 +64,10 @@ int main(int argc, char *argv[])
 			else if (arg == "-debug" || arg == "--debug")
 			{
 				options.generateDebugInfo = true;
+			}
+			else if (arg == "-no-debug" || arg == "--no-debug")
+			{
+				options.generateDebugInfo = false;
 			}
 			else if (arg == "-time" || arg == "--time")
 			{
