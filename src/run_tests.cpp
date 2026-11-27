@@ -11,6 +11,31 @@
 global_variable char compilerPath[1024];
 global_variable char *onlyRunThisTest;
 
+internal int
+CompileProgram(char *testName)
+{
+	char inputPath[1024];
+	sprintf_s(inputPath, "%s.lang", testName);
+
+	int code = (int)_spawnl(_P_WAIT,
+							compilerPath,
+							"compiler",
+							"-dynamic-vcruntime", // dynamic is faster to link than static
+							inputPath,
+							nullptr);
+	return code;
+}
+
+internal int
+RunProgram(char *testName)
+{
+	char exePath[1024];
+	sprintf_s(exePath, "%s.exe", testName);
+
+	int code = (int)_spawnl(_P_WAIT, exePath, testName, nullptr);
+	return code;
+}
+
 internal void
 TestReturnCode(char *testName, int expectedCode)
 {
@@ -19,35 +44,20 @@ TestReturnCode(char *testName, int expectedCode)
 		return;
 	}
 
+	if (CompileProgram(testName) != 0)
 	{
-		char inputPath[1024];
-		sprintf_s(inputPath, "%s.lang", testName);
-
-		if (_spawnl(_P_WAIT,
-					compilerPath,
-					"compiler",
-					"-dynamic-vcruntime", // dynamic is faster to link than static
-					inputPath,
-					nullptr) != 0)
-		{
-			fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": compilation error\n", testName);
-			exit(1);
-		}
+		fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": compilation error\n", testName);
+		exit(1);
 	}
 
+	int code = RunProgram(testName);
+	if (code != expectedCode)
 	{
-		char exePath[1024];
-		sprintf_s(exePath, "%s.exe", testName);
-
-		int code = (int)_spawnl(_P_WAIT, exePath, testName, nullptr);
-		if (code != expectedCode)
-		{
-			fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": result is %d, but expected %d\n", testName, code, expectedCode);
-			exit(1);
-		}
-
-		printf("Test %s " ANSI_COLOR_GREEN "passed" ANSI_COLOR_RESET " (result=%d)\n", testName, code);
+		fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": result is %d, but expected %d\n", testName, code, expectedCode);
+		exit(1);
 	}
+
+	printf("Test %s " ANSI_COLOR_GREEN "passed" ANSI_COLOR_RESET " (result=%d)\n", testName, code);
 }
 
 internal void
@@ -58,14 +68,7 @@ TestCompileError(char *testName)
 		return;
 	}
 
-	char inputPath[1024];
-	sprintf_s(inputPath, "%s.lang", testName);
-
-	if (_spawnl(_P_WAIT,
-				compilerPath,
-				"compiler",
-				inputPath,
-				nullptr) == 0)
+	if (CompileProgram(testName) == 0)
 	{
 		fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": the program compiled, but it was not supposed to.\n", testName);
 		exit(1);
@@ -82,14 +85,7 @@ TestCompiles(char *testName)
 		return;
 	}
 
-	char inputPath[1024];
-	sprintf_s(inputPath, "%s.lang", testName);
-
-	if (_spawnl(_P_WAIT,
-				compilerPath,
-				"compiler",
-				inputPath,
-				nullptr) != 0)
+	if (CompileProgram(testName) != 0)
 	{
 		fprintf(stderr, "Test %s " ANSI_COLOR_RED "FAILED" ANSI_COLOR_RESET ": compilation error\n", testName);
 		exit(1);
