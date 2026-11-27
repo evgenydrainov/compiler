@@ -185,7 +185,7 @@ brick_row_color :: proc(row: int) -> vec4
 
 is_pause_pressed :: proc() -> bool
 {
-	return IsKeyPressed(KEY_P) || IsKeyPressed(KEY_ESCAPE);
+	return IsKeyPressed(.P) || IsKeyPressed(.ESCAPE);
 }
 
 // the further from the paddle's center the ball hits, the steeper the angle
@@ -243,7 +243,7 @@ world_update :: proc(world: *World, game: *Game, delta: f32)
 	switch world.state
 	{
 	case .playing:
-		if DEVELOPER_HOTKEYS && IsKeyPressed(KEY_N)
+		if DEVELOPER_HOTKEYS && IsKeyPressed(.N)
 		{
 			world_next_level(world);
 		}
@@ -302,7 +302,7 @@ world_update_playing :: proc(world: *World, delta: f32)
 		ball.pos = paddle.pos - vec2(0, (paddle.size.y + ball.size.y)*0.5);
 
 		// wait for the bricks to appear
-		if world.level_banner_timer == 0 && IsKeyPressed(KEY_SPACE)
+		if world.level_banner_timer == 0 && IsKeyPressed(.SPACE)
 		{
 			// launch straight up, aim with the paddle
 			ball.vel = vec2(0, -BALL_LAUNCH_SPEED);
@@ -433,11 +433,11 @@ paddle_update :: proc(paddle: *Entity, delta: f32)
 {
 	paddle.vel = vec2(0, 0);
 
-	if IsKeyDown(KEY_RIGHT)
+	if IsKeyDown(.RIGHT)
 	{
 		paddle.vel.x += PADDLE_SPEED;
 	}
-	if IsKeyDown(KEY_LEFT)
+	if IsKeyDown(.LEFT)
 	{
 		paddle.vel.x -= PADDLE_SPEED;
 	}

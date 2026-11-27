@@ -1,9 +1,9 @@
 // Enter, but not Alt+Enter (that one toggles borderless windowed)
 is_confirm_pressed :: proc() -> bool
 {
-	return (IsKeyPressed(KEY_ENTER)
-			&& !IsKeyDown(KEY_LEFT_ALT)
-			&& !IsKeyDown(KEY_RIGHT_ALT));
+	return (IsKeyPressed(.ENTER)
+			&& !IsKeyDown(.LEFT_ALT)
+			&& !IsKeyDown(.RIGHT_ALT));
 }
 
 // scale the alpha of a color by amount (0..1)

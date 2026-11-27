@@ -49,7 +49,7 @@ name_entry_update :: proc(game: *Game)
 		}
 		ch = GetCharPressed();
 	}
-	if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) && board.name_length > 0
+	if (IsKeyPressed(.BACKSPACE) || IsKeyPressedRepeat(.BACKSPACE)) && board.name_length > 0
 	{
 		board.name_length -= 1;
 		board.name[board.name_length] = 0;

@@ -384,7 +384,7 @@ GenerateBinaryExpression(Node *baseNode,
 
 				Emit(context, "    movq rax, xmm0");
 			}
-			else if (IsInteger(node->inferredType))
+			else if (IsIntegerLike(node->inferredType))
 			{
 				if (node->op == BinaryOp_Add)
 				{
@@ -408,13 +408,9 @@ GenerateBinaryExpression(Node *baseNode,
 					{
 						Emit(context, "    idiv rcx\t\t; perform division");
 					}
-					else if (IsUnsignedInteger(node->inferredType))
-					{
-						Emit(context, "    div rcx\t\t; perform division");
-					}
 					else
 					{
-						Assert(false);
+						Emit(context, "    div rcx\t\t; perform division");
 					}
 				}
 				else if (node->op == BinaryOp_Modulo)
@@ -425,13 +421,9 @@ GenerateBinaryExpression(Node *baseNode,
 					{
 						Emit(context, "    idiv rcx\t\t; perform division for modulo");
 					}
-					else if (IsUnsignedInteger(node->inferredType))
-					{
-						Emit(context, "    div rcx\t\t; perform division for modulo");
-					}
 					else
 					{
-						Assert(false);
+						Emit(context, "    div rcx\t\t; perform division for modulo");
 					}
 
 					Emit(context, "    mov rax, rdx");
@@ -446,13 +438,9 @@ GenerateBinaryExpression(Node *baseNode,
 					{
 						Emit(context, "    sar rax, cl");
 					}
-					else if (IsUnsignedInteger(node->inferredType))
-					{
-						Emit(context, "    shr rax, cl");
-					}
 					else
 					{
-						Assert(false);
+						Emit(context, "    shr rax, cl");
 					}
 				}
 				else if (node->op == BinaryOp_BitAnd)
@@ -1175,6 +1163,10 @@ GenerateExpression(Node *baseNode,
 			else if (node->inferredType.kind == TypeKind_Float64)
 			{
 				Emit(context, "    movq rax, xmm0");
+			}
+			else if (IsIntegerLike(node->inferredType))
+			{
+				EmitConvertRaxToIntegerType(node->inferredType, context);
 			}
 
 			Emit(context, "    push rax\t\t; push the function return value");

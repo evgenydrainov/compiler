@@ -292,8 +292,7 @@ Compile(CompileOptions *options)
 			array_add(&commandLine, lib);
 		}
 
-		int retcode = CompilerRunProcess(options, commandLine);
-		if (retcode != 0)
+		if (CompilerRunProcess(options, commandLine) != 0)
 		{
 			return CompileResult_LinkerError;
 		}
@@ -356,8 +355,7 @@ Compile(CompileOptions *options)
 		array_add(&commandLine, ucrtLibpathArg);
 		array_add(&commandLine, umLibpathArg);
 
-		int retcode = CompilerRunProcess(options, commandLine);
-		if (retcode != 0)
+		if (CompilerRunProcess(options, commandLine) != 0)
 		{
 			return CompileResult_LinkerError;
 		}

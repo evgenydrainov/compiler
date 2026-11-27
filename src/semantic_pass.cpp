@@ -986,8 +986,7 @@ IsOverloadedOperator(Type *lhsType, Type *rhsType, BinaryOp op)
 }
 
 internal void
-AnalyzeBinaryExpression(Node *baseNode,
-						SemanticContext *context)
+AnalyzeBinaryExpression(Node *baseNode, SemanticContext *context, Type expectedType)
 {
 	BinaryNode *node = As<BinaryNode>(baseNode);
 
@@ -1011,8 +1010,8 @@ AnalyzeBinaryExpression(Node *baseNode,
 		{
 			// TODO: forbid non numeric types
 
-			AnalyzeExpression(node->lhs, context);
-			AnalyzeExpression(node->rhs, context);
+			AnalyzeExpression(node->lhs, context, expectedType);
+			AnalyzeExpression(node->rhs, context, expectedType);
 
 			if (IsOverloadedOperator(&node->lhs->inferredType, &node->rhs->inferredType, node->op))
 			{
@@ -1730,7 +1729,7 @@ AnalyzeExpression(Node *baseNode,
 
 		case NodeKind_Binary:
 		{
-			AnalyzeBinaryExpression(baseNode, context);
+			AnalyzeBinaryExpression(baseNode, context, expectedType);
 		} break;
 
 		case NodeKind_Unary:
@@ -2001,12 +2000,9 @@ AnalyzeExpression(Node *baseNode,
 				 i < node->arguments.count;
 				 i++)
 			{
-				Type _expectedType = {};
-
-				if (i < node->signature->params.count)
-				{
-					_expectedType = node->signature->params[i];
-				}
+				Type _expectedType = ((i < node->signature->params.count)
+									  ? node->signature->params[i]
+									  : Type{});
 
 				AnalyzeExpression(node->arguments[i], context, _expectedType);
 			}

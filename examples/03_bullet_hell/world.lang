@@ -77,19 +77,19 @@ player_update :: proc(player: *Entity, delta: f32)
 	dir_x := 0.0;
 	dir_y := 0.0;
 
-	if IsKeyDown(KEY_UP)
+	if IsKeyDown(.UP)
 	{
 		dir_y -= 1;
 	}
-	if IsKeyDown(KEY_DOWN)
+	if IsKeyDown(.DOWN)
 	{
 		dir_y += 1;
 	}
-	if IsKeyDown(KEY_LEFT)
+	if IsKeyDown(.LEFT)
 	{
 		dir_x -= 1;
 	}
-	if IsKeyDown(KEY_RIGHT)
+	if IsKeyDown(.RIGHT)
 	{
 		dir_x += 1;
 	}

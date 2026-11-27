@@ -10,7 +10,7 @@ title_update :: proc(title: *Title,
 		game.state = .world;
 		world_init(&game.world);
 	}
-	else if IsKeyPressed(KEY_L)
+	else if IsKeyPressed(.L)
 	{
 		game.state = .leaderboard;
 	}

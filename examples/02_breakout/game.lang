@@ -31,10 +31,16 @@ game_update :: proc(game: *Game, delta: f32)
 			if is_confirm_pressed() { game.state = .title; }
 	}
 
-	if (IsKeyPressed(KEY_ENTER) && (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)))
-		|| IsKeyPressed(KEY_F11)
+	if (IsKeyPressed(.ENTER) && (IsKeyDown(.LEFT_ALT) || IsKeyDown(.RIGHT_ALT)))
+		|| IsKeyPressed(.F11)
 	{
 		ToggleBorderlessWindowed();
+	}
+
+	// hack to fix alt-tab in fullscreen
+	if IsWindowBorderlessFullscreen() && !IsWindowFocused()
+	{
+		MinimizeWindow();
 	}
 }
 

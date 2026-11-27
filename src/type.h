@@ -34,7 +34,6 @@ enum TypeKind : u32
 	TypeKind_Pointer,
 	TypeKind_Proc,
 	TypeKind_Enum,
-
 	TypeKind_Bool,
 
 	TypeKind_Struct,
@@ -461,7 +460,8 @@ IsIntegerLike(Type type)
 	return (IsInteger(type)
 			|| type.kind == TypeKind_Pointer
 			|| type.kind == TypeKind_Proc
-			|| type.kind == TypeKind_Enum);
+			|| type.kind == TypeKind_Enum
+			|| type.kind == TypeKind_Bool);
 }
 
 inline bool

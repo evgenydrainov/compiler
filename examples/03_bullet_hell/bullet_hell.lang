@@ -28,9 +28,9 @@ setup_screen_camera :: proc(camera: *Camera2D)
 
 main :: proc() -> int
 {
-	SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
+	SetConfigFlags(.VSYNC_HINT | .WINDOW_RESIZABLE);
 	InitWindow(GAME_WIDTH*WINDOW_SCALE, GAME_HEIGHT*WINDOW_SCALE, "BULLET HELL"c);
-	SetExitKey(KEY_NULL);
+	SetExitKey(.NULL);
 
 	world: World;
 	world_init(&world);
