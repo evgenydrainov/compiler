@@ -3186,10 +3186,11 @@ EarlyAnalyze2(Node *baseNode,
 			type->enumInfo->name = node->name;
 			type->enumInfo->underlyingType = node->underlyingType;
 			// TODO: maybe allocate from somewhere else since node->enumerators.count can be large
-			type->enumInfo->enumerators = push_bump_array<EnumeratorInfo>(arena, node->enumerators.count);
+			type->enumInfo->enumerators = push_slice<EnumeratorInfo>(arena, node->enumerators.count);
 
 			i64 enumeratorValue = 0;
 
+			usize i = 0;
 			for (auto *enumerator : node->enumerators)
 			{
 				if (!FindEnumerator(type->enumInfo, enumerator->name))
@@ -3199,19 +3200,17 @@ EarlyAnalyze2(Node *baseNode,
 						enumeratorValue = EvaluateConstantExpressionInt(enumerator->value, context);
 					}
 
-					EnumeratorInfo info = {};
-					info.name = enumerator->name;
-					info.value = enumeratorValue++;
-
-					array_add(&type->enumInfo->enumerators, info);
+					type->enumInfo->enumerators[i].name = enumerator->name;
+					type->enumInfo->enumerators[i].value = enumeratorValue++;
 				}
 				else
 				{
 					Error(context, enumerator,
 						  "enum '%s' already has an enumerator '%s'",
-						  node->name,
-						  enumerator->name);
+						  node->name, enumerator->name);
 				}
+
+				i++;
 			}
 		} break;
 

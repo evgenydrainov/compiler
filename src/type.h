@@ -173,7 +173,7 @@ struct EnumeratorInfo
 struct EnumInfo
 {
 	string name;
-	bump_array<EnumeratorInfo> enumerators;
+	slice<EnumeratorInfo> enumerators;
 	Type underlyingType;
 };
 

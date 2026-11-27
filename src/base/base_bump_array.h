@@ -2,6 +2,7 @@
 
 #include "base_types.h"
 
+#if 0
 template <typename T>
 struct bump_array
 {
@@ -48,3 +49,4 @@ push_bump_array(Arena *arena, usize capacity)
 
 	return result;
 }
+#endif
