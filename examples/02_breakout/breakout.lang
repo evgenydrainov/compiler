@@ -38,7 +38,6 @@ setup_screen_camera :: proc(camera: *Camera2D)
 }
 
 main :: proc() -> int
-//WinMain :: proc(hInstance: *void, hPrevInstance: *void, lpCmdLine: *u8, nShowCmd: i32) -> int #foreign
 {
 	SetConfigFlags(.VSYNC_HINT | .WINDOW_RESIZABLE);
 	InitWindow(GAME_WIDTH*WINDOW_SCALE, GAME_HEIGHT*WINDOW_SCALE, "BREAKOUT");
@@ -74,4 +73,9 @@ main :: proc() -> int
 	CloseWindow();
 
 	return 0;
+}
+
+WinMain :: proc(hInstance: *void, hPrevInstance: *void, lpCmdLine: *u8, nShowCmd: i32) -> int #foreign
+{
+	return main();
 }
